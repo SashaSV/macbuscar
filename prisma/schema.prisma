@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  slug        String    @unique
+  nombre      String
+  cat         String
+  emoji       String
+  rating      Float
+  tag         String    @default("")
+  desc        String
+  fotos       Json      // color swatches array
+  fotoLabels  Json
+  specs       Json
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  prices      Price[]
+  listings    Listing[]
+  reviews     Review[]
+  priceHistory PriceHistory[]
+}
+
+model Store {
+  id      String  @id  // "apple", "mediamarkt", etc.
+  nombre  String
+  logo    String
+  url     String
+  badge   String  @default("")
+  delay   Int     @default(1000)
+
+  prices  Price[]
+}
+
+model Price {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  storeId   String
+  price     Float
+  updatedAt DateTime @updatedAt
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+}
+
+model PriceHistory {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  storeId   String
+  price     Float
+  month     String   // "Ene", "Feb", etc.
+  year      Int
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// Segunda mano listings
+model Listing {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  precio      Float
+  estado      String   // Excelente, Muy bueno, Bueno, Aceptable
+  ciudad      String
+  vendedor    String
+  descripcion String
+  fotos       Json     @default("[]")  // array of file paths or URLs
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        Int    @id @default(autoincrement())
+  productId Int
+  fuente    String
+  nota      Float
+  texto     String
+  fecha     String
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ScrapingLog {
+  id        Int      @id @default(autoincrement())
+  storeId   String
+  productId Int
+  status    String   // success, error, timeout
+  price     Float?
+  error     String?
+  duration  Int?     // ms
+  createdAt DateTime @default(now())
+}

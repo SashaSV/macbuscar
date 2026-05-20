@@ -1,0 +1,9 @@
+.next/
+node_modules/
+.env.local
+.env
+*.db
+*.db-journal
+/public/uploads/*
+!public/uploads/.gitkeep
+prisma/migrations/
