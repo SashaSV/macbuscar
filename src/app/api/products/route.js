@@ -1,6 +1,12 @@
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+
+const safeParse = (s, fallback) => {
+  if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
+  try { return JSON.parse(s); } catch { return fallback; }
+};
 
 export async function GET(request) {
   try {
@@ -22,16 +28,17 @@ export async function GET(request) {
       orderBy: { id: 'asc' },
     });
 
-    // Serialize JSON fields
     const serialized = products.map(p => ({
       ...p,
-      fotos: JSON.parse(p.fotos),
-      fotoLabels: JSON.parse(p.fotoLabels),
-      specs: JSON.parse(p.specs),
-      listings: p.listings.map(l => ({ ...l, fotos: JSON.parse(l.fotos) })),
+      fotos: safeParse(p.fotos, []),
+      fotoLabels: safeParse(p.fotoLabels, []),
+      specs: safeParse(p.specs, {}),
+      listings: p.listings.map(l => ({ ...l, fotos: safeParse(l.fotos, []) })),
     }));
 
-    return NextResponse.json(serialized);
+    return NextResponse.json(serialized, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
   } catch (err) {
     console.error('[GET /api/products]', err);
     return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });
