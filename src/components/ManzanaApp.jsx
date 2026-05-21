@@ -684,9 +684,24 @@ export default function ManzanaApp() {
   });
 
   if (loadingProducts) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div style={{ fontSize:48 }}>🍎</div>
-      <div style={{ fontSize:14, color:'#555' }}>Cargando Manzana.es…</div>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:18, background:'#090909' }}>
+      <div style={{ fontSize:64, animation:'bounce 1.4s ease-in-out infinite' }}>🍎</div>
+      <div style={{ fontSize:18, fontWeight:800, letterSpacing:-0.3 }}>Manzana.es</div>
+      <div style={{ fontSize:12, color:'#666', letterSpacing:1.5 }}>COMPARADOR · 8 TIENDAS</div>
+      <div style={{ width:200, height:3, background:'#1a1a1a', borderRadius:2, overflow:'hidden', marginTop:8 }}>
+        <div style={{ width:'40%', height:'100%', background:'linear-gradient(90deg,#2563eb,#60a5fa)', borderRadius:2, animation:'slide 1.5s ease-in-out infinite' }} />
+      </div>
+      <div style={{ fontSize:11, color:'#444', marginTop:4 }}>Cargando productos…</div>
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+        @keyframes slide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
+        }
+      `}</style>
     </div>
   );
 
