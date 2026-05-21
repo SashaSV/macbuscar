@@ -68,14 +68,17 @@ The price must be in EUR (lowest visible price for the matching product). The UR
 
   const data = await res.json();
   const text = data.content?.[0]?.text?.trim() || '';
+  console.log(`[${storeId}] AI raw response:`, text);
   try {
     const clean = text.replace(/^```json\s*|\s*```$/g, '').trim();
     const parsed = JSON.parse(clean);
+    console.log(`[${storeId}] Parsed:`, parsed);  // ← і цей
     return {
       price: typeof parsed.price === 'number' ? parsed.price : null,
       url: normalizeUrl(parsed.url, storeId),
     };
-  } catch {
+  } catch (err) {
+    console.error(`[${storeId}] Parse error:`, err.message, 'text:', text.slice(0, 200));
     return { price: null, url: null };
   }
 }
