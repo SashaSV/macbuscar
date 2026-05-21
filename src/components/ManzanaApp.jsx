@@ -7,7 +7,7 @@ import TarjetaProducto from './ui/TarjetaProducto';
 import ModalProducto from './modals/ModalProducto';
 import ModalAnuncio from './modals/ModalAnuncio';
 import { TIENDAS, CATS } from './shared/constants';
-import { getPrecioMap, safeParse } from './shared/utils';
+import { getPrecioMap, safeParse, getPriceValue } from './shared/utils';
 
 export default function ManzanaApp() {
   const [page, setPage] = useState('home');
@@ -46,7 +46,7 @@ export default function ManzanaApp() {
   }, []);
 
   async function triggerScrape(prod) {
-    const storeIds = Object.keys(getPrecioMap(prod)).filter(id => getPrecioMap(prod)[id]);
+    const storeIds = Object.keys(getPrecioMap(prod));
     setScrapeStatus(p => ({ ...p, [prod.id]: Object.fromEntries(storeIds.map(id=>[id,'loading'])) }));
 
     try {
@@ -55,8 +55,8 @@ export default function ManzanaApp() {
 
       if (data.results?.[0]) {
         const newPrices = {};
-        Object.entries(data.results[0].stores || {}).forEach(([storeId, { price }]) => {
-          if (price) newPrices[storeId] = price;
+        Object.entries(data.results[0].stores || {}).forEach(([storeId, { price, url }]) => {
+          if (price) newPrices[storeId] = { price, url };
         });
         setPrecios(p => ({ ...p, [prod.id]: { ...p[prod.id], ...newPrices } }));
       }
@@ -87,8 +87,10 @@ export default function ManzanaApp() {
   const filtrados = products.filter(p =>
     (cat==='all' || p.cat===cat) && p.nombre.toLowerCase().includes(busq.toLowerCase())
   ).sort((a,b) => {
-    const aMin = Math.min(...Object.values(precios[a.id]||{}).filter(Boolean));
-    const bMin = Math.min(...Object.values(precios[b.id]||{}).filter(Boolean));
+    const aVals = Object.values(precios[a.id]||{}).map(getPriceValue).filter(Boolean);
+    const bVals = Object.values(precios[b.id]||{}).map(getPriceValue).filter(Boolean);
+    const aMin = aVals.length ? Math.min(...aVals) : Infinity;
+    const bMin = bVals.length ? Math.min(...bVals) : Infinity;
     if (orden==='precio-asc') return aMin-bMin;
     if (orden==='precio-desc') return bMin-aMin;
     if (orden==='valoracion') return b.rating-a.rating;
@@ -114,7 +116,7 @@ export default function ManzanaApp() {
       `}</style>
     </div>
   );
-  
+
   return (
     <div style={{ minHeight:'100vh', background:'#090909', color:'#f0f0f0', fontFamily:"-apple-system,'Helvetica Neue',sans-serif" }}>
       <nav style={{ background:'rgba(9,9,9,.95)', borderBottom:'1px solid #1a1a1a', padding:'14px 24px', position:'sticky', top:0, zIndex:100, backdropFilter:'blur(20px)' }}>

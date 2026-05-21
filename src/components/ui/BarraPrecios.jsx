@@ -1,15 +1,15 @@
 import Dot from './Dot';
 import { TIENDAS } from '../shared/constants';
-import { getMejor } from '../shared/utils';
+import { getMejor, getPriceValue } from '../shared/utils';
 
 export default function BarraPrecios({ precios, statuses }) {
-  const v = Object.values(precios||{}).filter(Boolean);
+  const v = Object.values(precios||{}).map(getPriceValue).filter(Boolean);
   const maxP = v.length ? Math.max(...v) : 1;
   const [mejId] = getMejor(precios);
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
-      {TIENDAS.filter(t => precios[t.id] != null || statuses?.[t.id]==='loading').map(t => {
-        const p = precios[t.id]; const st = statuses?.[t.id];
+      {TIENDAS.filter(t => getPriceValue(precios[t.id]) != null || statuses?.[t.id]==='loading').map(t => {
+        const p = getPriceValue(precios[t.id]); const st = statuses?.[t.id];
         const pct = p ? Math.round((p/maxP)*100) : 0;
         const es = t.id === mejId;
         return (

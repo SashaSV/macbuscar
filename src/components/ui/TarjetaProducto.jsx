@@ -1,11 +1,11 @@
 import Dot from './Dot';
 import { TIENDAS, TAG_COLORS } from '../shared/constants';
-import { getMejor, getPrecioMap } from '../shared/utils';
+import { getMejor, getPrecioMap, getPriceValue } from '../shared/utils';
 
 export default function TarjetaProducto({ prod, precios, scrapeStatus, onClick }) {
   const pP = precios[prod.id] || getPrecioMap(prod);
   const pS = scrapeStatus[prod.id] || {};
-  const v = Object.values(pP).filter(Boolean);
+  const v = Object.values(pP).map(getPriceValue).filter(Boolean);
   const minP = v.length ? Math.min(...v) : null;
   const maxP = v.length ? Math.max(...v) : null;
   const [mejId] = getMejor(pP);

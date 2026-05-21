@@ -1,6 +1,10 @@
 export function getMejor(prices) {
-  const entries = Object.entries(prices || {}).filter(([,v]) => v != null);
-  return entries.length ? entries.reduce((a,b) => a[1] < b[1] ? a : b) : [null, null];
+  const entries = Object.entries(prices || {})
+    .filter(([, v]) => v && getPriceValue(v) != null);
+  if (!entries.length) return [null, null];
+  return entries.reduce((a, b) => {
+    return getPriceValue(a[1]) < getPriceValue(b[1]) ? a : b;
+  });
 }
 
 export function colorEstado(e) {
@@ -14,8 +18,22 @@ export function fmtDate() {
 
 export function getPrecioMap(product) {
   const map = {};
-  (product.prices || []).forEach(p => { map[p.storeId] = p.price; });
+  (product.prices || []).forEach(p => {
+    map[p.storeId] = { price: p.price, url: p.url || p.store?.url || null };
+  });
   return map;
+}
+
+// Extract number from either old format (number) or new format ({price, url})
+export function getPriceValue(v) {
+  if (v == null) return null;
+  return typeof v === 'object' ? v.price : v;
+}
+
+// Extract URL from new format
+export function getPriceUrl(v) {
+  if (v == null || typeof v !== 'object') return null;
+  return v.url || null;
 }
 
 export const safeParse = (s, fallback) => {

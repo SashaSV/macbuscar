@@ -8,8 +8,7 @@ import { scrapePrice } from '@/lib/scraper';
  * POST /api/prices/scrape
  * Body: { productId?: number }   — omit to scrape all products
  *
- * Scrapes prices for all stores of the given product(s),
- * updates the Price table, and logs to ScrapingLog.
+ * Scrapes prices AND product URLs for all stores, saves both to DB.
  */
 export async function POST(request) {
   try {
@@ -27,24 +26,21 @@ export async function POST(request) {
       const storeResults = {};
 
       await Promise.all(
-        product.prices.map(async ({ store, price: basePrice }) => {
-          const { price, status, error, duration } = await scrapePrice(store.id, product.nombre);
+        product.prices.map(async ({ store, price: basePrice, url: oldUrl }) => {
+          const { price, url, status, error, duration } = await scrapePrice(store.id, product.nombre);
 
-          // Log
           await prisma.scrapingLog.create({
             data: { storeId: store.id, productId: product.id, status, price, error, duration },
           });
 
           if (price) {
-            // Update current price
             await prisma.price.update({
               where: { productId_storeId: { productId: product.id, storeId: store.id } },
-              data: { price },
+              data: { price, url: url || oldUrl },
             });
-            storeResults[store.id] = { price, status };
+            storeResults[store.id] = { price, url: url || oldUrl, status };
           } else {
-            // Keep old price, mark as failed
-            storeResults[store.id] = { price: basePrice, status };
+            storeResults[store.id] = { price: basePrice, url: oldUrl, status };
           }
         })
       );
@@ -62,13 +58,10 @@ export async function POST(request) {
 // GET — fetch latest prices for all products
 export async function GET() {
   try {
-    const prices = await prisma.price.findMany({
-      include: { store: true },
-    });
-    // Group by product
+    const prices = await prisma.price.findMany({ include: { store: true } });
     const grouped = prices.reduce((acc, p) => {
       if (!acc[p.productId]) acc[p.productId] = {};
-      acc[p.productId][p.storeId] = p.price;
+      acc[p.productId][p.storeId] = { price: p.price, url: p.url };
       return acc;
     }, {});
     return NextResponse.json(grouped);

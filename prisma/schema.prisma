@@ -44,6 +44,7 @@ model Price {
   productId Int
   storeId   String
   price     Float
+  url       String?
   updatedAt DateTime @updatedAt
 
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)

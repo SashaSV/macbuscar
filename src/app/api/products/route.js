@@ -46,7 +46,9 @@ export async function GET(request) {
         specs,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
-        prices: p.prices,
+        prices: p.prices.map(pr => ({...pr,
+          url: pr.url || pr.store?.url || null,
+        })),
         reviews: p.reviews,
         priceHistory: p.priceHistory,
         listings: p.listings.map(l => ({
