@@ -3,6 +3,8 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const VERSION = "v3-safeparse-" + Date.now();
+
 const safeParse = (s, fallback) => {
   if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
   try { return JSON.parse(s); } catch { return fallback; }
@@ -36,7 +38,7 @@ export async function GET(request) {
       listings: p.listings.map(l => ({ ...l, fotos: safeParse(l.fotos, []) })),
     }));
 
-    return NextResponse.json(serialized, {
+    return NextResponse.json({ _version: VERSION, products: serialized }, {
       headers: { 'Cache-Control': 'no-store, max-age=0' },
     });
   } catch (err) {
