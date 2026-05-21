@@ -3,7 +3,7 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-const VERSION = "v3-safeparse-" + Date.now();
+const VERSION = "v3-safeparse-" + Date.now(); 
 
 const safeParse = (s, fallback) => {
   if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
