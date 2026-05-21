@@ -30,13 +30,42 @@ export async function GET(request) {
       orderBy: { id: 'asc' },
     });
 
-    const serialized = products.map(p => ({
-      ...p,
-      fotos: safeParse(p.fotos, []),
-      fotoLabels: safeParse(p.fotoLabels, []),
-      specs: safeParse(p.specs, {}),
-      listings: p.listings.map(l => ({ ...l, fotos: safeParse(l.fotos, []) })),
-    }));
+    const serialized = products.map(p => {
+      const fotos = safeParse(p.fotos, []);
+      const fotoLabels = safeParse(p.fotoLabels, []);
+      const specs = safeParse(p.specs, {});
+      return {
+        id: p.id,
+        slug: p.slug,
+        nombre: p.nombre,
+        cat: p.cat,
+        emoji: p.emoji,
+        rating: p.rating,
+        tag: p.tag,
+        desc: p.desc,
+        fotos,
+        fotoLabels,
+        specs,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        prices: p.prices,
+        reviews: p.reviews,
+        priceHistory: p.priceHistory,
+        listings: p.listings.map(l => ({
+          id: l.id,
+          productId: l.productId,
+          precio: l.precio,
+          estado: l.estado,
+          ciudad: l.ciudad,
+          vendedor: l.vendedor,
+          descripcion: l.descripcion,
+          fotos: safeParse(l.fotos, []),
+          active: l.active,
+          createdAt: l.createdAt,
+          updatedAt: l.updatedAt,
+        })),
+      };
+    });
 
     return NextResponse.json({ _version: VERSION, products: serialized }, {
       headers: { 'Cache-Control': 'no-store, max-age=0' },
