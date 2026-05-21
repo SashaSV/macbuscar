@@ -21,22 +21,7 @@ export async function GET(request) {
         ...(cat && cat !== 'all' ? { cat } : {}),
         ...(q ? { nombre: { contains: q } } : {}),
       },
-      include: {
-        prices: { include: { store: true } },
-        reviews: true,
-        priceHistory: { orderBy: { createdAt: 'asc' } },
-        listings: { where: { active: true }, orderBy: { createdAt: 'desc' } },
-      },
-      orderBy: { id: 'asc' },
-    });
-
-    const serialized = products.map(p => {
-      const fotos = safeParse(p.fotos, []);
-      const fotoLabels = safeParse(p.fotoLabels, []);
-      const specs = safeParse(p.specs, {});
-      return {
-        id: p.id,
-        slug: p.slug,
+      
         nombre: p.nombre,
         cat: p.cat,
         emoji: p.emoji,
