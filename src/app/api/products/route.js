@@ -67,7 +67,7 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json({ _version: VERSION, products: serialized }, {
+    return NextResponse.json(serialized, {
       headers: { 'Cache-Control': 'no-store, max-age=0' },
     });
   } catch (err) {
