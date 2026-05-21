@@ -1,6 +1,6 @@
 import TarjetaProducto from '../ui/TarjetaProducto';
 import { CATS } from '../shared/constants';
-import { getPrecioMap } from '../shared/utils';
+import { getPrecioMap, getPriceValue } from '../shared/utils';
 
 export default function HomePage({ products, precios, scrapeStatus, onSelect, onCategoryClick }) {
   const novedades = products.filter(p=>['Novedad','Pro','Ultra','Exclusivo'].includes(p.tag));
@@ -13,7 +13,7 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
 
   const hero = products[0];
   const heroPrecios = hero ? (precios[hero.id] || getPrecioMap(hero)) : {};
-  const heroV = Object.values(heroPrecios).filter(Boolean);
+  const heroV = Object.values(heroPrecios).map(getPriceValue).filter(Boolean);
   const heroMin = heroV.length ? Math.min(...heroV) : null;
 
   const Section = ({ title, icon, items }) => (

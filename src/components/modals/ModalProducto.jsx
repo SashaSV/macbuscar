@@ -6,13 +6,13 @@ import HistorialChart from '../ui/HistorialChart';
 import Resenas from '../ui/Resenas';
 import Dot from '../ui/Dot';
 import { TIENDAS, TABS } from '../shared/constants';
-import { getMejor, getPrecioMap, colorEstado } from '../shared/utils';
+import { getMejor, getPrecioMap, colorEstado, getPriceValue, getPriceUrl } from '../shared/utils';
 
 export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne }) {
   const [tab, setTab] = useState('Galería');
   const pP = precios[prod.id] || getPrecioMap(prod);
   const pS = scrapeStatus[prod.id] || {};
-  const v = Object.values(pP).filter(Boolean);
+  const v = Object.values(pP).map(getPriceValue).filter(Boolean);
   const minP = v.length ? Math.min(...v) : null;
   const maxP = v.length ? Math.max(...v) : null;
   const [mejId] = getMejor(pP);
@@ -71,16 +71,18 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
               </div>
               <BarraPrecios precios={pP} statuses={pS} />
               <div style={{ marginTop:14, display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                {TIENDAS.filter(t=>pP[t.id]!=null).map(t => {
+                {TIENDAS.filter(t=>getPriceValue(pP[t.id])!=null).map(t => {
                   const es=t.id===mejId; const st=pS[t.id];
+                  const price = getPriceValue(pP[t.id]);
+                  const productUrl = getPriceUrl(pP[t.id]) || t.url;
                   return (
-                    <a key={t.id} href={t.url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:9, padding:'10px 12px', background:es?'#0d1f0d':'#161616', border:`1px solid ${es?'#34c759':'#1e1e1e'}`, borderRadius:10, textDecoration:'none' }}>
+                    <a key={t.id} href={productUrl} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:9, padding:'10px 12px', background:es?'#0d1f0d':'#161616', border:`1px solid ${es?'#34c759':'#1e1e1e'}`, borderRadius:10, textDecoration:'none' }}>
                       <span style={{ fontSize:18 }}>{t.logo}</span>
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:10, color:'#555' }}>{t.nombre}</div>
                         <div style={{ display:'flex', alignItems:'center', gap:5 }}>
                           <Dot status={st} />
-                          <span style={{ fontSize:14, fontWeight:800, color:es?'#34c759':'#ddd', fontFamily:'ui-monospace,monospace' }}>{st==='loading'?'—':st==='error'?'Error':`${pP[t.id]}€`}</span>
+                          <span style={{ fontSize:14, fontWeight:800, color:es?'#34c759':'#ddd', fontFamily:'ui-monospace,monospace' }}>{st==='loading'?'—':st==='error'?'Error':`${price}€`}</span>
                         </div>
                       </div>
                       {es&&<span>🏆</span>}
