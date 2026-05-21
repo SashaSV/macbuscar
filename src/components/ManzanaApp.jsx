@@ -525,7 +525,7 @@ function TarjetaProducto({ prod, precios, scrapeStatus, onClick }) {
 }
 
 /* ─── HOME PAGE ─── */
-function HomePage({ products, precios, scrapeStatus, onSelect }) {
+function HomePage({ products, precios, scrapeStatus, onSelect, onCategoryClick }) {
   const novedades = products.filter(p=>['Novedad','Pro','Ultra','Exclusivo'].includes(p.tag));
   const populares = [...products].sort((a,b)=>b.rating-a.rating).slice(0,4);
   const mejorOferta = [...products].sort((a,b)=>{
@@ -574,9 +574,13 @@ function HomePage({ products, precios, scrapeStatus, onSelect }) {
 
       <div style={{ display:'flex', gap:9, marginBottom:26, flexWrap:'wrap' }}>
         {CATS.filter(c=>c.id!=='all').map(c=>(
-          <div key={c.id} style={{ display:'flex', alignItems:'center', gap:7, background:'#111', border:'1px solid #1e1e1e', borderRadius:12, padding:'9px 14px', cursor:'default', transition:'all .2s' }}>
+          <div key={c.id}
+            onClick={()=>onCategoryClick?.(c.id)}
+            style={{ display:'flex', alignItems:'center', gap:7, background:'#111', border:'1px solid #1e1e1e', borderRadius:12, padding:'9px 14px', cursor:'pointer', transition:'all .2s' }}
+            onMouseEnter={e=>{e.currentTarget.style.background='#1a1a1a';e.currentTarget.style.borderColor='#2563eb';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='#111';e.currentTarget.style.borderColor='#1e1e1e';}}>
             <span style={{ fontSize:18 }}>{c.icon}</span>
-            <span style={{ fontSize:12, fontWeight:700, color:'#777' }}>{c.label}</span>
+            <span style={{ fontSize:12, fontWeight:700, color:'#aaa' }}>{c.label}</span>
           </div>
         ))}
       </div>
@@ -587,6 +591,7 @@ function HomePage({ products, precios, scrapeStatus, onSelect }) {
     </div>
   );
 }
+
 
 /* ─── MAIN APP ─── */
 export default function ManzanaApp() {
@@ -717,7 +722,7 @@ export default function ManzanaApp() {
         <PanelScraping scrapeStatus={scrapeStatus} onScrapeAll={scrapeAll} isScraping={isScraping} lastUpdated={lastUpdated} />
 
         {page==='home' ? (
-          <HomePage products={products} precios={precios} scrapeStatus={scrapeStatus} onSelect={setSelProd} />
+          <HomePage products={products} precios={precios} scrapeStatus={scrapeStatus} onSelect={setSelProd} onCategoryClick={(c)=>{setCat(c);setPage('catalogo');}} />
         ) : (
           <>
             <div style={{ display:'flex', gap:9, marginBottom:13, flexWrap:'wrap' }}>
