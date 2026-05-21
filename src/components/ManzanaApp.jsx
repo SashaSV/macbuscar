@@ -609,10 +609,17 @@ export default function ManzanaApp() {
     fetch('/api/products')
       .then(r => r.json())
       .then(data => {
-        setProducts(Array.isArray(data) ? data : []);
-        // Init prices from DB
+        const safeParse = (s, f) => { try { return typeof s === 'string' ? JSON.parse(s) : (s ?? f); } catch { return f; } };
+        const normalized = (Array.isArray(data) ? data : []).map(p => ({
+          ...p,
+          fotos: safeParse(p.fotos, []),
+          fotoLabels: safeParse(p.fotoLabels, []),
+          specs: safeParse(p.specs, {}),
+          listings: (p.listings || []).map(l => ({ ...l, fotos: safeParse(l.fotos, []) })),
+        }));
+        setProducts(normalized);
         const initPrecios = {};
-        data.forEach(p => { initPrecios[p.id] = getPrecioMap(p); });
+        normalized.forEach(p => { initPrecios[p.id] = getPrecioMap(p); });
         setPrecios(initPrecios);
       })
       .catch(console.error)
