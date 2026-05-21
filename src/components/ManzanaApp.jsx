@@ -96,12 +96,25 @@ export default function ManzanaApp() {
   });
 
   if (loadingProducts) return (
-    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <div style={{ fontSize:48 }}>🍎</div>
-      <div style={{ fontSize:14, color:'#555' }}>Cargando Manzana.es…</div>
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:18, background:'#090909' }}>
+      <div style={{ fontSize:64, animation:'appleBounce 1.2s ease-in-out infinite', display:'inline-block' }}>🍎</div>
+      <div style={{ fontSize:14, fontWeight:800, color:'#888' }}>Manzana.es</div>
+      <div style={{ width:140, height:2, background:'#1a1a1a', borderRadius:2, overflow:'hidden' }}>
+        <div style={{ width:'40%', height:'100%', background:'linear-gradient(90deg,#2563eb,#60a5fa)', animation:'loadingBar 1.5s ease-in-out infinite' }} />
+      </div>
+      <style>{`
+        @keyframes appleBounce {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-14px) scale(1.05); }
+        }
+        @keyframes loadingBar {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
+        }
+      `}</style>
     </div>
   );
-
+  
   return (
     <div style={{ minHeight:'100vh', background:'#090909', color:'#f0f0f0', fontFamily:"-apple-system,'Helvetica Neue',sans-serif" }}>
       <nav style={{ background:'rgba(9,9,9,.95)', borderBottom:'1px solid #1a1a1a', padding:'14px 24px', position:'sticky', top:0, zIndex:100, backdropFilter:'blur(20px)' }}>
