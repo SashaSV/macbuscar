@@ -56,10 +56,9 @@ def close_driver(driver):
     driver.quit()
 
 def get_file_name(url, ftm) -> str:
-    CURR_DIR = os.getcwd()
-    if CURR_DIR.find("Python.Script") < 0 :
-        CURR_DIR = '{0}\\Python.Script'.format(CURR_DIR)
-    path = '{0}\\html\\{1}'.format(CURR_DIR,ftm['category']) 
+    CURR_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache', 'html')
+    path = os.path.join(CURR_DIR, ftm['category'])
+    os.makedirs(path, exist_ok=True)
     if not os.path.exists(path):
         os.mkdir(path)
     

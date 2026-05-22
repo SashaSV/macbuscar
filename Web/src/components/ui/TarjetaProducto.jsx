@@ -27,7 +27,13 @@ export default function TarjetaProducto({ prod, precios, scrapeStatus, onClick }
         {(prod.fotos||[]).slice(0,4).map((c,i)=><div key={i} style={{ flex:1, height:4, borderRadius:2, background:c }} />)}
       </div>
 
-      <div style={{ fontSize:34, textAlign:'center', marginBottom:8 }}>{prod.emoji}</div>
+      {prod.fotos && prod.fotos.length > 0 && prod.fotos[0].startsWith('http') ? (
+        <div style={{ height:80, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:8 }}>
+          <img src={prod.fotos[0]} alt={prod.nombre} style={{ maxHeight:80, maxWidth:'100%', objectFit:'contain' }} onError={e=>{e.target.style.display='none';e.target.parentElement.innerHTML=prod.emoji;e.target.parentElement.style.fontSize='34px';}} />
+        </div>
+      ) : (
+        <div style={{ fontSize:34, textAlign:'center', marginBottom:8 }}>{prod.emoji}</div>
+      )}
       <div style={{ fontSize:12, fontWeight:700, color:'#eee', marginBottom:2, lineHeight:1.3 }}>{prod.nombre}</div>
       <div style={{ fontSize:10, color:'#f5a623', marginBottom:10 }}>{'★'.repeat(Math.round(prod.rating))} <span style={{ color:'#444' }}>{prod.rating}</span></div>
 

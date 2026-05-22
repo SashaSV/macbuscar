@@ -1,17 +1,10 @@
 # -*- coding: utf-8 -*-
-from scanner import dbservice, scanservice
+from scanner import scanservice, dbservice_postgres
 from scanner.gethtml import get_html, driver_init, close_driver
-from scanner.dbservice import DataScraps, dict2obj, clear_spec
-from pymongo import MongoClient
+from scanner.dbservice_postgres import DataScraps
 import json
-import copy
 import unicodedata
-#from munch import DefaultMunch
 
-# 86
-DBCONNECT = {'NAMEMACHINE': 'localhost',
-             'PORTDB': 27017,
-             'NAMEDB': 'bldb'}
 
 PAGES_START = 1
 #PAGES_COUNT = 2
@@ -27,27 +20,27 @@ FTMS = [
     'category': 'MacBook',
     'url': 'https://www.amazon.es/s?i=computers&bbn=938008031&rh=n%3A938008031%2Cp_n_feature_twenty-two_browse-bin%3A27387615031%2Cp_89%3AApple&dc&page={page}&qid=1681645819&rnid=1692911031&ref=sr_pg_{page}',
     'PAGES_COUNT':2,
-    'pars': False
+    'pars': True
 },
 {
     'category': 'iPhone',
     'url': 'https://www.amazon.es/s?i=electronics&bbn=665492031&rh=n%3A599370031%2Cn%3A931491031%2Cn%3A665492031%2Cn%3A17425698031%2Cp_89%3AApple&dc&page={page}&qid=1685990505&rnid=665492031&ref=sr_pg_{page}',
     'PAGES_COUNT':2,
-    'pars': False
+    'pars': True
     #'PAGES_COUNT':27
 },
 {
     'category': 'iPad',
     'url': 'https://www.amazon.es/s?i=computers&bbn=938010031&rh=n%3A667049031%2Cn%3A667050031%2Cn%3A938010031%2Cp_89%3AApple&page={page}&qid=1685814004&ref=sr_pg_{page}',
     'PAGES_COUNT':1,
-    'pars': False
+    'pars': True
     #'PAGES_COUNT':11
 },
 {
     'category': 'Apple Watch',
     'url': 'https://www.amazon.es/s?i=electronics&bbn=665492031&rh=n%3A599370031%2Cn%3A931491031%2Cn%3A665492031%2Cn%3A3457446031%2Cp_89%3AApple&dc&page={page}&qid=1685815194&rnid=665492031&ref=sr_pg_{page}',
     'PAGES_COUNT':1,
-    'pars': False
+    'pars': True
     #'PAGES_COUNT':7
 },
 {
@@ -65,10 +58,6 @@ FTMS = [
 }
 ]
        
-client = MongoClient(DBCONNECT['NAMEMACHINE'], DBCONNECT['PORTDB'])
-#client = MongoClient('mongodb+srv://admin:Zazimja129shura@cluster0.ofiehaa.mongodb.net/bldb')
-db = client[DBCONNECT['NAMEDB']]
-
 def pars_new_card_into_db(ftm):
     #dbservice.chek_so_name(db, 'name', 'model')  
     PAGES_COUNT = ftm['PAGES_COUNT']
@@ -77,7 +66,7 @@ def pars_new_card_into_db(ftm):
     data = scanservice.getDataFromJsonFile(jsonfilename)
     
     #d1 = DefaultMunch.fromDict(data, DataScraps())
-    data = dict2obj(data)
+    #data = dict2obj(data)
         
     if len(data) == 0:
         urls = scanservice.getDataFromJsonFile(jsonUrlFileName)
@@ -98,8 +87,8 @@ def pars_new_card_into_db(ftm):
         #     scanservice.dump_to_json(jsonfilename, dataJson)
     
     if len(data) > 0:
-        dbservice.clear_all_product(ftm['category'])
-        dbservice.check_product(data)
+        dbservice_postgres.clear_store_data('amazon', ftm['category'])
+        dbservice_postgres.save_scraped_products(data, store_id='amazon')
 
 def crawl_products(pages_count, ftm):
     """
@@ -157,7 +146,238 @@ def check_property(techs, text):
         ret = techs.get(text)
     return ret
 
+def parse_jsonld_product(soup):
+    """Find Product object in any JSON-LD script."""
+    for script in soup.find_all('script', type='application/ld+json'):
+        try:
+            data = json.loads(script.string or '{}')
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                if item.get('@type') == 'Product':
+                    return item
+                for sub in item.get('@graph', []) or []:
+                    if sub.get('@type') == 'Product':
+                        return sub
+        except (json.JSONDecodeError, TypeError, AttributeError):
+            continue
+    return None
+
+
+def extract_amazon_price(soup):
+    """Try multiple selectors to find price on Amazon."""
+    selectors = [
+        ('div', {'id': 'corePriceDisplay_desktop_feature_div'}),
+        ('div', {'id': 'corePrice_feature_div'}),
+        ('span', {'class': 'a-price aok-align-center reinventPricePriceToPayMargin priceToPay'}),
+        ('span', {'class': 'a-price a-text-price a-size-medium apexPriceToPay'}),
+        ('span', {'class': 'a-price'}),
+    ]
+    for tag, attrs in selectors:
+        block = soup.find(tag, attrs)
+        if block:
+            offscreen = block.find('span', class_='a-offscreen')
+            if offscreen:
+                txt = offscreen.get_text(strip=True)
+                if txt and '€' in txt or any(c.isdigit() for c in txt):
+                    return txt, block
+    return None, None
+
+
 def parse_products(urls, ftm, dataScraps:list[DataScraps] = None) -> list[DataScraps]:
+    """Parse product details with JSON-LD fallbacks and try/except safety."""
+    skipped = []
+    data = dataScraps if dataScraps else []
+    driver = driver_init()
+
+    for number, url in enumerate(urls, start=1):
+        print(f'#{number}/{len(urls)}, product: {url}')
+        scrapsData = DataScraps(vendor=VENDOR)
+
+        try:
+            soup = get_html(driver, url, ftm)
+        except Exception as e:
+            print(f'  ❌ get_html failed: {e}')
+            skipped.append(url)
+            continue
+
+        scrapsData.url = url
+        if url.find('/ref=') > 0:
+            scrapsData.url = url[0:url.find('/ref=')].strip()
+        scrapsData.sku = scrapsData.url[scrapsData.url.rfind('/')+1:]
+        scrapsData.url = url = f'{HOST}/dp/{scrapsData.sku}'
+
+        if soup is None:
+            print('  ❌ empty soup')
+            skipped.append(url)
+            continue
+
+        scrapsData.manufacturer = 'Apple'
+        scrapsData.category = ftm['category']
+
+        # === JSON-LD як головний джерело ===
+        jsonld = parse_jsonld_product(soup) or {}
+
+        # === Name ===
+        try:
+            name_tag = soup.find('span', id='productTitle') or soup.find('span', class_='a-size-large product-title-word-break')
+            if name_tag:
+                scrapsData.name = unicodedata.normalize('NFKD', name_tag.get_text(strip=True))
+            elif jsonld.get('name'):
+                scrapsData.name = jsonld['name']
+            else:
+                print('  ⚠️ no name found, skip')
+                skipped.append(url)
+                continue
+        except Exception as e:
+            print(f'  ⚠️ name: {e}')
+
+        # === Specs/Techs ===
+        techs = {}
+        try:
+            for row in soup.find_all('tr', class_='a-spacing-small'):
+                k_cell = row.find('td', class_='a-span3')
+                v_cell = row.find('td', class_='a-span9')
+                if k_cell and v_cell:
+                    techs[k_cell.get_text(strip=True)] = v_cell.get_text(strip=True)
+        except Exception as e:
+            print(f'  ⚠️ techs: {e}')
+        scrapsData.techs = techs
+        scrapsData.display = check_property(techs, 'Tamaño de pantalla')
+        if scrapsData.display and 'Pulgadas' not in scrapsData.display:
+            scrapsData.display = f'{scrapsData.display} Pulgadas'
+        scrapsData.hdd = check_property(techs, 'Tamaño del disco duro')
+        scrapsData.memory = check_property(techs, 'Tamaño de memoria RAM instalada')
+        scrapsData.color = check_property(techs, 'Color')
+
+        # === SKU (variant ASIN) ===
+        try:
+            attach = soup.find('input', id='attach-baseAsin')
+            if attach and attach.get('value'):
+                scrapsData.sku = attach.get('value')
+        except Exception:
+            pass
+
+        # === Images: JSON-LD → ImageBlockATF → og:image → imgTagWrapperId ===
+        images = []
+        try:
+            img_block = soup.find('div', id='imageBlockVariations_feature_div')
+            if img_block:
+                script_tag = img_block.find('script')
+                if script_tag and script_tag.string:
+                    s = script_tag.string
+                    idx = s.find("jQuery.parseJSON(")
+                    if idx >= 0:
+                        end = s.find("}')", idx)
+                        if end >= 0:
+                            jstext = '[' + s[idx + len("jQuery.parseJSON(") + 1:end + 1] + ']'
+                            try:
+                                d = json.loads(jstext)
+                                if d and d[0].get('colorImages'):
+                                    for color, imgs in d[0]['colorImages'].items():
+                                        if d[0].get('colorToAsin', {}).get(color, {}).get('asin') == scrapsData.sku:
+                                            images = [i.get('hiRes') for i in imgs if i.get('hiRes')]
+                                            break
+                            except json.JSONDecodeError:
+                                pass
+        except Exception as e:
+            print(f'  ⚠️ images (variations): {e}')
+
+        if not images:
+            try:
+                for sc in soup.find_all('script', type='text/javascript'):
+                    txt = sc.get_text(strip=True)
+                    if 'ImageBlockATF' in txt and '"colorImages"' in txt:
+                        st = txt.find('"colorImages"')
+                        en = txt.find('"colorToAsin"')
+                        if st > 0 and en > st:
+                            try:
+                                obj = json.loads('{' + txt[st:en].rstrip(',') + '}')
+                                for img in obj['colorImages'].get('initial', []):
+                                    u = img.get('hiRes') or img.get('large')
+                                    if u: images.append(u)
+                            except json.JSONDecodeError:
+                                pass
+                        break
+            except Exception as e:
+                print(f'  ⚠️ images (ATF): {e}')
+
+        if not images and jsonld.get('image'):
+            jimg = jsonld['image']
+            images = [jimg] if isinstance(jimg, str) else list(jimg)[:10]
+
+        if not images:
+            try:
+                wrap = soup.find('div', id='imgTagWrapperId')
+                if wrap:
+                    img_tag = wrap.find('img')
+                    if img_tag and img_tag.get('src'):
+                        images = [img_tag.get('src')]
+            except Exception:
+                pass
+
+        scrapsData.images = images
+
+        # === Variants (other colors) ===
+        try:
+            tw = soup.find('div', id='twisterContainer')
+            if tw:
+                for li in tw.find_all('li'):
+                    asin = li.get('data-defaultasin')
+                    if asin and asin != scrapsData.sku:
+                        var_url = f'{HOST}/dp/{asin}'
+                        if var_url not in urls:
+                            urls.append(var_url)
+        except Exception:
+            pass
+
+        # === Price ===
+        price_text, price_block = extract_amazon_price(soup)
+        if price_text:
+            try:
+                scrapsData.price = float(scanservice.price_without_space(price_text))
+            except ValueError:
+                pass
+        if scrapsData.price == 0 and jsonld.get('offers'):
+            offers = jsonld['offers']
+            if isinstance(offers, list): offers = offers[0]
+            try:
+                scrapsData.price = float(offers.get('price') or offers.get('lowPrice') or 0)
+            except (ValueError, TypeError):
+                pass
+
+        # === Old price ===
+        if price_block:
+            try:
+                old = price_block.find('div', class_='a-section a-spacing-small aok-align-center')
+                if old:
+                    off = old.find('span', class_='a-offscreen')
+                    if off:
+                        scrapsData.oldprice = float(scanservice.price_without_space(off.get_text(strip=True)))
+            except Exception:
+                pass
+
+        # === Availability ===
+        scrapsData.available = 'Vendido'
+        try:
+            av = soup.find('span', class_='a-size-medium a-color-success')
+            if av:
+                scrapsData.available = av.get_text(strip=True).replace('.', '')
+        except Exception:
+            pass
+
+        if scrapsData.price == 0:
+            print(f'  ⚠️ no price found, skip {scrapsData.sku}')
+            skipped.append(url)
+            continue
+
+        # scrapsData.pars_name()  # legacy mongo logic
+        data.append(scrapsData)
+        print(f'  ✅ {scrapsData.name[:60]} — {scrapsData.price}€')
+
+    close_driver(driver)
+    if skipped:
+        print(f'\n⚠️ Skipped {len(skipped)} products')
+    return data
     """
     Парсинг полей:
         название, цена и таблица характеристик
@@ -222,7 +442,8 @@ def parse_products(urls, ftm, dataScraps:list[DataScraps] = None) -> list[DataSc
             scrapsData.memory = check_property(techs, 'Tamaño de memoria RAM instalada')
             scrapsData.color = check_property(techs, 'Color')
 
-            scrapsData.techs = dict2obj(techs)
+            #scrapsData.techs = dict2obj(techs)
+            scrapsData.techs = techs
             if soup.find('input', id='attach-baseAsin') is None:
                 sku = scrapsData.sku
             else:
@@ -337,7 +558,7 @@ def parse_products(urls, ftm, dataScraps:list[DataScraps] = None) -> list[DataSc
                 scrapsData.available = 'En stock'
 
             #scrapsData = pars_name(db,scrapsData)
-            scrapsData.pars_name()
+            # scrapsData.pars_name()  # legacy Mongo logic
             data.append(scrapsData)
 
         except ImportError:
@@ -353,21 +574,21 @@ def parse_products(urls, ftm, dataScraps:list[DataScraps] = None) -> list[DataSc
 import sys
 sys.setrecursionlimit(1500)
 
-def find_model(s:str, retModels:list[str] = [])->list[str]:
-    if len(s) > 0:
-        for n in s.split(' '):
-            s = s.replace(n,'').strip()
-            model = dbservice.chek_so_name(n, 'model')
-            if len(model) > 0:
-                retModels.append(model)
-                find_model(s=s, retModels = retModels)
-            if len(retModels) > 0:
-                break
+# def find_model(s:str, retModels:list[str] = [])->list[str]:
+#     if len(s) > 0:
+#         for n in s.split(' '):
+#             s = s.replace(n,'').strip()
+#             model = dbservice.chek_so_name(n, 'model')
+#             if len(model) > 0:
+#                 retModels.append(model)
+#                 find_model(s=s, retModels = retModels)
+#             if len(retModels) > 0:
+#                 break
     
-    return retModels
+#     return retModels
 
 def main():
-    clear_spec()
+    # clear_spec()  # not needed for Postgres
  
     for ftm in FTMS:
         if ftm['pars']:

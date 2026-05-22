@@ -20,15 +20,24 @@ from typing import Optional
 # === CONNECTION ===
 # Set DATABASE_URL env var, or paste your Neon connection string here:
 # DATABASE_URL = "postgresql://neondb_owner:****@ep-xxx.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+def _load_env():
+    """Load .env file from scraper root if exists."""
+    try:
+        from dotenv import load_dotenv
+        # Шукаємо .env у батьківській папці (scraper/)
+        env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+        load_dotenv(env_path)
+    except ImportError:
+        pass  # dotenv не встановлено — просто пропускаємо
 
 def get_connection():
     """Connect to Neon Postgres using DATABASE_URL env variable."""
+    _load_env()
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
         raise RuntimeError(
-            "DATABASE_URL not set. Get it from Neon dashboard and run:\n"
-            "  Windows:  set DATABASE_URL=postgresql://...\n"
-            "  Linux/Mac:  export DATABASE_URL=postgresql://..."
+            "DATABASE_URL not set. Create .env in scraper/ with:\n"
+            "  DATABASE_URL=postgresql://neondb_owner:****@ep-...neon.tech/neondb?sslmode=require"
         )
     return psycopg2.connect(db_url)
 

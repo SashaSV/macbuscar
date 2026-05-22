@@ -26,9 +26,9 @@ def url2filename(url):
         raise ValueError  # reject '%2f' or 'dir%5Cbasename.ext' on Windows
     return basename
 
-CURR_DIR = os.getcwd()
-if CURR_DIR.find("Python.Script") < 0 :
-    CURR_DIR = '{0}\\Python.Script'.format(CURR_DIR)
+# Кешуємо JSON та HTML в папці scraper/cache/
+CURR_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache')
+os.makedirs(CURR_DIR, exist_ok=True)
     
 def getDataFromJsonFile(jsonfilename):
     data = []
@@ -89,13 +89,16 @@ def max_elem(data, name_item):
     return max_row
 
 def price_without_space(price_with_spac):
+    # Видаляємо валюту і пробіли
+    s = price_with_spac.replace('€', '').replace(' ', '').replace('\xa0', '').strip()
     
-    price_with_spac = price_with_spac.replace('€','')
-    price_with_spac = price_with_spac.replace('.','')
-    price_with_spac = price_with_spac.replace(',','.')
-
-    pp = price_with_spac.split()
+    # Якщо є і крапка, і кома — кома десяткова (іспанський формат: 1.299,99)
+    if '.' in s and ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    # Якщо тільки кома — це десятковий роздільник (21,41)
+    elif ',' in s:
+        s = s.replace(',', '.')
+    # Якщо тільки крапка — залишаємо як є (21.41)
+    # ...нічого не робимо
     
-    price_without_space = ''.join(pp)
-
-    return price_without_space
+    return s

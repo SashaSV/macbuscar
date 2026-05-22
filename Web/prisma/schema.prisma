@@ -22,7 +22,8 @@ model Product {
   specs       String    @default("{}")  // JSON
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
+  ean         String?   @unique          
+  matchKeys   String    @default("[]")   
   prices      Price[]
   listings    Listing[]
   reviews     Review[]
@@ -131,11 +132,13 @@ model ScrapedProduct {
   hdd          String   @default("")
   scrapedAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
+  ean          String?                       
+  matchStatus  String   @default("pending")  
   product Product? @relation(fields: [productId], references: [id])
   store   Store    @relation(fields: [storeId], references: [id])
 
   @@unique([sku, storeId])
   @@index([category])
   @@index([storeId])
+  @@index([matchStatus])                      
 }
