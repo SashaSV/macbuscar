@@ -145,7 +145,6 @@ export default function ManzanaApp() {
 
       <div style={{ maxWidth:1100, margin:'0 auto', padding:'22px 24px' }}>
         <PanelIA />
-        <PanelScraping scrapeStatus={scrapeStatus} onScrapeAll={scrapeAll} isScraping={isScraping} lastUpdated={lastUpdated} />
 
         {page==='home' ? (
           <HomePage products={products} precios={precios} scrapeStatus={scrapeStatus} onSelect={setSelProd} onCategoryClick={(c)=>{setCat(c);setPage('catalogo');}} />
