@@ -1,0 +1,13 @@
+.env
+cache/*
+!cache/.gitkeep
+__pycache__/
+*.pyc
+*.pyo
+*.html
+*.json
+.venv/
+venv/
+env/
+.idea/
+.vscode/
