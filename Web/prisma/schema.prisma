@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// === Каталог продуктів (наша існуюча структура) ===
+model Product {
+  id          Int       @id @default(autoincrement())
+  slug        String    @unique
+  nombre      String
+  cat         String
+  emoji       String    @default("📦")
+  rating      Float     @default(0)
+  tag         String    @default("")
+  desc        String    @default("")
+  fotos       String    @default("[]")  // JSON
+  fotoLabels  String    @default("[]")  // JSON
+  specs       String    @default("{}")  // JSON
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  prices      Price[]
+  listings    Listing[]
+  reviews     Review[]
+  priceHistory PriceHistory[]
+  scrapedItems ScrapedProduct[]  // новий зв'язок зі скрапленими товарами
+}
+
+model Store {
+  id      String  @id
+  nombre  String
+  logo    String
+  url     String
+  badge   String  @default("")
+  delay   Int     @default(1000)
+
+  prices  Price[]
+  scrapedItems ScrapedProduct[]
+}
+
+model Price {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  storeId   String
+  price     Float
+  url       String?
+  updatedAt DateTime @updatedAt
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+}
+
+model PriceHistory {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  storeId   String
+  price     Float
+  month     String
+  year      Int
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Listing {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  precio      Float
+  estado      String
+  ciudad      String
+  vendedor    String
+  descripcion String   @default("")
+  fotos       String   @default("[]")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id        Int    @id @default(autoincrement())
+  productId Int
+  fuente    String
+  nota      Float
+  texto     String
+  fecha     String
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ScrapingLog {
+  id        Int      @id @default(autoincrement())
+  storeId   String
+  productId Int
+  status    String
+  price     Float?
+  error     String?
+  duration  Int?
+  createdAt DateTime @default(now())
+}
+
+// === Сирі дані від Python-скрапера (DataScraps) ===
+model ScrapedProduct {
+  id           Int      @id @default(autoincrement())
+  sku          String   // унікальний ідентифікатор товару в магазині
+  storeId      String   // amazon, mediamarkt, etc
+  productId    Int?     // зв'язок з каталогом (якщо співпало)
+  url          String
+  name         String
+  manufacturer String   @default("Apple")
+  category     String
+  subcategory  String   @default("[]")  // JSON array
+  price        Float    @default(0)
+  oldprice     Float    @default(0)
+  available    String   @default("")
+  techs        String   @default("{}")  // JSON object - всі specs
+  images       String   @default("[]")  // JSON array of URLs
+  model        String   @default("[]")  // JSON array
+  color        String   @default("")
+  year         String   @default("")
+  memory       String   @default("")
+  display      String   @default("")
+  cpu          String   @default("")
+  hdd          String   @default("")
+  scrapedAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id])
+  store   Store    @relation(fields: [storeId], references: [id])
+
+  @@unique([sku, storeId])
+  @@index([category])
+  @@index([storeId])
+}
