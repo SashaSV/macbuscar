@@ -8,6 +8,26 @@ const safeParse = (s, fallback) => {
   try { return JSON.parse(s); } catch { return fallback; }
 };
 
+/**
+ * GET /api/products
+ * Returns Products with embedded Variants and aggregated price info.
+ *
+ * Response shape (per Product):
+ * {
+ *   id, slug, nombre, cat, family, emoji, rating, tag, desc, basePrice,
+ *   fotos, fotoLabels, specs,
+ *   minPrice,      // lowest current scraped price across all variants/stores
+ *   maxPrice,      // highest
+ *   bestStore,     // store id offering minPrice
+ *   variantsCount, // total variants
+ *   variants: [    // each variant with its prices
+ *     { id, nombre, memory, color, colorHex, connectivity, cpu, msrp, prices: [{...}] }
+ *   ],
+ *   reviews: [...],
+ *   priceHistory: [...],  // aggregated across variants for the cheapest variant
+ *   listings: [...]       // 2nd-hand for any variant
+ * }
+ */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,53 +37,141 @@ export async function GET(request) {
     const products = await prisma.product.findMany({
       where: {
         ...(cat && cat !== 'all' ? { cat } : {}),
-        ...(q ? { nombre: { contains: q } } : {}),
+        ...(q ? { nombre: { contains: q, mode: 'insensitive' } } : {}),
+        // Show only products that have at least one variant with at least one price
+        variants: {
+          some: {
+            prices: {
+              some: {
+                price: { gt: 0 },
+              },
+            },
+          },
+        },
       },
       include: {
-        prices: { include: { store: true } },
         reviews: true,
-        priceHistory: { orderBy: { createdAt: 'asc' } },
-        listings: { where: { active: true }, orderBy: { createdAt: 'desc' } },
+        variants: {
+          include: {
+            prices: { include: { store: true } },
+            priceHistory: { orderBy: { date: 'asc' }, take: 30 },
+            listings: { where: { active: true }, orderBy: { createdAt: 'desc' } },
+          },
+        },
       },
-      orderBy: { id: 'asc' },
+      orderBy: [
+        { cat: 'asc' },
+        { basePrice: 'asc' },
+      ],
     });
 
-    const serialized = products.map(p => {
+    // Filter: keep only Products that have at least one Variant with at least one Price (any store)
+    const activeProducts = products.filter(p =>
+      p.variants.some(v => v.prices.some(pr => pr.price > 0))
+    );
+
+    const serialized = activeProducts.map(p => {
       const fotos = safeParse(p.fotos, []);
       const fotoLabels = safeParse(p.fotoLabels, []);
       const specs = safeParse(p.specs, {});
-      return {
-        id: p.id,
-        slug: p.slug,
-        nombre: p.nombre,
-        cat: p.cat,
-        emoji: p.emoji,
-        rating: p.rating,
-        tag: p.tag,
-        desc: p.desc,
-        fotos,
-        fotoLabels,
-        specs,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-        prices: p.prices.map(pr => ({...pr,
+
+      // Aggregate variant data
+      const variantsOut = p.variants.map(v => ({
+        id: v.id,
+        nombre: v.nombre,
+        sku: v.sku,
+        ean: v.ean,
+        memory: v.memory,
+        color: v.color,
+        colorHex: v.colorHex,
+        display: v.display,
+        cpu: v.cpu,
+        gpu: v.gpu,
+        connectivity: v.connectivity,
+        bandSize: v.bandSize,
+        msrp: v.msrp,
+        prices: v.prices.map(pr => ({
+          id: pr.id,
+          storeId: pr.storeId,
+          storeName: pr.store?.nombre,
+          storeLogo: pr.store?.logo,
+          price: pr.price,
+          oldPrice: pr.oldPrice,
           url: pr.url || pr.store?.url || null,
+          stock: pr.stock,
+          discountPct: pr.discountPct,
+          condition: pr.condition,
+          updatedAt: pr.updatedAt,
         })),
-        reviews: p.reviews,
-        priceHistory: p.priceHistory,
-        listings: p.listings.map(l => ({
+        listings: v.listings.map(l => ({
           id: l.id,
-          productId: l.productId,
+          variantId: l.variantId,
+          source: l.source,
           precio: l.precio,
           estado: l.estado,
           ciudad: l.ciudad,
           vendedor: l.vendedor,
           descripcion: l.descripcion,
           fotos: safeParse(l.fotos, []),
-          active: l.active,
           createdAt: l.createdAt,
-          updatedAt: l.updatedAt,
         })),
+      }));
+
+      // Compute aggregated prices across all variants
+      const allPrices = variantsOut.flatMap(v => v.prices.map(pr => pr.price)).filter(p => p > 0);
+      const minPrice = allPrices.length ? Math.min(...allPrices) : null;
+      const maxPrice = allPrices.length ? Math.max(...allPrices) : null;
+
+      // Find best store (offering minPrice)
+      let bestStore = null;
+      let bestVariantId = null;
+      if (minPrice != null) {
+        for (const v of variantsOut) {
+          const found = v.prices.find(pr => pr.price === minPrice);
+          if (found) { bestStore = found.storeId; bestVariantId = v.id; break; }
+        }
+      }
+
+      // Use cheapest variant's price history for the chart
+      const cheapestVariant = variantsOut.find(v => v.id === bestVariantId) || variantsOut[0];
+      const priceHistory = (cheapestVariant?.prices?.[0])
+        ? (p.variants.find(v => v.id === cheapestVariant.id)?.priceHistory || [])
+        : [];
+
+      // Collect all listings across variants
+      const allListings = variantsOut.flatMap(v => v.listings);
+
+      return {
+        id: p.id,
+        slug: p.slug,
+        nombre: p.nombre,
+        cat: p.cat,
+        family: p.family,
+        emoji: p.emoji,
+        rating: p.rating,
+        tag: p.tag,
+        desc: p.desc,
+        basePrice: p.basePrice,
+        releasedAt: p.releasedAt,
+        fotos,
+        fotoLabels,
+        specs,
+        // Computed fields
+        minPrice,
+        maxPrice,
+        bestStore,
+        bestVariantId,
+        variantsCount: variantsOut.length,
+        // Full data
+        variants: variantsOut,
+        reviews: p.reviews,
+        priceHistory: priceHistory.map(ph => ({
+          date: ph.date,
+          price: ph.price,
+        })),
+        listings: allListings,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
       };
     });
 
@@ -72,6 +180,6 @@ export async function GET(request) {
     });
   } catch (err) {
     console.error('[GET /api/products]', err);
-    return NextResponse.json({ error: 'Error al obtener productos' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al obtener productos', message: err.message }, { status: 500 });
   }
 }

@@ -1,70 +1,187 @@
+'use client';
 import TarjetaProducto from '../ui/TarjetaProducto';
 import { CATS } from '../shared/constants';
 import { getPrecioMap, getPriceValue } from '../shared/utils';
+import { CATEGORY_ICON, getProductIcon } from '../shared/categoryIcons';
 
 export default function HomePage({ products, precios, scrapeStatus, onSelect, onCategoryClick }) {
-  const novedades = products.filter(p=>['Novedad','Pro','Ultra','Exclusivo'].includes(p.tag));
-  const populares = [...products].sort((a,b)=>b.rating-a.rating).slice(0,4);
-  const mejorOferta = [...products].sort((a,b)=>{
-    const aH=a.priceHistory||[], bH=b.priceHistory||[];
-    const drop = h => h.length>=2 ? h[0].price-h[h.length-1].price : 0;
-    return drop(bH)-drop(aH);
-  }).slice(0,4);
+  const novedades = products.filter(p => ['Novedad','Pro','Ultra','Exclusivo'].includes(p.tag));
+  const populares = [...products].sort((a,b) => b.rating - a.rating).slice(0, 4);
+  const mejorOferta = [...products].sort((a,b) => {
+    const drop = h => (h && h.length >= 2) ? h[0].price - h[h.length-1].price : 0;
+    return drop(b.priceHistory) - drop(a.priceHistory);
+  }).slice(0, 4);
 
-  const hero = products[0];
+  // Hero: the highest-rated product with a real price
+  const hero = [...products].sort((a,b) => b.rating - a.rating).find(p => {
+    const map = precios[p.id] || getPrecioMap(p);
+    return Object.values(map).some(v => getPriceValue(v));
+  }) || products[0];
+
   const heroPrecios = hero ? (precios[hero.id] || getPrecioMap(hero)) : {};
   const heroV = Object.values(heroPrecios).map(getPriceValue).filter(Boolean);
   const heroMin = heroV.length ? Math.min(...heroV) : null;
+  const heroIcon = hero ? getProductIcon(hero) : 'ti-package';
 
-  const Section = ({ title, icon, items }) => (
-    <div style={{ marginBottom:34 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-        <span style={{ fontSize:20 }}>{icon}</span>
-        <div style={{ fontSize:18, fontWeight:900 }}>{title}</div>
-        <div style={{ flex:1, height:1, background:'linear-gradient(90deg,#2a2a2a,transparent)', marginLeft:8 }} />
+  const Section = ({ title, items }) => {
+    if (!items.length) return null;
+    return (
+      <div style={{ marginBottom: 34 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
+          <div style={{ fontSize:18, fontWeight:500, color:'#1d1d1f', letterSpacing:-0.3 }}>{title}</div>
+          <div style={{ flex:1, height:1, background:'linear-gradient(90deg,rgba(0,0,0,0.1),transparent)' }} />
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:20 }}>
+          {items.map(p => (
+            <TarjetaProducto key={p.id} prod={p} precios={precios} scrapeStatus={scrapeStatus} onClick={() => onSelect(p)} />
+          ))}
+        </div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:12 }}>
-        {items.map(p=><TarjetaProducto key={p.id} prod={p} precios={precios} scrapeStatus={scrapeStatus} onClick={()=>onSelect(p)} />)}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div>
+      {/* HERO */}
       {hero && (
-        <div style={{ background:'linear-gradient(135deg,#0d1117 0%,#1a1a2e 50%,#16213e 100%)', borderRadius:20, padding:'30px 26px', marginBottom:30, border:'1px solid #1e3a5f', position:'relative', overflow:'hidden' }}>
-          <div style={{ position:'absolute', top:-40, right:-40, width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle,rgba(37,99,235,.15),transparent 70%)' }} />
-          <div style={{ display:'flex', gap:20, alignItems:'center', flexWrap:'wrap' }}>
-            <div style={{ flex:1, minWidth:200 }}>
-              <div style={{ fontSize:11, color:'#60a5fa', fontWeight:800, letterSpacing:2, marginBottom:8 }}>DESTACADO DEL MES</div>
-              <div style={{ fontSize:24, fontWeight:900, lineHeight:1.2, marginBottom:8 }}>{hero.nombre}</div>
-              <div style={{ fontSize:13, color:'#888', lineHeight:1.6, marginBottom:16, maxWidth:360 }}>{hero.desc}</div>
-              <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-                {heroMin&&<div><div style={{ fontSize:11, color:'#555' }}>Desde</div><div style={{ fontSize:26, fontWeight:900, color:'#34c759', fontFamily:'ui-monospace,monospace' }}>{heroMin}€</div></div>}
-                <button onClick={()=>onSelect(hero)} style={{ background:'linear-gradient(90deg,#2563eb,#1d4ed8)', border:'none', borderRadius:11, padding:'10px 20px', color:'#fff', fontSize:13, fontWeight:800, cursor:'pointer' }}>Ver oferta →</button>
-              </div>
+        <div style={{
+          background: 'rgba(255,255,255,0.45)',
+          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+          border: '0.5px solid rgba(255,255,255,0.7)',
+          borderRadius: 24,
+          padding: '28px 26px',
+          marginBottom: 28,
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(168,85,247,0.08)',
+        }}>
+          {/* purple glow inside hero */}
+          <div style={{
+            position: 'absolute',
+            top: -60, right: -60,
+            width: 200, height: 200,
+            background: 'rgba(168,85,247,0.3)',
+            borderRadius: '50%',
+            filter: 'blur(50px)',
+            pointerEvents: 'none',
+          }} />
+
+          <div style={{ position:'relative', display:'flex', gap:24, alignItems:'center', flexWrap:'wrap' }}>
+            <div style={{ flex:1, minWidth:220 }}>
+              <div style={{
+                display:'inline-block',
+                background:'rgba(168,85,247,0.15)',
+                border:'0.5px solid rgba(168,85,247,0.3)',
+                padding:'3px 12px',
+                borderRadius:980,
+                fontSize:10,
+                fontWeight:500,
+                letterSpacing:1.2,
+                color:'#7c3aed',
+                marginBottom:12,
+              }}>DESTACADO DEL MES</div>
+
+              <h1 style={{
+                fontSize:'clamp(22px, 4vw, 30px)',
+                fontWeight:500,
+                letterSpacing:-0.6,
+                color:'#1d1d1f',
+                lineHeight:1.15,
+                margin:'0 0 8px',
+              }}>
+                {hero.nombre}
+              </h1>
+
+              {hero.desc && (
+                <p style={{ fontSize:13, color:'rgba(29,29,31,0.6)', maxWidth:380, lineHeight:1.5, margin:'0 0 16px' }}>
+                  {hero.desc}
+                </p>
+              )}
+
+              {heroMin != null && (
+                <>
+                  <div style={{ fontSize:11, color:'rgba(29,29,31,0.5)', marginBottom:2 }}>Desde</div>
+                  <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:14 }}>
+                    <span style={{ fontSize:32, fontWeight:500, color:'#1d1d1f', letterSpacing:-0.7 }}>
+                      {heroMin.toLocaleString('es-ES')} €
+                    </span>
+                  </div>
+                </>
+              )}
+
+              <button
+                onClick={() => onSelect(hero)}
+                style={{
+                  background:'#1d1d1f',
+                  color:'#fff',
+                  border:'none',
+                  borderRadius:980,
+                  padding:'10px 22px',
+                  fontSize:13,
+                  fontWeight:500,
+                  cursor:'pointer',
+                  display:'inline-flex',
+                  alignItems:'center',
+                  gap:6,
+                  transition:'transform .2s',
+                }}
+                onMouseDown={e => e.currentTarget.style.transform='scale(0.97)'}
+                onMouseUp={e => e.currentTarget.style.transform='scale(1)'}
+                onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}
+              >
+                Ver oferta <i className="ti ti-arrow-right" aria-hidden="true" style={{ fontSize:14 }} />
+              </button>
             </div>
-            <div style={{ fontSize:80, filter:'drop-shadow(0 0 40px rgba(37,99,235,.3))' }}>{hero.emoji}</div>
+
+            <div style={{
+              width: 160, height: 160,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              flexShrink: 0,
+            }}>
+              <i className={`ti ${heroIcon}`} aria-hidden="true" style={{
+                fontSize: 140,
+                color: '#1d1d1f',
+                filter: 'drop-shadow(0 12px 24px rgba(168,85,247,0.2))',
+              }} />
+            </div>
           </div>
         </div>
       )}
 
-      <div style={{ display:'flex', gap:9, marginBottom:26, flexWrap:'wrap' }}>
-        {CATS.filter(c=>c.id!=='all').map(c=>(
-          <div key={c.id}
-            onClick={()=>onCategoryClick?.(c.id)}
-            style={{ display:'flex', alignItems:'center', gap:7, background:'#111', border:'1px solid #1e1e1e', borderRadius:12, padding:'9px 14px', cursor:'pointer', transition:'all .2s' }}
-            onMouseEnter={e=>{e.currentTarget.style.background='#1a1a1a';e.currentTarget.style.borderColor='#2563eb';}}
-            onMouseLeave={e=>{e.currentTarget.style.background='#111';e.currentTarget.style.borderColor='#1e1e1e';}}>
-            <span style={{ fontSize:18 }}>{c.icon}</span>
-            <span style={{ fontSize:12, fontWeight:700, color:'#aaa' }}>{c.label}</span>
-          </div>
-        ))}
+      {/* Categories */}
+      <div style={{ display:'flex', gap:8, marginBottom:28, flexWrap:'wrap' }}>
+        {CATS.filter(c => c.id !== 'all').map(c => {
+          const iconClass = CATEGORY_ICON[c.id] || 'ti-apps';
+          return (
+            <div
+              key={c.id}
+              onClick={() => onCategoryClick?.(c.id)}
+              style={{
+                display:'flex', alignItems:'center', gap:8,
+                background:'rgba(255,255,255,0.55)',
+                backdropFilter:'blur(20px) saturate(180%)',
+                WebkitBackdropFilter:'blur(20px) saturate(180%)',
+                border:'0.5px solid rgba(255,255,255,0.8)',
+                borderRadius:980,
+                padding:'8px 14px',
+                cursor:'pointer',
+                boxShadow:'inset 0 1px 0 rgba(255,255,255,0.9)',
+                transition:'transform .2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
+            >
+              <i className={`ti ${iconClass}`} aria-hidden="true" style={{ fontSize:16, color:'#1d1d1f' }} />
+              <span style={{ fontSize:12, fontWeight:500, color:'#1d1d1f' }}>{c.label}</span>
+            </div>
+          );
+        })}
       </div>
 
-      <Section title="Novedades" icon="✨" items={novedades} />
-      <Section title="Más populares" icon="🔥" items={populares} />
-      <Section title="Mejor bajada de precio" icon="📉" items={mejorOferta} />
+      <Section title="Novedades" items={novedades} />
+      <Section title="Más populares" items={populares} />
+      <Section title="Mejor bajada de precio" items={mejorOferta} />
     </div>
   );
 }

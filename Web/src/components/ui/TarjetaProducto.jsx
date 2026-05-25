@@ -1,57 +1,219 @@
-import Dot from './Dot';
-import { TIENDAS, TAG_COLORS } from '../shared/constants';
-import { getMejor, getPrecioMap, getPriceValue } from '../shared/utils';
+'use client';
+import { useState } from 'react';
+import { TAG_COLORS, TIENDAS } from '../shared/constants';
+import { getPrecioMap, getMejor } from '../shared/utils';
 
-export default function TarjetaProducto({ prod, precios, scrapeStatus, onClick }) {
-  const pP = precios[prod.id] || getPrecioMap(prod);
-  const pS = scrapeStatus[prod.id] || {};
-  const v = Object.values(pP).map(getPriceValue).filter(Boolean);
-  const minP = v.length ? Math.min(...v) : null;
-  const maxP = v.length ? Math.max(...v) : null;
-  const [mejId] = getMejor(pP);
-  const mejT = TIENDAS.find(t=>t.id===mejId);
-  const listings = prod.listings || [];
-  const mejBU = listings.length ? Math.min(...listings.map(l=>l.precio)) : null;
-  const isLoading = Object.values(pS).some(s=>s==='loading');
+export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeStatus, onClick }) {
+  const [hovered, setHovered] = useState(false);
+  // Support BOTH old (tiendas, abrir) and new (precios, onClick) prop styles
+  const handleClick = onClick || abrir;
+  const tiendaList = tiendas || TIENDAS || [];
+
+  const precioMap = precios?.[prod.id] || getPrecioMap(prod);
+  const mejor = getMejor(prod);
+
+  // Find best store safely
+  const mejorTienda = mejor && tiendaList.length
+    ? tiendaList.find(t => t.id === mejor.tiendaId || t.id === mejor.storeId)
+    : null;
+
+  // Parse photos
+  let fotos = [];
+  try { fotos = typeof prod.fotos === 'string' ? JSON.parse(prod.fotos) : (prod.fotos || []); }
+  catch { fotos = []; }
+  const hasRealPhoto = fotos.length > 0 && typeof fotos[0] === 'string' && fotos[0].startsWith('http');
+
+  const tagColor = TAG_COLORS?.[prod.tag] || '#86868b';
+
+  // Best price: from precios map OR product.minPrice OR product.basePrice
+  let bestPrice = null;
+  let bestStoreId = null;
+  if (precioMap && typeof precioMap === 'object') {
+    for (const [storeId, val] of Object.entries(precioMap)) {
+      const p = typeof val === 'object' ? val.price : val;
+      if (typeof p === 'number' && p > 0 && (bestPrice == null || p < bestPrice)) {
+        bestPrice = p;
+        bestStoreId = storeId;
+      }
+    }
+  }
+  if (bestPrice == null && mejor?.precio) bestPrice = mejor.precio;
+  if (bestPrice == null && prod.minPrice) bestPrice = prod.minPrice;
+  if (bestPrice == null && prod.basePrice) bestPrice = prod.basePrice;
+
+  const storeName = bestStoreId
+    ? tiendaList.find(t => t.id === bestStoreId)?.nombre
+    : mejorTienda?.nombre;
+
+  const ahorro = (bestPrice && prod.specs?.precioReferencia)
+    ? Math.round(prod.specs.precioReferencia - bestPrice)
+    : null;
 
   return (
-    <div onClick={onClick}
-      style={{ background:'linear-gradient(145deg,#161616,#111)', border:`1px solid ${isLoading?'#1e3a5f':'#1e1e1e'}`, borderRadius:18, padding:18, cursor:'pointer', transition:'all .25s', position:'relative', overflow:'hidden', animation:'slideUp .3s ease' }}
-      onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow='0 16px 48px rgba(0,0,0,.7)';e.currentTarget.style.border=`1px solid ${isLoading?'#2563eb':'#333'}`;}}
-      onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='none';e.currentTarget.style.border=`1px solid ${isLoading?'#1e3a5f':'#1e1e1e'}`;}}>
+    <div
+      onClick={() => handleClick && handleClick(prod)}
+      style={{
+        background: '#fff',
+        borderRadius: 18,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        border: '1px solid rgba(0,0,0,0.05)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+      }}
+      onMouseEnter={e => {
+        setHovered(true);
+        e.currentTarget.style.transform = 'translateY(-4px)';
+        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)';
+      }}
+      onMouseLeave={e => {
+        setHovered(false);
+        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+      }}
+    >
+      <div style={{
+        aspectRatio: '1',
+        background: '#f5f5f7',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {prod.tag && (
+          <div style={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            background: tagColor,
+            color: '#fff',
+            fontSize: 10,
+            fontWeight: 500,
+            padding: '4px 9px',
+            borderRadius: 980,
+            letterSpacing: '0.2px',
+            zIndex: 1,
+          }}>
+            {prod.tag}
+          </div>
+        )}
 
-      {prod.tag && <div style={{ position:'absolute', top:12, right:12, background:TAG_COLORS[prod.tag]||'#555', color:'#fff', fontSize:9, fontWeight:900, padding:'3px 8px', borderRadius:20, letterSpacing:1 }}>{prod.tag}</div>}
-      {isLoading && <div style={{ position:'absolute', top:12, left:12, display:'flex', alignItems:'center', gap:4 }}><Dot status="loading"/><span style={{ fontSize:9, color:'#2563eb' }}>Scraping</span></div>}
-
-      <div style={{ display:'flex', gap:4, marginBottom:9, marginTop:isLoading?12:0 }}>
-        {(prod.fotos||[]).slice(0,4).map((c,i)=><div key={i} style={{ flex:1, height:4, borderRadius:2, background:c }} />)}
+        {hasRealPhoto ? (
+          <>
+            <img
+              src={fotos[0]}
+              alt={prod.nombre}
+              style={{
+                position: 'absolute',
+                maxWidth: '220%',
+                maxHeight: '220%',
+                objectFit: 'contain',
+                transform: 'scale(1.15)',
+                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.08))',
+                opacity: hovered && fotos.length > 1 ? 0 : 1,
+                transition: 'opacity 0.35s ease',
+              }}
+              onError={e => {
+                e.target.style.display = 'none';
+                const fallback = document.createElement('div');
+                fallback.style.fontSize = '70px';
+                fallback.textContent = prod.emoji || '📦';
+                e.target.parentElement.appendChild(fallback);
+              }}
+            />
+            {fotos.length > 1 && (
+              <img
+                src={fotos[1]}
+                alt={prod.nombre}
+                style={{
+                  position: 'absolute',
+                  maxWidth: '220%',
+                  maxHeight: '220%',
+                  objectFit: 'contain',
+                  transform: hovered ? 'scale(1.18)' : 'scale(1.15)',
+                  filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.08))',
+                  opacity: hovered ? 1 : 0,
+                  transition: 'opacity 0.35s ease, transform 0.35s ease',
+                }}
+              />
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: 70 }}>{prod.emoji || '📦'}</div>
+        )}
       </div>
 
-      {prod.fotos && prod.fotos.length > 0 && prod.fotos[0].startsWith('http') ? (
-        <div style={{ height:80, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:8 }}>
-          <img src={prod.fotos[0]} alt={prod.nombre} style={{ maxHeight:80, maxWidth:'100%', objectFit:'contain' }} onError={e=>{e.target.style.display='none';e.target.parentElement.innerHTML=prod.emoji;e.target.parentElement.style.fontSize='34px';}} />
+      <div style={{ padding: '16px 16px 18px' }}>
+        <div style={{
+          fontSize: 11,
+          color: '#6e6e73',
+          marginBottom: 4,
+          letterSpacing: '0.1px',
+          textTransform: 'capitalize',
+        }}>
+          {prod.cat}
         </div>
-      ) : (
-        <div style={{ fontSize:34, textAlign:'center', marginBottom:8 }}>{prod.emoji}</div>
-      )}
-      <div style={{ fontSize:12, fontWeight:700, color:'#eee', marginBottom:2, lineHeight:1.3 }}>{prod.nombre}</div>
-      <div style={{ fontSize:10, color:'#f5a623', marginBottom:10 }}>{'★'.repeat(Math.round(prod.rating))} <span style={{ color:'#444' }}>{prod.rating}</span></div>
 
-      <div style={{ borderTop:'1px solid #1e1e1e', paddingTop:10 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:mejBU!=null?8:0 }}>
-          <div>
-            <div style={{ fontSize:9, color:'#444', letterSpacing:1 }}>NUEVO · {isLoading?<span style={{ color:'#2563eb' }}>…</span>:mejT?.nombre}</div>
-            <div style={{ fontSize:18, fontWeight:900, color:'#f0f0f0', fontFamily:'ui-monospace,monospace' }}>{isLoading?'—':minP?`${minP}€`:'—'}</div>
-          </div>
-          {!isLoading&&maxP&&minP&&maxP-minP>0&&<div style={{ fontSize:9, color:'#34c759', background:'#0d1f0d', border:'1px solid #1a3a1a', borderRadius:7, padding:'2px 7px' }}>-{maxP-minP}€</div>}
+        <div style={{
+          fontSize: 15,
+          fontWeight: 500,
+          lineHeight: 1.3,
+          marginBottom: 8,
+          color: '#1d1d1f',
+          letterSpacing: '-0.2px',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          minHeight: 38,
+        }}>
+          {prod.nombre}
         </div>
-        {mejBU!=null?(
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#0d0d0d', borderRadius:9, padding:'7px 9px', border:'1px solid #1e1e1e' }}>
-            <div><div style={{ fontSize:9, color:'#f5a623' }}>2ª MANO · {listings.length} anuncio{listings.length>1?'s':''}</div><div style={{ fontSize:16, fontWeight:800, color:'#f5a623', fontFamily:'ui-monospace,monospace' }}>{mejBU}€</div></div>
-            {minP&&<div style={{ fontSize:9, color:'#f5a623' }}>-{minP-mejBU}€</div>}
+
+        {prod.rating > 0 && (
+          <div style={{ fontSize: 11, color: '#6e6e73', marginBottom: 6 }}>
+            ★ {prod.rating}
           </div>
-        ):(
-          <div style={{ fontSize:10, color:'#252525', textAlign:'center', marginTop:4 }}>Sin 2ª mano</div>
+        )}
+
+        <div style={{ fontSize: 11, color: '#6e6e73', marginBottom: 2 }}>
+          {bestPrice ? 'Desde' : 'Sin precio'}
+        </div>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{
+            fontSize: 17,
+            fontWeight: 600,
+            letterSpacing: '-0.3px',
+            color: '#1d1d1f',
+          }}>
+            {bestPrice ? `${bestPrice.toLocaleString('es-ES')} €` : '—'}
+          </span>
+          {ahorro > 0 && (
+            <span style={{
+              fontSize: 11,
+              color: '#34a853',
+              fontWeight: 500,
+            }}>
+              −{ahorro} €
+            </span>
+          )}
+        </div>
+
+        {storeName && (
+          <div style={{
+            fontSize: 10,
+            color: '#86868b',
+            marginTop: 4,
+          }}>
+            en {storeName}
+          </div>
         )}
       </div>
     </div>
