@@ -141,6 +141,24 @@ export async function GET(request) {
       // Collect all listings across variants
       const allListings = variantsOut.flatMap(v => v.listings);
 
+      // Build backward-compatible precios map: { storeId: { price, url, updatedAt } }
+      // Takes the MINIMUM price per store across all variants
+      const precios = {};
+      for (const v of variantsOut) {
+        for (const pr of v.prices) {
+          if (!pr.price || pr.price <= 0) continue;
+          const cur = precios[pr.storeId];
+          if (!cur || pr.price < cur.price) {
+            precios[pr.storeId] = {
+              price: pr.price,
+              url: pr.url,
+              updatedAt: pr.updatedAt,
+              variantId: v.id,
+            };
+          }
+        }
+      }
+
       return {
         id: p.id,
         slug: p.slug,
@@ -162,6 +180,9 @@ export async function GET(request) {
         bestStore,
         bestVariantId,
         variantsCount: variantsOut.length,
+        // Backward-compatible price map for UI
+        precios,
+        prices: precios,    // alias
         // Full data
         variants: variantsOut,
         reviews: p.reviews,

@@ -17,10 +17,21 @@ export function fmtDate() {
 }
 
 export function getPrecioMap(product) {
+  // If API already provides precios map, use it directly
+  if (product.precios && typeof product.precios === 'object' && !Array.isArray(product.precios)) {
+    return product.precios;
+  }
+  // Otherwise build from prices array (legacy format)
   const map = {};
-  (product.prices || []).forEach(p => {
-    map[p.storeId] = { price: p.price, url: p.url || p.store?.url || null };
-  });
+  const prices = product.prices;
+  if (Array.isArray(prices)) {
+    prices.forEach(p => {
+      map[p.storeId] = { price: p.price, url: p.url || p.store?.url || null, updatedAt: p.updatedAt };
+    });
+  } else if (prices && typeof prices === 'object') {
+    // Already an object map
+    return prices;
+  }
   return map;
 }
 
