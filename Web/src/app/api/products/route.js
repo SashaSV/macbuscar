@@ -89,6 +89,7 @@ export async function GET(request) {
         gpu: v.gpu,
         connectivity: v.connectivity,
         bandSize: v.bandSize,
+        fotos: v.fotos,
         msrp: v.msrp,
         prices: v.prices.map(pr => ({
           id: pr.id,

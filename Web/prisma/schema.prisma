@@ -74,7 +74,7 @@ model ProductVariant {
   gpu         String?                           // "10-core GPU"
   connectivity String?                          // "Wi-Fi" | "Wi-Fi + Cellular"
   bandSize    String?                           // "45mm" | "49mm"
-  
+  fotos       Json     @default("[]")
   msrp        Float?                            // Apple official price
   matchKeys   String    @default("[]")
   

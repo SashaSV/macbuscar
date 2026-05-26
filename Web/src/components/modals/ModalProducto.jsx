@@ -24,16 +24,6 @@ const FILTER_LABELS = {
 export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne }) {
   const variants = prod.variants || [];
 
-  // Build available options per filter dimension
-  const filterOptions = useMemo(() => {
-    const opts = {};
-    for (const field of FILTER_FIELDS) {
-      const values = [...new Set(variants.map(v => v[field]).filter(Boolean))];
-      if (values.length > 1) opts[field] = values;
-    }
-    return opts;
-  }, [variants]);
-
   // Build best price map per variant: variantId → { storeId: {price,url,updatedAt} }
   const variantPriceMaps = useMemo(() => {
     const map = {};
@@ -50,15 +40,36 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     return map;
   }, [variants]);
 
-  // Find cheapest variant (default selection)
+  // Variants that have at least one active price
+  const variantsWithPrice = useMemo(
+    () => variants.filter(v => Object.keys(variantPriceMaps[v.id] || {}).length > 0),
+    [variants, variantPriceMaps]
+  );
+
+  // Build available options per filter dimension — only from priced variants
+  const filterOptions = useMemo(() => {
+    const opts = {};
+    const pool = variantsWithPrice.length ? variantsWithPrice : variants;
+    for (const field of FILTER_FIELDS) {
+      const values = [...new Set(pool.map(v => v[field]).filter(Boolean))];
+      if (values.length > 1) opts[field] = values;
+    }
+    return opts;
+  }, [variantsWithPrice, variants]);
+
+  // Find cheapest variant (default selection) — only consider priced variants
   const cheapestVariantId = useMemo(() => {
     let best = null, bestPrice = Infinity;
-    for (const v of variants) {
-      const minP = Math.min(...Object.values(variantPriceMaps[v.id] || {}).map(p => p.price));
+    const pool = variantsWithPrice.length ? variantsWithPrice : variants;
+    for (const v of pool) {
+      const priceMap = variantPriceMaps[v.id] || {};
+      const prices = Object.values(priceMap).map(p => p.price);
+      if (!prices.length) continue;
+      const minP = Math.min(...prices);
       if (minP < bestPrice) { bestPrice = minP; best = v.id; }
     }
-    return best;
-  }, [variants, variantPriceMaps]);
+    return best || (pool[0]?.id);
+  }, [variantsWithPrice, variants, variantPriceMaps]);
 
   // Initial selected filters = filters of cheapest variant
   const cheapestVariant = variants.find(v => v.id === cheapestVariantId);
@@ -158,18 +169,68 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
 
           {tab === 'Precios' && (
             <>
-              {/* Variant Filters */}
-              {Object.keys(filterOptions).length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 22 }}>
+              {/* Top row: Photo (left) + Filters (right) */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 24,
+                marginBottom: 24,
+                alignItems: 'start',
+              }}>
+                {/* LEFT: Variant photo */}
+                {(() => {
+                  let vFotos = [];
+                  try {
+                    vFotos = typeof selectedVariant?.fotos === 'string'
+                      ? JSON.parse(selectedVariant.fotos)
+                      : (selectedVariant?.fotos || []);
+                  } catch { vFotos = []; }
+                  if (!vFotos.length) {
+                    try {
+                      vFotos = typeof prod.fotos === 'string'
+                        ? JSON.parse(prod.fotos)
+                        : (prod.fotos || []);
+                    } catch { vFotos = []; }
+                  }
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'rgba(0,0,0,0.02)',
+                      borderRadius: 16,
+                      padding: 16,
+                      height: 320,
+                      overflow: 'hidden',
+                    }}>
+                      {vFotos.length ? (
+                        <img
+                          src={vFotos[0]}
+                          alt={selectedVariant?.nombre}
+                          style={{
+                            maxWidth: '180%',
+                            maxHeight: '180%',
+                            objectFit: 'contain',
+                            filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.06))',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ fontSize: 70 }}>{prod.emoji || '📦'}</div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* RIGHT: Filters */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {FILTER_FIELDS.filter(f => filterOptions[f]).map(field => (
                     <div key={field}>
                       <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(29,29,31,0.6)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>
                         {FILTER_LABELS[field] || field}
                       </div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {filterOptions[field].map(val => {
                           const active = selected[field] === val;
-                          // For color filter — render color swatch
                           if (field === 'color') {
                             const swatchVariant = variants.find(v => v.color === val);
                             const hex = swatchVariant?.colorHex || '#cccccc';
@@ -179,17 +240,17 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                                 onClick={() => setSelected(s => ({ ...s, [field]: val }))}
                                 title={val}
                                 style={{
-                                  display: 'flex', alignItems: 'center', gap: 8,
-                                  padding: '6px 12px 6px 6px',
+                                  display: 'flex', alignItems: 'center', gap: 7,
+                                  padding: '5px 11px 5px 5px',
                                   background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
                                   color: active ? '#fff' : '#1d1d1f',
                                   border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
                                   borderRadius: 980, cursor: 'pointer',
-                                  fontSize: 12, fontWeight: 500, transition: 'all .15s',
+                                  fontSize: 11, fontWeight: 500, transition: 'all .15s',
                                 }}
                               >
                                 <span style={{
-                                  width: 18, height: 18, borderRadius: '50%',
+                                  width: 16, height: 16, borderRadius: '50%',
                                   background: hex,
                                   border: '1px solid rgba(0,0,0,0.15)',
                                   display: 'inline-block',
@@ -203,12 +264,12 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                               key={val}
                               onClick={() => setSelected(s => ({ ...s, [field]: val }))}
                               style={{
-                                padding: '7px 14px',
+                                padding: '6px 12px',
                                 background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
                                 color: active ? '#fff' : '#1d1d1f',
                                 border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
                                 borderRadius: 980, cursor: 'pointer',
-                                fontSize: 12, fontWeight: 500, transition: 'all .15s',
+                                fontSize: 11, fontWeight: 500, transition: 'all .15s',
                               }}
                             >
                               {val}
@@ -219,7 +280,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
 
               {/* Selected Variant Header */}
               <div style={{
@@ -311,21 +372,45 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
 
           {tab === 'Características' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {Object.entries(prod.specs || {}).map(([k, v]) => (
-                <div key={k} style={{
-                  background: 'rgba(0,0,0,0.03)',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: 10, padding: '10px 13px',
-                }}>
-                  <div style={{ fontSize: 10, color: 'rgba(29,29,31,0.4)', marginBottom: 2 }}>{k}</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#1d1d1f' }}>{String(v)}</div>
-                </div>
-              ))}
-              {(!prod.specs || Object.keys(prod.specs).length === 0) && (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '36px 0', color: 'rgba(29,29,31,0.4)' }}>
-                  Sin características disponibles
-                </div>
-              )}
+              {Object.entries(prod.specs || {})
+                .filter(([k, v]) => {
+                  // Skip empty, null, undefined, empty arrays, empty objects
+                  if (v == null || v === '' || v === false) return false;
+                  if (Array.isArray(v) && v.length === 0) return false;
+                  if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+                  // Skip placeholder values
+                  if (typeof v === 'string' && ['—', '-', 'N/A', 'n/a'].includes(v.trim())) return false;
+                  return true;
+                })
+                .map(([k, v]) => (
+                  <div key={k} style={{
+                    background: 'rgba(0,0,0,0.03)',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    borderRadius: 10, padding: '10px 13px',
+                  }}>
+                    <div style={{ fontSize: 10, color: 'rgba(29,29,31,0.4)', marginBottom: 2 }}>{k}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1d1d1f' }}>
+                      {Array.isArray(v) ? v.join(', ') : String(v)}
+                    </div>
+                  </div>
+                ))}
+              {(() => {
+                const validSpecs = Object.entries(prod.specs || {}).filter(([k, v]) => {
+                  if (v == null || v === '' || v === false) return false;
+                  if (Array.isArray(v) && v.length === 0) return false;
+                  if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+                  if (typeof v === 'string' && ['—', '-', 'N/A', 'n/a'].includes(v.trim())) return false;
+                  return true;
+                });
+                if (validSpecs.length === 0) {
+                  return (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '36px 0', color: 'rgba(29,29,31,0.4)' }}>
+                      Sin características disponibles
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
 

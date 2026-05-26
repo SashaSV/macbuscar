@@ -1,16 +1,17 @@
 'use client';
 import TarjetaProducto from '../ui/TarjetaProducto';
 import { CATS } from '../shared/constants';
+import CarruselProductos from '../ui/CarruselProductos';
 import { getPrecioMap, getPriceValue } from '../shared/utils';
 import { CATEGORY_ICON, getProductIcon } from '../shared/categoryIcons';
 
 export default function HomePage({ products, precios, scrapeStatus, onSelect, onCategoryClick }) {
   const novedades = products.filter(p => ['Novedad','Pro','Ultra','Exclusivo'].includes(p.tag));
-  const populares = [...products].sort((a,b) => b.rating - a.rating).slice(0, 4);
+  const populares = [...products].sort((a,b) => b.rating - a.rating).slice(0, 12);
   const mejorOferta = [...products].sort((a,b) => {
     const drop = h => (h && h.length >= 2) ? h[0].price - h[h.length-1].price : 0;
     return drop(b.priceHistory) - drop(a.priceHistory);
-  }).slice(0, 4);
+  }).slice(0, 12);
 
   // Hero: the highest-rated product with a real price
   const hero = [...products].sort((a,b) => b.rating - a.rating).find(p => {
@@ -22,23 +23,6 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
   const heroV = Object.values(heroPrecios).map(getPriceValue).filter(Boolean);
   const heroMin = heroV.length ? Math.min(...heroV) : null;
   const heroIcon = hero ? getProductIcon(hero) : 'ti-package';
-
-  const Section = ({ title, items }) => {
-    if (!items.length) return null;
-    return (
-      <div style={{ marginBottom: 34 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16 }}>
-          <div style={{ fontSize:18, fontWeight:500, color:'#1d1d1f', letterSpacing:-0.3 }}>{title}</div>
-          <div style={{ flex:1, height:1, background:'linear-gradient(90deg,rgba(0,0,0,0.1),transparent)' }} />
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:20 }}>
-          {items.map(p => (
-            <TarjetaProducto key={p.id} prod={p} precios={precios} scrapeStatus={scrapeStatus} onClick={() => onSelect(p)} />
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div>
@@ -56,7 +40,6 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
           overflow: 'hidden',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(168,85,247,0.08)',
         }}>
-          {/* purple glow inside hero */}
           <div style={{
             position: 'absolute',
             top: -60, right: -60,
@@ -179,9 +162,27 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
         })}
       </div>
 
-      <Section title="Novedades" items={novedades} />
-      <Section title="Más populares" items={populares} />
-      <Section title="Mejor bajada de precio" items={mejorOferta} />
+      <CarruselProductos
+        titulo="Novedades"
+        productos={novedades}
+        precios={precios}
+        scrapeStatus={scrapeStatus}
+        onAbrir={onSelect}
+      />
+      <CarruselProductos
+        titulo="Más populares"
+        productos={populares}
+        precios={precios}
+        scrapeStatus={scrapeStatus}
+        onAbrir={onSelect}
+      />
+      <CarruselProductos
+        titulo="Mejor bajada de precio"
+        productos={mejorOferta}
+        precios={precios}
+        scrapeStatus={scrapeStatus}
+        onAbrir={onSelect}
+      />
     </div>
   );
 }

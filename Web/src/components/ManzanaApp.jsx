@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import HomePage from './panels/HomePage';
-import PanelIA from './panels/PanelIA';
+import FooterLegal from './panels/FooterLegal';
 import TarjetaProducto from './ui/TarjetaProducto';
 import ModalProducto from './modals/ModalProducto';
 import ModalAnuncio from './modals/ModalAnuncio';
@@ -151,8 +151,6 @@ export default function ManzanaApp() {
 
           {/* Content */}
           <div style={{ paddingTop:18, paddingBottom:32 }}>
-            <PanelIA />
-
             {page === 'home' ? (
               <HomePage
                 products={products}
@@ -219,6 +217,7 @@ export default function ManzanaApp() {
               </>
             )}
           </div>
+      
         </div>
 
         {selProd && (
@@ -238,7 +237,9 @@ export default function ManzanaApp() {
             onCerrar={() => setModalAnuncio(null)}
           />
         )}
+        <FooterLegal />  
       </div>
+    
     </div>
   );
 }

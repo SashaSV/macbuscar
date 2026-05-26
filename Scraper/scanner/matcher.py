@@ -184,42 +184,66 @@ def pass1_match_variants():
 # ── PASS 2 ─────────────────────────────────────────────────────────────────
 
 def pass2_copy_images():
-    print('=== PASS 2: Copy Apple images → Product.fotos ===\n')
+    print('=== PASS 2: Copy Apple images → ProductVariant.fotos ===\n')
     conn = get_connection()
-    updated = 0
+    updated_v = 0
+    updated_p = 0
 
     try:
+        # 1) Per-variant: copy images from ScrapedProduct → ProductVariant.fotos
         with conn.cursor() as cur:
             cur.execute('''
-                SELECT DISTINCT ON (p.id)
-                    p.id, p.nombre, sp.images
-                FROM "Product" p
-                JOIN "ProductVariant" v ON v."productId" = p.id
-                JOIN "ScrapedProduct" sp ON sp."variantId" = v.id
+                SELECT DISTINCT ON (sp."variantId")
+                    sp."variantId", sp.images, v.nombre, p.nombre as pname
+                FROM "ScrapedProduct" sp
+                JOIN "ProductVariant" v ON v.id = sp."variantId"
+                JOIN "Product" p ON p.id = v."productId"
                 WHERE sp.images IS NOT NULL AND sp.images != '[]'
                   AND sp."storeId" = 'apple'
-                ORDER BY p.id, sp."updatedAt" DESC
+                  AND sp."variantId" IS NOT NULL
+                ORDER BY sp."variantId", sp."updatedAt" DESC
             ''')
             rows = cur.fetchall()
 
-        for pid, pname, images_str in rows:
+        for vid, images_str, vname, pname in rows:
             try:
                 images = json.loads(images_str) if isinstance(images_str, str) else images_str
             except:
                 images = []
             if not images:
                 continue
-
             with conn.cursor() as cur:
-                cur.execute(
-                    'UPDATE "Product" SET fotos=%s, "updatedAt"=NOW() WHERE id=%s',
-                    (json.dumps(images), pid)
-                )
+                cur.execute('UPDATE "ProductVariant" SET fotos=%s WHERE id=%s', (json.dumps(images), vid))
                 conn.commit()
-            updated += 1
-            print(f'  📸 {pname[:50]:50} ← {len(images)} images')
+            updated_v += 1
+            if updated_v <= 10 or updated_v % 50 == 0:
+                print(f'  📸 [{vid}] {pname[:25]:25} {vname[:30]:30} ← {len(images)} images')
 
-        print(f'\n📊 Pass 2: updated {updated} Products\n')
+        # 2) Per-product: copy first variant's images to Product.fotos for catalog cards
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT DISTINCT ON (p.id)
+                    p.id, p.nombre, v.fotos
+                FROM "Product" p
+                JOIN "ProductVariant" v ON v."productId" = p.id
+                WHERE v.fotos IS NOT NULL AND v.fotos != '[]'
+                ORDER BY p.id, v.id
+            ''')
+            prows = cur.fetchall()
+
+        for pid, pname, fotos_str in prows:
+            try:
+                fotos = json.loads(fotos_str) if isinstance(fotos_str, str) else fotos_str
+            except:
+                fotos = []
+            if not fotos:
+                continue
+            with conn.cursor() as cur:
+                cur.execute('UPDATE "Product" SET fotos=%s WHERE id=%s', (json.dumps(fotos), pid))
+                conn.commit()
+            updated_p += 1
+
+        print(f'\n📊 Pass 2: updated {updated_v} variants, {updated_p} products with photos\n')
     finally:
         conn.close()
 
@@ -286,6 +310,24 @@ def show_summary():
         conn.close()
 
 
+def purge_scraped(store_id=None):
+    """Delete old ScrapedProducts (optionally filtered by storeId) before re-scraping."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            if store_id:
+                cur.execute('DELETE FROM "ScrapedProduct" WHERE "storeId"=%s', (store_id,))
+                msg = f'store "{store_id}"'
+            else:
+                cur.execute('DELETE FROM "ScrapedProduct"')
+                msg = 'all stores'
+            n = cur.rowcount
+            conn.commit()
+            print(f'🗑  PURGED {n} ScrapedProducts ({msg})\n')
+    finally:
+        conn.close()
+
+
 def reset_matches():
     """Clear all matches and prices — use when re-running matcher."""
     print('=== RESET: Clearing previous matches and prices ===\n')
@@ -298,16 +340,31 @@ def reset_matches():
             n2 = cur.rowcount
             cur.execute("UPDATE \"Product\" SET fotos='[]' WHERE fotos != '[]'")
             n3 = cur.rowcount
+            cur.execute("UPDATE \"ProductVariant\" SET fotos='[]' WHERE fotos != '[]'")
+            n4 = cur.rowcount
             conn.commit()
-            print(f'🗑  Deleted {n1} prices, reset {n2} matches, cleared {n3} product photos\n')
+            print(f'🗑  Deleted {n1} prices, reset {n2} matches, cleared {n3} product photos, {n4} variant photos\n')
     finally:
         conn.close()
 
 
 if __name__ == '__main__':
     import sys
+
+    # --purge[=store_id] : delete old ScrapedProducts before matching
+    # Examples:
+    #   python -m scanner.matcher --purge          → delete ALL scraped
+    #   python -m scanner.matcher --purge=apple    → delete only apple scraped
+    #   python -m scanner.matcher --reset          → clear matches/prices only (keep scraped)
+    #   python -m scanner.matcher --purge=apple --reset
+    purge_arg = next((a for a in sys.argv if a.startswith('--purge')), None)
+    if purge_arg:
+        store = purge_arg.split('=', 1)[1] if '=' in purge_arg else None
+        purge_scraped(store)
+
     if '--reset' in sys.argv:
         reset_matches()
+
     pass1_match_variants()
     pass2_copy_images()
     pass3_update_prices()

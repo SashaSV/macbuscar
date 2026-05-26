@@ -53,32 +53,39 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
     <div
       onClick={() => handleClick && handleClick(prod)}
       style={{
-        background: '#fff',
-        borderRadius: 18,
+        background: 'rgba(255,255,255,0.55)',
+        backdropFilter: 'blur(30px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+        borderRadius: 22,
         overflow: 'hidden',
         cursor: 'pointer',
-        border: '1px solid rgba(0,0,0,0.05)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        border: '0.5px solid rgba(255,255,255,0.8)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)',
+        transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s ease, background 0.3s',
+        position: 'relative',
       }}
       onMouseEnter={e => {
         setHovered(true);
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.08)';
+        e.currentTarget.style.transform = 'translateY(-6px)';
+        e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(168,85,247,0.08)';
+        e.currentTarget.style.background = 'rgba(255,255,255,0.7)';
       }}
       onMouseLeave={e => {
         setHovered(false);
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+        e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)';
+        e.currentTarget.style.background = 'rgba(255,255,255,0.55)';
       }}
     >
       <div style={{
-        aspectRatio: '1',
-        background: '#f5f5f7',
+aspectRatio: '1',
+        background: 'rgba(255, 255, 255, 0.65)', // М'яке світле підклад-тло від Apple
+        borderRadius: 16,                        // Закруглення внутрішньої вітрини
+        margin: '12px 12px 0 12px',              // Елегантні відступи від країв картки
+        border: '1px solid rgba(255, 255, 255, 0.7)', // Тонка преміальна рамка вітрини
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -107,13 +114,13 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
               alt={prod.nombre}
               style={{
                 position: 'absolute',
-                maxWidth: '220%',
-                maxHeight: '220%',
+                maxWidth: '180%',
+                maxHeight: '180%',
                 objectFit: 'contain',
-                transform: 'scale(1.15)',
-                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.08))',
+                transform: 'scale(1.05)',
                 opacity: hovered && fotos.length > 1 ? 0 : 1,
                 transition: 'opacity 0.35s ease',
+                mixBlendMode: 'multiply', // Повністю розчиняє білий фон у підкладці Bento
               }}
               onError={e => {
                 e.target.style.display = 'none';
@@ -129,13 +136,13 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
                 alt={prod.nombre}
                 style={{
                   position: 'absolute',
-                  maxWidth: '220%',
-                  maxHeight: '220%',
+                  maxWidth: '180%',
+                  maxHeight: '180%',
                   objectFit: 'contain',
-                  transform: hovered ? 'scale(1.18)' : 'scale(1.15)',
-                  filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.08))',
+                  transform: hovered ? 'scale(1.08)' : 'scale(1.05)',
                   opacity: hovered ? 1 : 0,
                   transition: 'opacity 0.35s ease, transform 0.35s ease',
+                  mixBlendMode: 'multiply', // Повністю розчиняє білий фон у підкладці Bento
                 }}
               />
             )}
