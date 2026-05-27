@@ -205,6 +205,12 @@ def extract_variant_images(html):
         # Remove qlt parameter (PNG doesn't use it)
         url = re.sub(r'&qlt=\d+', '', url)
         url = re.sub(r'\?qlt=\d+&', '?', url)
+        # Remove .v= cache-buster (not always compatible with png-alpha)
+        url = re.sub(r'&\.v=[^&]+', '', url)
+        url = re.sub(r'\?\.v=[^&]+&', '?', url)
+        # Remove traceId parameter
+        url = re.sub(r'&traceId=\d+', '', url)
+        url = re.sub(r'\?traceId=\d+&', '?', url)
         return url
 
     # Step 1: Find each <img> with data-autom="galleryImageN"

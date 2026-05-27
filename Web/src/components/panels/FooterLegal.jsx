@@ -3,7 +3,7 @@
 export default function FooterLegal() {
   return (
     <footer style={{
-      maxWidth: 1600,
+      maxWidth: 1140,
       margin: '60px auto 0',
       padding: '32px 24px 40px',
       borderTop: '1px solid rgba(0,0,0,0.06)',
@@ -27,6 +27,23 @@ export default function FooterLegal() {
             <li><a href="/politica-privacidad" style={linkStyle}>Política de privacidad</a></li>
             <li><a href="/politica-cookies" style={linkStyle}>Política de cookies</a></li>
             <li><a href="/condiciones-uso" style={linkStyle}>Condiciones de uso</a></li>
+            <li>
+              <button
+                onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('openCookieSettings'))}
+                style={{
+                  ...linkStyle,
+                  background: 'none',
+                  border: 'none',
+                  padding: '3px 0',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                }}
+              >
+                Gestionar cookies
+              </button>
+            </li>
           </ul>
         </div>
 

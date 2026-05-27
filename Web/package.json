@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@tabler/icons-react": "^3.44.0",
     "axios": "^1.7.0",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",

@@ -3,6 +3,8 @@ const SITE_NAME = 'Manzana.es';
 const TITLE = 'Manzana.es — Comparador de precios Apple en España';
 const DESCRIPTION = 'Encuentra el mejor precio en iPhone, MacBook, iPad, Apple Watch y AirPods. Comparamos 8 tiendas españolas: Apple Store, MediaMarkt, PcComponentes, Fnac, Amazon, El Corte Inglés, Worten y iStore. Actualizado en tiempo real.';
 
+import CookieConsent from '@/components/legal/CookieConsent';
+
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: TITLE, template: '%s | Manzana.es' },
@@ -77,7 +79,10 @@ export default function RootLayout({ children }) {
           @keyframes loadingBar { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <CookieConsent />
+      </body>
     </html>
   );
 }

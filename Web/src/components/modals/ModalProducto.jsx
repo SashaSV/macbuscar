@@ -1,5 +1,14 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
+import {
+  IconDeviceMobile, IconShieldCheck, IconCpu, IconSparkles,
+  IconBattery3, IconMagnet, IconUsb, IconCamera, IconCameraSelfie,
+  IconZoom, IconAlertHexagon, IconScreenShare, IconDeviceImac,
+  IconCameraPlus, IconRotate360, IconWifi, IconNfc, IconBluetooth,
+  IconShield, IconFingerprint, IconRuler2, IconDatabase, IconPalette,
+  IconBroadcast, IconSim, IconMicrophone, IconBrandApple, IconWeight,
+  IconCompass, IconLock, IconAccessPoint, IconDots,
+} from '@tabler/icons-react';
 import Galeria from '../ui/Galeria';
 import BarraPrecios from '../ui/BarraPrecios';
 import HistorialChart from '../ui/HistorialChart';
@@ -19,6 +28,80 @@ const FILTER_LABELS = {
   connectivity: 'Conectividad',
   cpu: 'Chip',
   bandSize: 'Tamaño',
+};
+
+// Apple compare badge icons → Tabler React components
+const ICON_MAP = {
+  'design':                  IconDeviceMobile,
+  'ceramic':                 IconShieldCheck,
+  'chip-a19pro':             IconCpu,
+  'chip-a19':                IconCpu,
+  'chip-a18pro':             IconCpu,
+  'chip-a18':                IconCpu,
+  'chip-a16':                IconCpu,
+  'apple-intelligence':      IconSparkles,
+  'battery':                 IconBattery3,
+  'magsafe':                 IconMagnet,
+  'usbc':                    IconUsb,
+  'camera-triple4-alt':      IconCamera,
+  'camera-triple3-alt':      IconCamera,
+  'camera-double-alt':       IconCamera,
+  'camera-single-alt':       IconCamera,
+  'camera-single-air-alt':   IconCamera,
+  'camera-center-stage':     IconCameraSelfie,
+  'optical-zoom2':           IconZoom,
+  'optical-zoom5':           IconZoom,
+  'optical-zoom8':           IconZoom,
+  'optical-zoom9':           IconZoom,
+  'sos':                     IconAlertHexagon,
+};
+
+// Default section → Tabler icon
+const SECTION_ICONS = {
+  summary:        IconDots,
+  display:        IconScreenShare,
+  chip:           IconCpu,
+  camera:         IconCamera,
+  front:          IconCameraSelfie,
+  video:          IconCameraPlus,
+  power:          IconBattery3,
+  measurements:   IconRuler2,
+  capacity:       IconDatabase,
+  colors:         IconPalette,
+  connector:      IconUsb,
+  cellular:       IconBroadcast,
+  sim:            IconSim,
+  resistance:     IconShield,
+  safety:         IconAlertHexagon,
+  sensors:        IconCompass,
+  authentication: IconFingerprint,
+  siri:           IconMicrophone,
+  tech:           IconAccessPoint,
+  apple:          IconBrandApple,
+};
+
+// Apple compare section keys → Spanish labels
+const SECTION_LABELS = {
+  summary:        'Resumen',
+  display:        'Pantalla',
+  chip:           'Chip y procesador',
+  camera:         'Cámara trasera',
+  front:          'Cámara frontal',
+  video:          'Vídeo',
+  power:          'Batería y carga',
+  measurements:   'Tamaño y peso',
+  capacity:       'Capacidad',
+  colors:         'Acabados',
+  connector:      'Conectividad',
+  cellular:       'Red móvil',
+  sim:            'SIM',
+  resistance:     'Resistencia',
+  safety:         'Funciones de seguridad',
+  sensors:        'Sensores',
+  authentication: 'Autenticación',
+  siri:           'Siri',
+  tech:           'Tecnologías',
+  apple:          'Servicios Apple',
 };
 
 export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne }) {
@@ -105,11 +188,19 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
   }, [onCerrar]);
 
   const tabStyle = a => ({
-    flex: 1, padding: '11px 0', fontSize: 12, fontWeight: 500,
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: a ? '#1d1d1f' : 'rgba(29,29,31,0.5)',
+    flex: 1,
+    padding: '16px 0',
+    fontSize: 15,
+    fontWeight: a ? 600 : 400,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: a ? '#1d1d1f' : 'rgba(29,29,31,0.55)',
     borderBottom: `2px solid ${a ? '#1d1d1f' : 'transparent'}`,
-    transition: 'all .2s', whiteSpace: 'nowrap',
+    transition: 'all .2s',
+    whiteSpace: 'nowrap',
+    letterSpacing: '-0.2px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
   });
 
   return (
@@ -199,17 +290,17 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       justifyContent: 'center',
                       background: 'rgba(0,0,0,0.02)',
                       borderRadius: 16,
-                      padding: 16,
                       height: 320,
                       overflow: 'hidden',
+                      position: 'relative',
                     }}>
                       {vFotos.length ? (
                         <img
                           src={vFotos[0]}
                           alt={selectedVariant?.nombre}
                           style={{
-                            maxWidth: '180%',
-                            maxHeight: '180%',
+                            width: '170%',
+                            height: '170%',
                             objectFit: 'contain',
                             filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.06))',
                           }}
@@ -371,45 +462,148 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
           )}
 
           {tab === 'Características' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {Object.entries(prod.specs || {})
-                .filter(([k, v]) => {
-                  // Skip empty, null, undefined, empty arrays, empty objects
-                  if (v == null || v === '' || v === false) return false;
-                  if (Array.isArray(v) && v.length === 0) return false;
-                  if (typeof v === 'object' && Object.keys(v).length === 0) return false;
-                  // Skip placeholder values
-                  if (typeof v === 'string' && ['—', '-', 'N/A', 'n/a'].includes(v.trim())) return false;
-                  return true;
-                })
-                .map(([k, v]) => (
-                  <div key={k} style={{
-                    background: 'rgba(0,0,0,0.03)',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    borderRadius: 10, padding: '10px 13px',
-                  }}>
-                    <div style={{ fontSize: 10, color: 'rgba(29,29,31,0.4)', marginBottom: 2 }}>{k}</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1d1d1f' }}>
-                      {Array.isArray(v) ? v.join(', ') : String(v)}
-                    </div>
-                  </div>
-                ))}
+            <div>
               {(() => {
-                const validSpecs = Object.entries(prod.specs || {}).filter(([k, v]) => {
-                  if (v == null || v === '' || v === false) return false;
-                  if (Array.isArray(v) && v.length === 0) return false;
-                  if (typeof v === 'object' && Object.keys(v).length === 0) return false;
-                  if (typeof v === 'string' && ['—', '-', 'N/A', 'n/a'].includes(v.trim())) return false;
-                  return true;
-                });
-                if (validSpecs.length === 0) {
+                const specs = prod.specs || {};
+                const summary = specs.summary;
+
+                // Other sections (non-summary)
+                const orderedKeys = Object.keys(SECTION_LABELS).filter(k => k !== 'summary');
+                const remaining = Object.keys(specs)
+                  .filter(k => !orderedKeys.includes(k) && k !== 'summary' && !k.startsWith('_'));
+                const otherSections = [...orderedKeys, ...remaining]
+                  .map(k => [k, specs[k]])
+                  .filter(([k, v]) => Array.isArray(v) && v.length > 0);
+
+                if (!summary && otherSections.length === 0) {
                   return (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '36px 0', color: 'rgba(29,29,31,0.4)' }}>
+                    <div style={{ textAlign: 'center', padding: '36px 0', color: 'rgba(29,29,31,0.4)' }}>
                       Sin características disponibles
                     </div>
                   );
                 }
-                return null;
+
+                return (
+                  <>
+                    {/* APPLE-STYLE RESUMEN — groups with icon and features */}
+                    {Array.isArray(summary) && summary.length > 0 && (
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0,
+                        marginBottom: 32,
+                      }}>
+                        {summary.map((group, gi) => {
+                          const IconComp = group.icon ? ICON_MAP[group.icon] : null;
+                          const features = group.features || [];
+                          if (features.length === 0) return null;
+
+                          const lead = features[0];
+                          const rest = features.slice(1);
+
+                          return (
+                            <div key={gi} style={{
+                              padding: '28px 0',
+                              borderBottom: gi < summary.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                              textAlign: 'center',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: 6,
+                            }}>
+                              {IconComp && (
+                                <div style={{
+                                  marginBottom: 14,
+                                  color: '#1d1d1f',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}>
+                                  <IconComp size={42} stroke={1.5} />
+                                </div>
+                              )}
+                              <div style={{
+                                fontSize: 20,
+                                fontWeight: 600,
+                                color: '#1d1d1f',
+                                letterSpacing: '-0.3px',
+                                lineHeight: 1.25,
+                              }}>{lead}</div>
+                              {rest.map((f, i) => (
+                                <div key={i} style={{
+                                  fontSize: 13,
+                                  color: 'rgba(29,29,31,0.75)',
+                                  lineHeight: 1.5,
+                                  maxWidth: 480,
+                                }}>{f}</div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* OTHER SECTIONS - clean lists with icon header */}
+                    {otherSections.map(([sectionKey, items]) => {
+                      const IconComp = SECTION_ICONS[sectionKey] || IconDots;
+                      const label = SECTION_LABELS[sectionKey] || sectionKey;
+                      const firstWord = label.split(/\s+/)[0];
+
+                      return (
+                        <div key={sectionKey} style={{ marginBottom: 32 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            marginBottom: 14,
+                            paddingBottom: 12,
+                            borderBottom: '1px solid rgba(0,0,0,0.06)',
+                          }}>
+                            <span style={{
+                              color: '#1d1d1f',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              <IconComp size={22} stroke={1.5} />
+                            </span>
+                            <span style={{
+                              fontSize: 17,
+                              fontWeight: 600,
+                              color: '#1d1d1f',
+                              letterSpacing: '-0.3px',
+                            }}>{label}</span>
+                          </div>
+                          <ul style={{
+                            listStyle: 'none',
+                            padding: 0,
+                            margin: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 6,
+                          }}>
+                            {items.map((item, i) => {
+                              const text = typeof item === 'object' && item !== null ? item.text : item;
+                              const cleanText = String(text)
+                                .replace(new RegExp(`^${firstWord}:\\s*`, 'i'), '')
+                                .replace(new RegExp(`^${label}:\\s*`, 'i'), '');
+                              return (
+                                <li key={i} style={{
+                                  fontSize: 13,
+                                  lineHeight: 1.55,
+                                  color: 'rgba(29,29,31,0.85)',
+                                  padding: '2px 0',
+                                }}>
+                                  {cleanText}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </>
+                );
               })()}
             </div>
           )}
