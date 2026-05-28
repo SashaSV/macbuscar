@@ -137,7 +137,7 @@ def extract_variant_price(html, path):
     for m in re.finditer(r'"(?:fromPrice|currentPrice|price)"\s*:\s*(?:\{[^}]*"raw"\s*:\s*)?([\d.]+)', html):
         try:
             p = float(m.group(1))
-            if 10 < p < 30000:
+            if 500 < p < 30000:
                 return p
         except: pass
 

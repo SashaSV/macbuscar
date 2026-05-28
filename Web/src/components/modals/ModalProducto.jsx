@@ -104,7 +104,7 @@ const SECTION_LABELS = {
   apple:          'Servicios Apple',
 };
 
-export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne }) {
+export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne, tabInicial }) {
   const variants = prod.variants || [];
 
   // Build best price map per variant: variantId → { storeId: {price,url,updatedAt} }
@@ -163,7 +163,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     }
   }
   const [selected, setSelected] = useState(initialSelected);
-  const [tab, setTab] = useState('Precios');
+  const [tab, setTab] = useState(tabInicial || 'Precios');
 
   // Find variant matching ALL selected filters
   const selectedVariant = useMemo(() => {
@@ -451,6 +451,127 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   )}
                 </div>
               )}
+
+              {/* Second-hand listings for the CURRENT variant (compact, max 3) */}
+              {(() => {
+                if (!selectedVariant) return null;
+                const variantListings = (prod.listings || [])
+                  .filter(l => l.variantId === selectedVariant.id);
+                if (!variantListings.length) return null;
+
+                const top = variantListings.slice(0, 3);
+                const rest = Math.max(0, variantListings.length - top.length);
+
+                return (
+                  <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      marginBottom: 10,
+                    }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.2px' }}>
+                        Segunda mano
+                        <span style={{ fontSize: 11, fontWeight: 400, color: 'rgba(29,29,31,0.5)', marginLeft: 6 }}>
+                          · {variantListings.length} {variantListings.length === 1 ? 'anuncio' : 'anuncios'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setTab('2ª mano')}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          fontSize: 12, fontWeight: 500, color: '#7c3aed',
+                          padding: 0, display: 'inline-flex', alignItems: 'center', gap: 3,
+                        }}
+                      >
+                        Ver todos <span style={{ fontSize: 13 }}>→</span>
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {top.map(a => {
+                        const foto = Array.isArray(a.fotos) ? a.fotos[0] : null;
+                        const estadoColor = colorEstado(a.estado);
+                        return (
+                          <div
+                            key={a.id}
+                            onClick={() => setTab('2ª mano')}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 10,
+                              padding: '8px 10px',
+                              background: 'rgba(245,158,11,0.06)',
+                              border: '1px solid rgba(245,158,11,0.25)',
+                              borderRadius: 12,
+                              cursor: 'pointer',
+                              transition: 'background .15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.12)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,158,11,0.06)'}
+                          >
+                            {/* Thumbnail */}
+                            <div style={{
+                              width: 44, height: 44, borderRadius: 8,
+                              background: 'rgba(0,0,0,0.05)',
+                              overflow: 'hidden', flexShrink: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {foto ? (
+                                <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={e => { e.target.style.display = 'none'; }} />
+                              ) : (
+                                <span style={{ fontSize: 20 }}>{prod.emoji || '📦'}</span>
+                              )}
+                            </div>
+
+                            {/* Info */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{
+                                  fontSize: 15, fontWeight: 700, color: '#f5a623',
+                                  fontFamily: 'ui-monospace, monospace',
+                                }}>{a.precio}€</span>
+                                <span style={{
+                                  background: estadoColor + '22', color: estadoColor,
+                                  fontSize: 9, fontWeight: 600,
+                                  padding: '2px 7px', borderRadius: 980,
+                                }}>{a.estado}</span>
+                              </div>
+                              <div style={{
+                                fontSize: 11, color: 'rgba(29,29,31,0.55)', marginTop: 2,
+                                display: 'flex', alignItems: 'center', gap: 4,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              }}>
+                                <i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize: 11 }} />
+                                {a.ciudad}
+                                <span style={{ color: 'rgba(29,29,31,0.3)' }}>·</span>
+                                {a.vendedor}
+                              </div>
+                            </div>
+
+                            <span style={{ fontSize: 14, color: 'rgba(29,29,31,0.3)', flexShrink: 0 }}>›</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {rest > 0 && (
+                      <button
+                        onClick={() => setTab('2ª mano')}
+                        style={{
+                          marginTop: 8,
+                          width: '100%',
+                          background: 'rgba(0,0,0,0.03)',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          borderRadius: 10,
+                          padding: '8px',
+                          fontSize: 12, color: 'rgba(29,29,31,0.6)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        +{rest} {rest === 1 ? 'anuncio más' : 'anuncios más'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           )}
 
