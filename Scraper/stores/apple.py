@@ -31,6 +31,13 @@ STORE_ID  = 'apple'
 VENDOR    = 'apple.com'
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
 
+<<<<<<< HEAD
+=======
+# Sanity diapason для электроники Apple — отрезаем месячные платежи, скидки, центы
+PRICE_MIN = 100
+PRICE_MAX = 30000
+
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
 # Googlebot UA → Apple returns SSR Markdown with prices visible
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
@@ -66,7 +73,11 @@ IMG_RE   = re.compile(
     r'https://store\.storeimages\.cdn-apple\.com/\d+/as-images\.apple\.com/is/'
     r'([A-Za-z0-9_\-]+)\?([^"\'\s<>\\]+)', re.I)
 
+<<<<<<< HEAD
 PRICE_RE = re.compile(r'(\d{1,4}(?:\.\d{3})*(?:,\d{2})?)\s*\u20ac')
+=======
+PRICE_RE = re.compile(r'(\d{1,4}(?:\.\d{3})*(?:,\d{2})?)\s*€')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
 
 # ── Cache ──────────────────────────────────────────────────────────────────
 
@@ -107,31 +118,114 @@ def fetch(url, suffix='html', delay=1.2):
         cache_write(url, r.text, suffix)
         return r.text
     except Exception as e:
+<<<<<<< HEAD
         print(f'    \u274c GET error: {e}')
+=======
+        print(f'    ❌ GET error: {e}')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
         return ''
 
 # ── Parsing ────────────────────────────────────────────────────────────────
 
 def parse_price(text):
+<<<<<<< HEAD
     clean = text.strip().replace('\xa0', '').replace('.', '').replace(',', '.')
     try:
         v = float(clean)
         return v if 10 < v < 30000 else None
     except: return None
+=======
+    """
+    Парсит цену в float. Поддерживает форматы:
+        '1.319,00'   (испанский) → 1319.00
+        '1.319,00 €' (испанский) → 1319.00
+        '1,319.00'   (US)        → 1319.00
+        '1319.00'    (raw)       → 1319.00
+        '1319'                   → 1319.00
+        1319.0       (float)     → 1319.00
+    Возвращает None если результат вне диапазона PRICE_MIN..PRICE_MAX.
+    """
+    if text is None:
+        return None
+    if isinstance(text, (int, float)):
+        v = float(text)
+        return v if PRICE_MIN <= v <= PRICE_MAX else None
+
+    s = str(text).strip().replace('\xa0', '').replace(' ', '').replace('€', '').replace('EUR', '')
+    if not s:
+        return None
+
+    if '.' in s and ',' in s:
+        # Оба разделителя: последний по позиции — десятичный
+        if s.rindex(',') > s.rindex('.'):
+            # Spanish: 1.319,00 — точки тысячи, запятая десятичная
+            s = s.replace('.', '').replace(',', '.')
+        else:
+            # US: 1,319.00 — запятые тысячи, точка десятичная
+            s = s.replace(',', '')
+    elif ',' in s:
+        # Только запятая. Если ровно 2 цифры после неё — десятичная, иначе тысячи.
+        parts = s.split(',')
+        if len(parts) == 2 and len(parts[1]) == 2:
+            s = s.replace(',', '.')
+        else:
+            s = s.replace(',', '')
+    # Только точка или ничего — оставляем как есть.
+
+    try:
+        v = float(s)
+    except ValueError:
+        return None
+    return v if PRICE_MIN <= v <= PRICE_MAX else None
+
+
+# Полные ключи JSON, которые надёжно содержат основную цену товара.
+# НЕ включаем generic "price" — он матчится в monthlyPrice/installmentPrice/etc.
+# и возвращает рассрочку вместо полной цены ("цена в N раз меньше").
+_PRICE_KEYS_FULL = (
+    'fromPrice', 'currentPrice', 'fullPrice', 'displayPrice',
+    'regularPrice', 'sellingPrice', 'amount', 'priceAmount',
+)
+_PRICE_KEY_RE = re.compile(
+    r'"(' + '|'.join(_PRICE_KEYS_FULL) + r')"\s*:\s*'
+    r'(?:\{[^}]*?"raw"\s*:\s*([\d.,]+)'        # {"raw": 1319.00, ...}
+    r'|"([^"]+)"'                              # "1.319,00 €"
+    r'|([\d.,]+))',                            # 1319.00
+    re.I
+)
+# Ключи, которые СОДЕРЖАТ цену, но НЕ полную — рассрочка, скидка, trade-in
+_PRICE_KEY_SKIP = re.compile(
+    r'"(monthly|installment|financing|saving|discount|tradein|trade_in|'
+    r'promotion|loan|apr|deposit|down|due|tax|shipping|delivery|estimated)'
+    r'[a-z]*price"\s*:\s*([\d.,]+|\{[^}]*"raw"\s*:\s*[\d.,]+)',
+    re.I
+)
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
 
 
 def extract_variant_price(html, path):
     """
+<<<<<<< HEAD
     Extract price for a specific variant from Selenium-rendered Apple page.
     Apple renders the price in these DOM patterns:
       - <span class="current_price">1.319,00 €</span>
       - <span ... data-autom="full-price">1.319,00 €</span>
       - <span class="rc-prices-fullprice">1.319,00 €</span>
       - In a script tag: "fromPrice":{"raw":1319.00,...}
+=======
+    Извлекает цену конкретного варианта со страницы Apple.
+    Стратегии в порядке надёжности:
+      1. DOM-элементы с маркером "full-price" / "current_price" (рендеренный ценник)
+      2. JSON-LD priceAmount / price (Schema.org)
+      3. Точные JSON-ключи (fromPrice, currentPrice, ...) — без monthly/installment/saving/etc
+      4. Любая цена X€ после якоря "Comprar el ..."
+      5. Максимум среди всех найденных цен (fallback)
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
     """
     if not html:
         return None
 
+<<<<<<< HEAD
     # Strategy 1: JSON pricing in script tags (most reliable for Selenium output)
     # Pattern: "price":1319.00 or "fromPrice":{"raw":1319.00}
     for m in re.finditer(r'"(?:fromPrice|currentPrice|price)"\s*:\s*(?:\{[^}]*"raw"\s*:\s*)?([\d.]+)', html):
@@ -148,17 +242,61 @@ def extract_variant_price(html, path):
         r'class=["\'][^"\']*rc-prices-fullprice[^"\']*["\'][^>]*>([\d.,]+)\s*\u20ac',
         r'class=["\'][^"\']*as-price-currentprice[^"\']*["\'][^>]*>\s*([\d.,]+)\s*\u20ac',
     ]:
+=======
+    # Strategy 1: DOM elements (самые надёжные — рендеренный финальный ценник)
+    dom_patterns = [
+        r'data-autom=["\']full-price["\'][^>]*>\s*([\d.,]+)\s*€',
+        r'class=["\']current_price["\'][^>]*>\s*([\d.,]+)\s*€',
+        r'class=["\'][^"\']*rc-prices-fullprice[^"\']*["\'][^>]*>\s*([\d.,]+)\s*€',
+        r'class=["\'][^"\']*as-price-currentprice[^"\']*["\'][^>]*>\s*([\d.,]+)\s*€',
+    ]
+    for pattern in dom_patterns:
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
         for m in re.finditer(pattern, html):
             p = parse_price(m.group(1))
             if p:
                 return p
 
+<<<<<<< HEAD
     # Strategy 3: First price after "Comprar el ..." anchor (SSR markdown style)
+=======
+    # Strategy 2: JSON-LD Schema.org Product
+    for m in re.finditer(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html, re.DOTALL | re.I
+    ):
+        block = m.group(1)
+        for sub in re.finditer(r'"price"\s*:\s*"?([\d.,]+)"?', block):
+            p = parse_price(sub.group(1))
+            if p:
+                return p
+
+    # Strategy 3: точные JSON-ключи (без monthly/installment/savings/etc)
+    candidates = []
+    for m in _PRICE_KEY_RE.finditer(html):
+        raw = m.group(2) or m.group(3) or m.group(4)
+        p = parse_price(raw)
+        if p:
+            candidates.append(p)
+
+    if candidates:
+        # Если в JSON есть и full-price и какой-то skip-ключ (например savingsPrice
+        # с тем же названием поля рядом), отдаём предпочтение медиане:
+        # обычно full-price повторяется в нескольких местах JSON.
+        candidates.sort()
+        # Самая частая цена среди топ-2 (защита от выбросов в обе стороны)
+        from collections import Counter
+        most_common = Counter(candidates).most_common(1)[0][0]
+        return most_common
+
+    # Strategy 4: первая X€ после "Comprar el ..."
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
     for anchor in ['Comprar el', 'Comprar un', 'Comprar la']:
         idx = html.lower().find(anchor.lower())
         if idx == -1:
             continue
         window = html[idx:idx + 3000]
+<<<<<<< HEAD
         for m in PRICE_RE.findall(window):
             p = parse_price(m)
             if p:
@@ -168,6 +306,17 @@ def extract_variant_price(html, path):
     prices = [parse_price(m) for m in PRICE_RE.findall(html)]
     prices = [p for p in prices if p]
     return prices[0] if prices else None
+=======
+        for raw in PRICE_RE.findall(window):
+            p = parse_price(raw)
+            if p:
+                return p
+
+    # Strategy 5: максимум среди всех X€ (а не первый — он часто месячный платёж в табе)
+    prices = [parse_price(m) for m in PRICE_RE.findall(html)]
+    prices = [p for p in prices if p]
+    return max(prices) if prices else None
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
 
 
 def extract_hero_images(html, min_wid=350):
@@ -273,7 +422,11 @@ def parse_variant_path(path):
                 r'\d+(?:gb|tb)', r'wi[-\s]?fi[\+\-]?(?:\+[\s]?cellular)?',
                 r'\+?cellular', r'\bgps\b']:
         color = re.sub(pat, ' ', color, flags=re.I)
+<<<<<<< HEAD
     color = re.sub(r'[-_\s\u2033]+', ' ', color).strip()
+=======
+    color = re.sub(r'[-_\s″]+', ' ', color).strip()
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
     if color and len(color) > 2:
         result['color'] = color.title()
     return result
@@ -286,7 +439,11 @@ def extract_product_name(html):
         txt = re.sub(r'&[a-z]+;', '', txt)
         txt = re.sub(r'\s+', ' ', txt).strip()
         txt = re.sub(r'^comprar\s+(el\s+|un\s+|la\s+)?', '', txt, flags=re.I)
+<<<<<<< HEAD
         txt = re.split(r'\s+y\s+|\s+[-\u2013]\s+Apple', txt)[0].strip()
+=======
+        txt = re.split(r'\s+y\s+|\s+[-–]\s+Apple', txt)[0].strip()
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
         if len(txt) > 3:
             return txt
     return ''
@@ -309,10 +466,17 @@ class AppleScraper:
                 print(f'\n\U0001f4e6 {family_slug}')
                 n = self._scrape_family(driver, url, family_slug, category)
                 total += n
+<<<<<<< HEAD
                 print(f'   \u2192 saved {n}')
         finally:
             close_driver(driver)
         print(f'\n\u2705 Total: {total}')
+=======
+                print(f'   → saved {n}')
+        finally:
+            close_driver(driver)
+        print(f'\n✅ Total: {total}')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
 
     def _scrape_family(self, driver, url, family_slug, category):
         # Step 1: Selenium loads family page (for JS variant links)
@@ -349,7 +513,11 @@ class AppleScraper:
                 return [...new Set(out)];
             """) or []
         except Exception as e:
+<<<<<<< HEAD
             print(f'  \u26a0\ufe0f JS failed: {e}')
+=======
+            print(f'  ⚠️ JS failed: {e}')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
             js_links = []
 
         # Filter to this family + valid variant slug (has memory + reasonable structure)
@@ -397,7 +565,11 @@ class AppleScraper:
             if disp: parts.append(disp)
             if mem:  parts.append(mem)
             if col:  parts.append(col)
+<<<<<<< HEAD
             vname = re.sub(r'[\u2033\u2032]', '', ' '.join(p for p in parts if p))
+=======
+            vname = re.sub(r'[″′]', '', ' '.join(p for p in parts if p))
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
             vname = re.sub(r'\s+', ' ', vname).strip()
 
             # Load variant page in Selenium (cache its HTML separately)
@@ -415,7 +587,11 @@ class AppleScraper:
                     cache_p = cache_path(full_url, 'var')
                     print(f'       \U0001f4be cached: {os.path.basename(cache_p)} ({len(v_html)} chars)')
                 except Exception as e:
+<<<<<<< HEAD
                     print(f'    \u26a0\ufe0f  Selenium error: {e}')
+=======
+                    print(f'    ⚠️  Selenium error: {e}')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
                     v_html = ''
 
             price = extract_variant_price(v_html, path) if v_html else None
@@ -442,13 +618,22 @@ class AppleScraper:
 
             try:
                 db.save_scraped_products([d], store_id=STORE_ID)
+<<<<<<< HEAD
                 marker = '\u2705' if price else '\u26a0\ufe0f'
                 print(f'    {marker} [{i+1:2}/{len(variant_links)}] {vname[:55]:55} \u2014 {price}\u20ac \u00b7 {len(v_images)} img')
+=======
+                marker = '✅' if price else '⚠️'
+                print(f'    {marker} [{i+1:2}/{len(variant_links)}] {vname[:55]:55} — {price}€ · {len(v_images)} img')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
                 for img_idx, img_url in enumerate(v_images):
                     print(f'         {img_idx+1}. {img_url[:130]}{"..." if len(img_url) > 130 else ""}')
                 saved += 1
             except Exception as e:
+<<<<<<< HEAD
                 print(f'    \u274c {vname[:50]}: {e}')
+=======
+                print(f'    ❌ {vname[:50]}: {e}')
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
 
         return saved
 
@@ -458,4 +643,8 @@ def run():
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     run()
+=======
+    run()
+>>>>>>> bd2ce6f0afe92d8d01e479425723ea3457217627
