@@ -543,65 +543,72 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       </div>
                     )}
 
-                    {/* OTHER SECTIONS - clean lists with icon header */}
-                    {otherSections.map(([sectionKey, items]) => {
-                      const IconComp = SECTION_ICONS[sectionKey] || IconDots;
-                      const label = SECTION_LABELS[sectionKey] || sectionKey;
-                      const firstWord = label.split(/\s+/)[0];
+                    {/* OTHER SECTIONS — two-column grid (Pantalla | Chip ...) */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                      gap: '0 40px',
+                      alignItems: 'start',
+                    }}>
+                      {otherSections.map(([sectionKey, items]) => {
+                        const IconComp = SECTION_ICONS[sectionKey] || IconDots;
+                        const label = SECTION_LABELS[sectionKey] || sectionKey;
+                        const firstWord = label.split(/\s+/)[0];
 
-                      return (
-                        <div key={sectionKey} style={{ marginBottom: 32 }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            marginBottom: 14,
-                            paddingBottom: 12,
-                            borderBottom: '1px solid rgba(0,0,0,0.06)',
-                          }}>
-                            <span style={{
-                              color: '#1d1d1f',
+                        return (
+                          <div key={sectionKey} style={{ marginBottom: 32 }}>
+                            <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
+                              gap: 12,
+                              marginBottom: 14,
+                              paddingBottom: 12,
+                              borderBottom: '1px solid rgba(0,0,0,0.06)',
                             }}>
-                              <IconComp size={22} stroke={1.5} />
-                            </span>
-                            <span style={{
-                              fontSize: 17,
-                              fontWeight: 600,
-                              color: '#1d1d1f',
-                              letterSpacing: '-0.3px',
-                            }}>{label}</span>
+                              <span style={{
+                                color: '#1d1d1f',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}>
+                                <IconComp size={22} stroke={1.5} />
+                              </span>
+                              <span style={{
+                                fontSize: 17,
+                                fontWeight: 600,
+                                color: '#1d1d1f',
+                                letterSpacing: '-0.3px',
+                              }}>{label}</span>
+                            </div>
+                            <ul style={{
+                              listStyle: 'none',
+                              padding: 0,
+                              margin: 0,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 6,
+                            }}>
+                              {items.map((item, i) => {
+                                const text = typeof item === 'object' && item !== null ? item.text : item;
+                                const cleanText = String(text)
+                                  .replace(new RegExp(`^${firstWord}:\\s*`, 'i'), '')
+                                  .replace(new RegExp(`^${label}:\\s*`, 'i'), '');
+                                return (
+                                  <li key={i} style={{
+                                    fontSize: 13,
+                                    lineHeight: 1.55,
+                                    color: 'rgba(29,29,31,0.85)',
+                                    padding: '2px 0',
+                                  }}>
+                                    {cleanText}
+                                  </li>
+                                );
+                              })}
+                            </ul>
                           </div>
-                          <ul style={{
-                            listStyle: 'none',
-                            padding: 0,
-                            margin: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 6,
-                          }}>
-                            {items.map((item, i) => {
-                              const text = typeof item === 'object' && item !== null ? item.text : item;
-                              const cleanText = String(text)
-                                .replace(new RegExp(`^${firstWord}:\\s*`, 'i'), '')
-                                .replace(new RegExp(`^${label}:\\s*`, 'i'), '');
-                              return (
-                                <li key={i} style={{
-                                  fontSize: 13,
-                                  lineHeight: 1.55,
-                                  color: 'rgba(29,29,31,0.85)',
-                                  padding: '2px 0',
-                                }}>
-                                  {cleanText}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </>
                 );
               })()}

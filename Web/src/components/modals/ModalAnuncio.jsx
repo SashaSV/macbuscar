@@ -1,9 +1,10 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { ESTADOS } from '../shared/constants';
 
 export default function ModalAnuncio({ productoId, productos, onGuardar, onCerrar }) {
   const [form, setForm] = useState({ productoId: productoId || '', precio:'', estado:'Excelente', ciudad:'', vendedor:'', descripcion:'' });
+  const [selected, setSelected] = useState({ color: '', memory: '' }); // variant filters
   const [fotos, setFotos] = useState([]);
   const [urlInput, setUrlInput] = useState('');
   const [dragOver, setDragOver] = useState(false);
@@ -11,6 +12,44 @@ export default function ModalAnuncio({ productoId, productos, onGuardar, onCerra
   const [error, setError] = useState('');
   const fileRef = useRef();
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Currently chosen product object (must contain a `.variants` array)
+  const producto = useMemo(
+    () => productos.find(p => String(p.id) === String(form.productoId)),
+    [productos, form.productoId]
+  );
+  const variants = producto?.variants || [];
+
+  // Available color / storage options (only show a selector when >1 value)
+  const colorOptions = useMemo(
+    () => [...new Set(variants.map(v => v.color).filter(Boolean))],
+    [variants]
+  );
+  const memoryOptions = useMemo(
+    () => [...new Set(variants.map(v => v.memory).filter(Boolean))],
+    [variants]
+  );
+
+  // Resolve the variant matching the selected color + memory
+  const selectedVariant = useMemo(() => {
+    if (!variants.length) return null;
+    // If there's only one variant, just use it.
+    if (variants.length === 1) return variants[0];
+    return variants.find(v =>
+      (!colorOptions.length  || !selected.color  || v.color  === selected.color) &&
+      (!memoryOptions.length || !selected.memory || v.memory === selected.memory)
+    ) || null;
+  }, [variants, selected, colorOptions, memoryOptions]);
+
+  // When product changes, default selectors to the first variant's values
+  useEffect(() => {
+    if (!variants.length) { setSelected({ color: '', memory: '' }); return; }
+    const first = variants[0];
+    setSelected({
+      color: colorOptions.length ? (first.color || '') : '',
+      memory: memoryOptions.length ? (first.memory || '') : '',
+    });
+  }, [form.productoId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function addFiles(files) {
     Array.from(files).forEach(file => {
@@ -32,10 +71,15 @@ export default function ModalAnuncio({ productoId, productos, onGuardar, onCerra
       setError('Rellena todos los campos obligatorios.');
       return;
     }
+    if (variants.length && !selectedVariant) {
+      setError('Selecciona la configuración (color y almacenamiento).');
+      return;
+    }
     setLoading(true); setError('');
     try {
       const fd = new FormData();
       fd.append('productoId', form.productoId);
+      if (selectedVariant) fd.append('variantId', selectedVariant.id);
       fd.append('precio', form.precio);
       fd.append('estado', form.estado);
       fd.append('ciudad', form.ciudad);
@@ -128,6 +172,80 @@ export default function ModalAnuncio({ productoId, productos, onGuardar, onCerra
             <option value="" disabled>Selecciona el producto…</option>
             {productos.map(p => <option key={p.id} value={p.id}>{p.emoji} {p.nombre}</option>)}
           </select>
+
+          {/* VARIANT SELECTORS — color + storage (only when product chosen & options exist) */}
+          {producto && (colorOptions.length > 0 || memoryOptions.length > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Color */}
+              {colorOptions.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(29,29,31,0.6)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    Color
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {colorOptions.map(c => {
+                      const active = selected.color === c;
+                      const hex = variants.find(v => v.color === c)?.colorHex || '#cccccc';
+                      return (
+                        <button
+                          key={c}
+                          onClick={() => setSelected(s => ({ ...s, color: c }))}
+                          title={c}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 7,
+                            padding: '5px 11px 5px 5px',
+                            background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
+                            color: active ? '#fff' : '#1d1d1f',
+                            border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
+                            borderRadius: 980, cursor: 'pointer',
+                            fontSize: 11, fontWeight: 500, transition: 'all .15s',
+                          }}
+                        >
+                          <span style={{
+                            width: 16, height: 16, borderRadius: '50%',
+                            background: hex,
+                            border: '1px solid rgba(0,0,0,0.15)',
+                            display: 'inline-block',
+                          }} />
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Storage */}
+              {memoryOptions.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(29,29,31,0.6)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    Almacenamiento
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {memoryOptions.map(m => {
+                      const active = selected.memory === m;
+                      return (
+                        <button
+                          key={m}
+                          onClick={() => setSelected(s => ({ ...s, memory: m }))}
+                          style={{
+                            padding: '6px 12px',
+                            background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
+                            color: active ? '#fff' : '#1d1d1f',
+                            border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
+                            borderRadius: 980, cursor: 'pointer',
+                            fontSize: 11, fontWeight: 500, transition: 'all .15s',
+                          }}
+                        >
+                          {m}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 10 }}>
             <input type="number" placeholder="Precio (€)" value={form.precio} onChange={e => set('precio', e.target.value)} style={{ ...inp, flex: 1 }} />
@@ -242,7 +360,7 @@ export default function ModalAnuncio({ productoId, productos, onGuardar, onCerra
 
           <button
             onClick={submit}
-            disabled={loading || !form.productoId || !form.precio || !form.ciudad || !form.vendedor}
+            disabled={loading || !form.productoId || !form.precio || !form.ciudad || !form.vendedor || (variants.length > 0 && !selectedVariant)}
             style={{
               padding: '13px',
               background: loading ? 'rgba(168,85,247,0.4)' : '#1d1d1f',

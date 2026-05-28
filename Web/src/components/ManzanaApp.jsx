@@ -61,14 +61,49 @@ export default function ManzanaApp() {
   }
 
   function handleNewListing(listing) {
+    // A Listing is linked to a ProductVariant (no direct productId).
+    // Resolve the owning product via the listing's variantId, with a couple
+    // of fallbacks in case the API also returned a nested product object.
+    const ownerId =
+      listing.product?.id ??
+      listing.variant?.productId ??
+      products.find(p => (p.variants || []).some(v => v.id === listing.variantId))?.id ??
+      null;
+
+    if (ownerId == null) {
+      // Last resort: refetch products so the new listing shows up.
+      setModalAnuncio(null);
+      fetch('/api/products')
+        .then(r => r.json())
+        .then(data => {
+          const normalized = (Array.isArray(data) ? data : []).map(p => ({
+            ...p,
+            fotos: safeParse(p.fotos, []),
+            fotoLabels: safeParse(p.fotoLabels, []),
+            specs: safeParse(p.specs, {}),
+            listings: (p.listings || []).map(l => ({ ...l, fotos: safeParse(l.fotos, []) })),
+          }));
+          setProducts(normalized);
+        })
+        .catch(console.error);
+      return;
+    }
+
+    const newListing = { ...listing, fotos: safeParse(listing.fotos, []) };
+
     setProducts(ps => ps.map(p =>
-      p.id === listing.productId
-        ? { ...p, listings: [listing, ...(p.listings || [])] }
+      p.id === ownerId
+        ? { ...p, listings: [newListing, ...(p.listings || [])] }
         : p
     ));
     setModalAnuncio(null);
-    const prod = products.find(p => p.id === listing.productId);
-    if (prod) setSelProd({ ...prod, listings: [listing, ...(prod.listings || [])] });
+
+    // If the product modal is open, update it too so the listing appears instantly.
+    setSelProd(sp =>
+      sp && sp.id === ownerId
+        ? { ...sp, listings: [newListing, ...(sp.listings || [])] }
+        : sp
+    );
   }
 
   const filtrados = products.filter(p =>
@@ -123,7 +158,7 @@ export default function ManzanaApp() {
                   <span style={{ fontSize:22 }}>🍎</span>
                   <div>
                     <div style={{ fontSize:14, fontWeight:500, color:'#1d1d1f', letterSpacing:-0.2 }}>macbuscar</div>
-                    <div style={{ fontSize:9, color:'rgba(29,29,31,0.4)', letterSpacing:1 }}>COMPARADOR · {TIENDAS.length} TIENDAS</div>
+                    <div style={{ fontSize:9, color:'rgba(29,29,31,0.4)', letterSpacing:1 }}>COMPARADOR</div>
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:4 }}>

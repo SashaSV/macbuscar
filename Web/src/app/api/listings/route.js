@@ -3,6 +3,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { saveMultipleFiles } from '@/lib/upload';
 
+// In the schema, Listing is linked ONLY to ProductVariant.
+// The product is reached through variant -> product.
+const VARIANT_INCLUDE = {
+  variant: {
+    select: {
+      id: true, nombre: true, color: true, colorHex: true, memory: true,
+      productId: true,
+      product: { select: { id: true, nombre: true, emoji: true, slug: true } },
+    },
+  },
+};
+
 // GET /api/listings?productId=1
 export async function GET(request) {
   try {
@@ -12,14 +24,20 @@ export async function GET(request) {
     const listings = await prisma.listing.findMany({
       where: {
         active: true,
-        ...(productId ? { productId: parseInt(productId) } : {}),
+        // filter by product through the variant relation
+        ...(productId ? { variant: { productId: parseInt(productId) } } : {}),
       },
-      include: { product: { select: { nombre: true, emoji: true, slug: true } } },
+      include: VARIANT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
 
     return NextResponse.json(
-      listings.map(l => ({ ...l, fotos: JSON.parse(l.fotos) }))
+      listings.map(l => ({
+        ...l,
+        fotos: JSON.parse(l.fotos),
+        // expose product at top level for backwards compatibility with the UI
+        product: l.variant?.product || null,
+      }))
     );
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -31,16 +49,29 @@ export async function POST(request) {
   try {
     const formData = await request.formData();
 
-    const productId = parseInt(formData.get('productoId'));
+    const productId = formData.get('productoId') ? parseInt(formData.get('productoId')) : null;
+    const variantId = formData.get('variantId') ? parseInt(formData.get('variantId')) : null;
     const precio    = parseFloat(formData.get('precio'));
     const estado    = formData.get('estado');
     const ciudad    = formData.get('ciudad');
     const vendedor  = formData.get('vendedor');
     const descripcion = formData.get('descripcion') || '';
 
-    // Validate
-    if (!productId || !precio || !estado || !ciudad || !vendedor) {
+    // variantId is required — Listing is tied to a specific SKU (variant)
+    if (!variantId || !precio || !estado || !ciudad || !vendedor) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
+    }
+
+    // Safety: make sure the variant exists (and, if productId was sent, that it matches)
+    const variant = await prisma.productVariant.findUnique({
+      where: { id: variantId },
+      select: { id: true, productId: true },
+    });
+    if (!variant) {
+      return NextResponse.json({ error: 'La variante no existe' }, { status: 400 });
+    }
+    if (productId && variant.productId !== productId) {
+      return NextResponse.json({ error: 'La variante no corresponde al producto' }, { status: 400 });
     }
 
     // Handle uploaded files
@@ -57,7 +88,7 @@ export async function POST(request) {
 
     const listing = await prisma.listing.create({
       data: {
-        productId,
+        variant: { connect: { id: variantId } },
         precio,
         estado,
         ciudad,
@@ -65,10 +96,13 @@ export async function POST(request) {
         descripcion,
         fotos: JSON.stringify(allFotos),
       },
-      include: { product: { select: { nombre: true, emoji: true } } },
+      include: VARIANT_INCLUDE,
     });
 
-    return NextResponse.json({ ...listing, fotos: allFotos }, { status: 201 });
+    return NextResponse.json(
+      { ...listing, fotos: allFotos, product: listing.variant?.product || null },
+      { status: 201 }
+    );
   } catch (err) {
     console.error('[POST /api/listings]', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

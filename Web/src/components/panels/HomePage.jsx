@@ -82,6 +82,21 @@ const BANNERS = [
 
 const AUTO_ROTATE_MS = 5000;
 
+/**
+ * Category card images (Apple Tienda style). Place PNGs in /public/categories/.
+ * Keyed by CATS id. If an id has no entry here, the chip falls back to its
+ * Tabler icon automatically — so this never breaks onCategoryClick.
+ * NOTE: verify these keys match your real CATS ids in shared/constants.js.
+ */
+const CATEGORY_IMG = {
+  iphone: '/categories/iphone.png',
+  mac: '/categories/mac.png',
+  ipad: '/categories/ipad.png',
+  watch: '/categories/watch.png',
+  airpods: '/categories/airpods.png',
+  accesorios: '/categories/accesorios.png',
+};
+
 
 function BannerCarousel() {
   const [active, setActive] = useState(0);
@@ -103,9 +118,13 @@ function BannerCarousel() {
         position: 'relative',
         borderRadius: 24,
         marginBottom: 28,
+        // Breakout: banner extends slightly wider than the content grid on
+        // larger screens, while staying inside the viewport (no h-scroll).
+        marginLeft: 'calc(-1 * clamp(0px, 4vw, 56px))',
+        marginRight: 'calc(-1 * clamp(0px, 4vw, 56px))',
         overflow: 'hidden',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 8px 24px rgba(0,0,0,0.10)',
-        minHeight: 300,
+        minHeight: 320,
       }}
     >
       {BANNERS.map((b, i) => {
@@ -137,14 +156,14 @@ function BannerCarousel() {
               backgroundSize: 'auto, cover',
               backgroundPosition: `left, ${b.imagePos || 'center right'}`,
               backgroundRepeat: 'no-repeat, no-repeat',
-              minHeight: 300,
+              minHeight: 320,
             }}
           >
             <div style={{
               display: 'flex',
               alignItems: 'center',
               height: '100%',
-              minHeight: 300,
+              minHeight: 320,
               padding: '40px 44px',
             }}>
               <div style={{ flex: 1, maxWidth: 480, zIndex: 1 }}>
@@ -264,31 +283,63 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
       {/* BANNER CAROUSEL — sponsored slots */}
       <BannerCarousel />
 
-      {/* Categories */}
-      <div style={{ display:'flex', gap:8, marginBottom:28, flexWrap:'wrap' }}>
+      {/* Categories — Apple Tienda style: product image on top, label below */}
+      <div style={{
+        display:'grid',
+        gridTemplateColumns:'repeat(auto-fit, minmax(120px, 1fr))',
+        gap:12,
+        marginBottom:32,
+      }}>
         {CATS.filter(c => c.id !== 'all').map(c => {
+          const imgSrc = CATEGORY_IMG[c.id];
           const iconClass = CATEGORY_ICON[c.id] || 'ti-apps';
           return (
             <div
               key={c.id}
               onClick={() => onCategoryClick?.(c.id)}
               style={{
-                display:'flex', alignItems:'center', gap:8,
+                display:'flex',
+                flexDirection:'column',
+                alignItems:'center',
+                gap:6,
                 background:'rgba(255,255,255,0.55)',
                 backdropFilter:'blur(20px) saturate(180%)',
                 WebkitBackdropFilter:'blur(20px) saturate(180%)',
                 border:'0.5px solid rgba(255,255,255,0.8)',
-                borderRadius:980,
-                padding:'8px 14px',
+                borderRadius:20,
+                padding:'14px 12px 16px',
                 cursor:'pointer',
                 boxShadow:'inset 0 1px 0 rgba(255,255,255,0.9)',
-                transition:'transform .2s',
+                transition:'transform .2s, box-shadow .2s',
               }}
-              onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform='translateY(-3px)';
+                e.currentTarget.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(0,0,0,0.10)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform='translateY(0)';
+                e.currentTarget.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.9)';
+              }}
             >
-              <i className={`ti ${iconClass}`} aria-hidden="true" style={{ fontSize:16, color:'#1d1d1f' }} />
-              <span style={{ fontSize:12, fontWeight:500, color:'#1d1d1f' }}>{c.label}</span>
+              {imgSrc ? (
+                <img
+                  src={imgSrc}
+                  alt={c.label}
+                  loading="lazy"
+                  style={{
+                    width:'100%',
+                    maxWidth:110,
+                    height:72,
+                    objectFit:'contain',
+                    mixBlendMode:'multiply', // blends the light grey card bg into the glass
+                  }}
+                />
+              ) : (
+                <div style={{ height:72, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <i className={`ti ${iconClass}`} aria-hidden="true" style={{ fontSize:34, color:'#1d1d1f' }} />
+                </div>
+              )}
+              <span style={{ fontSize:13, fontWeight:500, color:'#1d1d1f', textAlign:'center' }}>{c.label}</span>
             </div>
           );
         })}
