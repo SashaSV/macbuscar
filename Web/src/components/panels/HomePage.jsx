@@ -54,6 +54,30 @@ const BANNERS = [
     imagePos: 'center 30%',
     dark: true,
   },
+  {
+    id: 'iphone17e-colors',
+    title: 'iPhone 17e, en 4 colores',
+    subtitle: 'Negro, Blanco, Rosa y más. Compara el mejor precio en 8 tiendas españolas.',
+    cta: 'Comparar precios',
+    link: '#',
+    sponsor: 'macbuscar',
+    accent: '#ff375f',
+    image: '/banners/iphone17e-colors.jpg',
+    imagePos: 'center right',
+    dark: false,
+  },
+  {
+    id: 'airpods-pro',
+    title: 'AirPods Pro',
+    subtitle: 'Cancelación de ruido y audio espacial. Encuentra el precio más bajo hoy.',
+    cta: 'Ver ofertas',
+    link: '#',
+    sponsor: 'macbuscar',
+    accent: '#0a84ff',
+    image: '/banners/airpods-pro.jpg',
+    imagePos: 'center right',
+    dark: false,
+  },
 ];
 
 const AUTO_ROTATE_MS = 5000;
