@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-MediaMarkt.es scraper — variant-driven, prices only.
+K-tuin.com scraper — variant-driven, prices only.
 
-Same architecture as amazon.py and worten.py.
+K-tuin is an Apple Authorized Reseller in Spain. Pure Apple catalog, smaller
+site, generally easier to scrape than mainstream electronics retailers.
 
-MediaMarkt-specific quirks resolved here:
-  - JSON-LD <script type="application/ld+json"> on search pages carries the
-    full ItemList of products with Offer.price → that's the cleanest parse.
-  - When JSON-LD is missing/incomplete, we fall back to walking the DOM:
-    the visible card (anchor) contains only the title, so we anchor on the
-    parent <article data-test=*=product-list-item> and scan it for any
-    element whose text matches a euro-shaped price ("579,– €" included).
-  - The Akamai Bot Manager fronts the site. We warm up with a visit to the
-    home page (+ cookie banner accept) before any /search.html hit.
+In the DB this store has id 'istore' (kept for historical reasons — the seed
+file calls it "iStore (K-tuin)"). The module is named ktuin.py for clarity.
 """
 import os
 import re
@@ -23,7 +17,6 @@ import random
 import argparse
 from urllib.parse import quote_plus
 
-# Force UTF-8 stdout on Windows so emoji/Spanish chars don't crash in cp1251.
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -41,9 +34,51 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scanner.dbservice_postgres import get_connection
 
 
-STORE_ID = 'mediamarkt'
-HOST = 'https://www.mediamarkt.es'
-SEARCH_URL_TPL = '{host}/es/search.html?query={query}'
+STORE_ID = 'istore'          # matches DB Store.id from seed
+HOST = 'https://www.k-tuin.com'
+
+# K-tuin doesn't have a working /buscar?... endpoint. Instead it has
+# subfamily landing pages that list every variant for that subfamily.
+# We map sub-family queries (as built by subfamily_info()) directly to
+# these landing-page URLs.
+SUBFAMILY_URLS = {
+    # iPhone
+    'iPhone 17 Pro Max':     '/comprar-un-iphone/iphone-17-pro-max',
+    'iPhone 17 Pro':         '/comprar-un-iphone/iphone-17-pro',
+    'iPhone Air':            '/comprar-un-iphone/iphone-air',
+    'iPhone 17':             '/comprar-un-iphone/iphone-17',
+    'iPhone 17e':            '/comprar-un-iphone/iphone-17e',
+    'iPhone 16 Plus':        '/comprar-un-iphone/iphone-16-plus',
+    'iPhone 16':             '/comprar-un-iphone/iphone-16',
+    'iPhone 16e':            '/comprar-un-iphone/iphone-16e',
+    # Mac
+    'MacBook Neo':           '/comprar-un-mac/nuevo-macbook-neo',
+    'MacBook Air 13':        '/comprar-un-mac/nuevo-macbook-air',
+    'MacBook Air 15':        '/comprar-un-mac/nuevo-macbook-air',
+    'MacBook Pro 14':        '/comprar-un-mac/nuevo-macbook-pro',
+    'MacBook Pro 16':        '/comprar-un-mac/nuevo-macbook-pro',
+    'iMac':                  '/comprar-un-mac/nuevo-imac',
+    'Mac Studio':            '/comprar-un-mac/mac-studio',
+    'Mac mini':              '/comprar-un-mac/nuevo-mac-mini',
+    # iPad
+    'iPad Pro 11':           '/comprar-un-ipad/nuevo-ipad-pro',
+    'iPad Pro 13':           '/comprar-un-ipad/nuevo-ipad-pro',
+    'iPad Air 11':           '/comprar-un-ipad/nuevo-ipad-air',
+    'iPad Air 13':           '/comprar-un-ipad/nuevo-ipad-air',
+    'iPad mini':             '/comprar-un-ipad/nuevo-ipad-mini',
+    'iPad':                  '/comprar-un-ipad/ipad-11',
+    # Watch
+    'Apple Watch Ultra':     '/comprar-un-watch/apple-watch-ultra-3',
+    'Apple Watch Series 11': '/comprar-un-watch/apple-watch-series-11',
+    'Apple Watch SE':        '/comprar-un-watch/apple-watch-se',
+    # AirPods
+    'AirPods Max 2':         '/music/airpods-max',
+    'AirPods Max':           '/music/airpods-max',
+    'AirPods Pro 3':         '/music/airpods-pro',
+    'AirPods Pro':           '/music/airpods-pro',
+    'AirPods 4':             '/music/airpods',
+    'AirPods':               '/music/airpods',
+}
 
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -51,9 +86,8 @@ USER_AGENT = (
 )
 
 MIN_MATCH_SCORE = 50
-# MediaMarkt has stricter bot detection than Worten — slightly higher pacing.
-PAGE_DELAY_MIN  = 4.0
-PAGE_DELAY_MAX  = 8.0
+PAGE_DELAY_MIN  = 3.5
+PAGE_DELAY_MAX  = 7.0
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -61,9 +95,12 @@ PAGE_DELAY_MAX  = 8.0
 # ════════════════════════════════════════════════════════════════════════════
 
 def build_search_url(product_name, cat):
-    """Plain query search; MediaMarkt has no brand-filter URL param."""
-    query = quote_plus(f'{product_name} Apple')
-    return SEARCH_URL_TPL.format(host=HOST, query=query)
+    """K-tuin has no working search endpoint — we use direct subfamily
+    landing URLs. Returns None if the subfamily isn't mapped."""
+    path = SUBFAMILY_URLS.get(product_name)
+    if not path:
+        return None
+    return HOST + path
 
 
 COLOR_TRANSLATIONS = {
@@ -90,9 +127,6 @@ def _translate_color_for_search(color):
     return COLOR_TRANSLATIONS.get(key, color)
 
 
-# Multi-word Apple colors that have an English ↔ Spanish equivalent which is
-# NOT just a single-word translation. Used for color matching against result
-# names (MediaMarkt returns English color names in its JSON-LD for newer SKUs).
 APPLE_COLOR_SYNONYMS = {
     'medianoche':      'midnight',
     'blanco estrella': 'starlight',
@@ -109,21 +143,15 @@ APPLE_COLOR_SYNONYMS = {
 
 
 def _color_search_terms(color):
-    """Return lower-cased synonyms for `color` in BOTH languages.
-    Used to match against listing names that may be in Spanish or English."""
     if not color:
         return set()
     base = color.strip().lower()
     terms = {base}
-    # Forward: English -> Spanish via COLOR_TRANSLATIONS
     if base in COLOR_TRANSLATIONS:
         terms.add(COLOR_TRANSLATIONS[base].lower())
-    # Reverse: Spanish -> English (built from COLOR_TRANSLATIONS each call;
-    # COLOR_TRANSLATIONS is small enough this is cheap)
     for en, es in COLOR_TRANSLATIONS.items():
         if es.lower() == base:
             terms.add(en)
-    # Multi-word Apple-specific names
     if base in APPLE_COLOR_SYNONYMS:
         terms.add(APPLE_COLOR_SYNONYMS[base])
     for es, en in APPLE_COLOR_SYNONYMS.items():
@@ -149,11 +177,9 @@ def build_fallback_query(variant, subfamily_query):
 
 
 def parse_price(text):
-    """Spanish/German price ('1.299,99 €' or '579,– €') -> float."""
     if text is None or text == '':
         return None
     s = str(text).replace('€', '').replace('EUR', '').replace('\xa0', '').strip()
-    # European "579,–" / "579,-" notation: dash = no cents
     s = s.replace(',–', ',00').replace(',-', ',00').replace('.–', '.00')
     if '.' in s and ',' in s:
         s = s.replace('.', '').replace(',', '.')
@@ -166,23 +192,22 @@ def parse_price(text):
 
 
 def is_captcha(html):
-    """Detect Akamai Bot Manager challenges + generic ones.
-    Returns (marker, snippet) or (None, '')."""
     if not html:
         return ('empty-html', '')
     low = html.lower()
     strong_markers = (
-        'akamai-error',
-        'reference&#32;&#35;',    # Akamai block page often has "Reference #..."
-        'akam_error',
         'cf-browser-verification',
         'checking your browser before accessing',
         'challenge-platform',
+        '__cf_chl_',
         'enable javascript and cookies to continue',
         'access to this page has been denied',
         'request blocked',
         'error 1015',
     )
+    # Tiny placeholder responses
+    if len(html) < 3000 and 'k-tuin' in low and '<script' in low and '€' not in html:
+        return ('short-stub', html[:200])
     for m in strong_markers:
         if m in low:
             idx = low.find(m)
@@ -194,7 +219,7 @@ def is_captcha(html):
 REJECT_ANYWHERE = (
     'reacondicionado', 'renewed', 'segunda mano', 'usado',
     'señales de uso', 'producto reacondicionado',
-    'open box', 'outlet',
+    'open box', 'outlet', 'restaurado',
 )
 REJECT_AT_START = ('funda', 'protector', 'cargador', 'cable', 'adaptador',
                    'soporte', 'correa', 'pulsera', 'bandolera')
@@ -211,17 +236,13 @@ def is_accessory_listing(name):
 
 
 def is_non_apple_listing(name):
+    """K-tuin is Apple-only, so this is mostly a sanity check."""
     if not name:
         return True
     n = name.lower()
     apple_signals = ('apple', 'iphone', 'ipad', 'macbook', 'imac', 'airpods',
-                     'apple watch', 'magsafe', 'mac mini', 'mac studio')
-    if not any(s in n for s in apple_signals):
-        return True
-    competing = ('samsung', 'xiaomi', 'huawei', 'realme', 'oppo', 'oneplus',
-                 'google pixel', 'motorola', 'sony xperia', 'jbl ',
-                 'bose ', 'sennheiser')
-    return any(c in n for c in competing)
+                     'apple watch', 'magsafe', 'mac mini', 'mac studio', 'watch')
+    return not any(s in n for s in apple_signals)
 
 
 def _slug_from_url(url):
@@ -236,7 +257,6 @@ def _slug_from_url(url):
 # ════════════════════════════════════════════════════════════════════════════
 
 def _walk_jsonld_items(data):
-    """Yield Product nodes nested anywhere inside a JSON-LD blob."""
     if isinstance(data, list):
         for it in data:
             for x in _walk_jsonld_items(it):
@@ -262,7 +282,6 @@ def _walk_jsonld_items(data):
 
 
 def parse_jsonld(soup):
-    """Extract products from <script type='application/ld+json'> blocks."""
     out = []
     seen = set()
     for el in soup.select('script[type="application/ld+json"]'):
@@ -305,97 +324,152 @@ def parse_jsonld(soup):
     return out
 
 
-def _find_price_in_article(article):
-    """Scan article DOM for a sensible product price (50 .. 10000 EUR).
-    Returns (price, oldprice). Old-price detection follows class/tag hints."""
-    price = None
-    oldprice = None
-    for el in article.find_all(['span', 'div', 'p', 'strong']):
-        text = el.get_text(strip=True)
-        if not text or '€' not in text:
-            continue
-        # Filter-slider range labels are "17 €" / "625 €" — too short and
-        # appear in <label> ancestry, not product cards. Skip oddly long
-        # blobs (probably a wrapper that captured multiple things).
-        if len(text) > 25:
-            continue
-        candidate = parse_price(text)
-        if not candidate or candidate < 50 or candidate > 10000:
-            continue
-        # Strike-through ancestor / tag → old (struck-out) price.
-        is_old = False
-        for ancestor in [el] + list(el.parents)[:3]:
-            cls = ' '.join(ancestor.get('class', []) or []).lower()
-            if 'strike' in cls or 'oldprice' in cls or 'old-price' in cls:
-                is_old = True
-                break
-            if ancestor.name in ('s', 'del'):
-                is_old = True
-                break
-        if is_old:
-            if oldprice is None or candidate > oldprice:
-                oldprice = candidate
-        elif price is None:
-            price = candidate
-    return price, oldprice
+# K-tuin DOM (verified via --inspect):
+#   <div class="product-element">
+#     <div class="product-info">
+#       <div class="product-name"><a href="/...">...</a></div>
+#       <div class="product-prices">
+#         <span class="price" id="old-price-30202">959,00 €</span>
+#         <span class="price" id="product-price-30202">899,00 €</span>
+#       </div>
+#     </div>
+#   </div>
+# SKU = Magento product ID extracted from id="product-price-XXXXX".
+CARD_SELECTOR_STRATEGIES = (
+    'div.product-element',
+    'li.product-element',
+    '[itemtype$="schema.org/Product"]',
+    'article[class*="product"]',
+    'li[class*="product"]',
+    'div[class*="product-card"]',
+    'div[class*="ProductCard"]',
+    'div[class*="product-item"]',
+    'div.product-miniature',
+    '[data-id-product]',
+)
+
+NAME_SELECTORS = (
+    '.product-name a',
+    '.product-name',
+    '[itemprop="name"]',
+    'a.product-name',
+    'h2.product-title a',
+    'h3.product-title a',
+    '.product-title',
+    'h2 a', 'h3 a',
+)
+
+PRICE_SELECTORS_MAIN = (
+    'span.price[id^="product-price-"]',
+    '[itemprop="price"]',
+    '.product-price',
+    '.price',
+    '.regular-price',
+    '.current-price',
+)
+
+PRICE_SELECTORS_OLD = (
+    'span.price[id^="old-price-"]',
+    '.product-price-old',
+    '.regular-price-old',
+    '[class*="strikethrough"]',
+    '.old-price',
+    'del',
+    's',
+)
+
+LINK_SELECTORS = (
+    '.product-name a',
+    '.product-picture a',
+    'a[itemprop="url"]',
+    'a.product-name',
+    'h2 a', 'h3 a',
+    'a[href*="/iphone-"]', 'a[href*="/ipad-"]', 'a[href*="/mac"]',
+    'a[href*="/watch-"]',  'a[href*="/airpods"]',
+    # K-tuin: each card is wrapped in a single <a> as a direct child of
+    # div.product-element. The href can be any apple-watch-..., imac-...,
+    # macbook-..., or other product slug — not all match the patterns
+    # above. Broad fallbacks below catch any remaining cases.
+    'a[href^="https://www.k-tuin.com/"]',
+    'a[href]',
+)
 
 
 def parse_search_results(html):
-    """Parse MediaMarkt search-result cards.
-    Primary: JSON-LD ItemList. Fallback: DOM walk over <article data-test>."""
     soup = BeautifulSoup(html, 'html.parser')
 
-    # ───── Primary: JSON-LD ─────
     jsonld_results = parse_jsonld(soup)
     if jsonld_results:
         return jsonld_results
 
-    # ───── Fallback: DOM ─────
-    cards = (soup.select('article[data-test*="product-list-item"]') or
-             soup.select('article[data-test]') or
-             soup.select('[data-test*="product-list-item"]'))
+    cards = []
+    for sel in CARD_SELECTOR_STRATEGIES:
+        cards = soup.select(sel)
+        if cards:
+            break
+    if not cards:
+        return []
 
     out = []
     seen = set()
     for card in cards:
-        link_el = (card.select_one('a[data-test*="link"]') or
-                   card.select_one('a[href*="/product/"]') or
-                   card.select_one('a'))
+        link_el = None
+        for sel in LINK_SELECTORS:
+            link_el = card.select_one(sel)
+            if link_el and link_el.get('href'):
+                break
         if not link_el:
             continue
         href = link_el.get('href') or ''
         if href and not href.startswith('http'):
-            href = HOST + href
+            href = HOST + (href if href.startswith('/') else '/' + href)
 
         name = ''
-        title_el = card.select_one('[data-test="product-title"]')
-        if title_el:
-            name = title_el.get_text(strip=True)
+        for sel in NAME_SELECTORS:
+            el = card.select_one(sel)
+            if el and el.get_text(strip=True):
+                name = el.get_text(strip=True)
+                break
         if not name:
-            name = (link_el.get('title') or
-                    (card.select_one('[title]').get('title') if card.select_one('[title]') else '') or
-                    link_el.get_text(strip=True) or '')
+            name = link_el.get('title') or link_el.get_text(strip=True) or ''
         if not name:
             continue
         if is_accessory_listing(name) or is_non_apple_listing(name):
             continue
 
-        # SKU: data-* attribute, or numeric ID from URL slug like
-        # /es/product/_apple-airpods-max-…-1582273.html
-        sku = (card.get('data-test-product-id') or
+        sku = (card.get('data-id-product') or
                card.get('data-product-id') or '')
         if not sku:
-            m = re.search(r'-(\d{6,})\.html', href)
-            if m:
-                sku = m.group(1)
+            # K-tuin: extract Magento product ID from id="product-price-XXXXX"
+            pid_el = card.select_one('span.price[id^="product-price-"]')
+            if pid_el:
+                m = re.match(r'product-price-(\d+)', pid_el.get('id') or '')
+                if m:
+                    sku = m.group(1)
         if not sku:
             sku = _slug_from_url(href)
         if not sku or sku in seen:
             continue
 
-        price, oldprice = _find_price_in_article(card)
-        if not price:
+        price = None
+        for sel in PRICE_SELECTORS_MAIN:
+            el = card.select_one(sel)
+            if not el:
+                continue
+            raw = el.get('content') or el.get('data-price') or el.get_text(strip=True)
+            price = parse_price(raw)
+            if price:
+                break
+        if not price or price < 50:
             continue
+
+        oldprice = None
+        for sel in PRICE_SELECTORS_OLD:
+            el = card.select_one(sel)
+            if el and el.get_text(strip=True):
+                oldprice = parse_price(el.get_text(strip=True))
+                if oldprice:
+                    break
         if oldprice and oldprice <= price:
             oldprice = None
 
@@ -411,17 +485,20 @@ def parse_search_results(html):
     return out
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#   inspect_page  —  diagnostic
-# ════════════════════════════════════════════════════════════════════════════
-
 def inspect_page(html):
     soup = BeautifulSoup(html, 'html.parser')
     print('\n── PAGE INSPECTION ──')
     print(f'   <title>: {soup.title.get_text(strip=True) if soup.title else "(none)"}')
     print(f'   total HTML length: {len(html)} chars')
 
-    # JSON-LD path
+    if len(html) < 5000:
+        print('\n   ⚠️  HTML is suspiciously short — dumping full content:')
+        print('   ─── FULL HTML ───')
+        for line in html.splitlines():
+            print(f'   {line}')
+        print('   ─── END FULL HTML ───')
+
+    # JSON-LD
     ld_scripts = soup.select('script[type="application/ld+json"]')
     print(f'\n   application/ld+json scripts: {len(ld_scripts)}')
     for i, el in enumerate(ld_scripts[:2]):
@@ -432,20 +509,64 @@ def inspect_page(html):
     for r in jsonld_products[:5]:
         print(f'     · [{str(r["asin"])[:24]:24}] {r["name"][:60]:60} | {r["price"]}€')
 
-    # DOM path
-    for sel in ('article[data-test*="product-list-item"]',
-                'article[data-test]',
-                '[data-test*="product-list-item"]'):
+    # DOM
+    for sel in CARD_SELECTOR_STRATEGIES:
         n = len(soup.select(sel))
         marker = '✅' if n else '  '
         print(f'   {marker} cards via "{sel}": {n}')
 
-    # Euros
+    # Broad survey
+    print(f'\n   ─ Broad survey ─')
+    n_iphone_text = html.lower().count('iphone')
+    n_apple_text  = html.lower().count('apple')
+    print(f'   text "iphone" in HTML: {n_iphone_text}')
+    print(f'   text "apple"  in HTML: {n_apple_text}')
+
+    product_link_patterns = (
+        'a[href*="/iphone/"]',
+        'a[href*="/ipad/"]',
+        'a[href*="/mac/"]',
+        'a[href*="/watch/"]',
+        'a[href*="/airpods/"]',
+        'a[href*="/producto/"]',
+    )
+    for sel in product_link_patterns:
+        n = len(soup.select(sel))
+        if n:
+            print(f'   links {sel!r}: {n}')
+
+    interesting_classes = set()
+    for el in soup.find_all(class_=True):
+        for c in (el.get('class') or []):
+            cl = c.lower()
+            if any(k in cl for k in ('product', 'article', 'card', 'tile', 'item', 'miniature')):
+                interesting_classes.add(c)
+    print(f'   distinct classes containing product/article/card/tile/item/miniature: {len(interesting_classes)}')
+    for c in sorted(interesting_classes)[:30]:
+        print(f'     · .{c}')
+
+    interesting_attrs = set()
+    for el in soup.find_all(True):
+        for attr in el.attrs:
+            if attr.startswith('data-') and any(k in attr.lower() for k in
+                                                 ('product', 'item', 'sku', 'price', 'card')):
+                interesting_attrs.add(attr)
+    print(f'   data-* attrs with product/item/sku/price/card: {len(interesting_attrs)}')
+    for a in sorted(interesting_attrs)[:15]:
+        print(f'     · [{a}]')
+
     euro_positions = [i for i in range(len(html)) if html[i] == '€']
     print(f'\n   € occurrences in page: {len(euro_positions)}')
     for pos in euro_positions[:5]:
         ctx = html[max(0, pos - 80):pos + 30].replace('\n', ' ').strip()
         print(f'     • ...{ctx}...')
+
+    for sel in CARD_SELECTOR_STRATEGIES:
+        cards = soup.select(sel)
+        if cards:
+            print(f'\n   Sample card HTML via "{sel}" (1500 chars):')
+            print('   ' + str(cards[0])[:1500].replace('\n', '\n   '))
+            break
 
     parsed = parse_search_results(html)
     print(f'\n   parse_search_results() found {len(parsed)} usable products.')
@@ -455,7 +576,7 @@ def inspect_page(html):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#   Variant matching (same as Amazon/Worten)
+#   Variant matching (same as Amazon/Worten/MediaMarkt)
 # ════════════════════════════════════════════════════════════════════════════
 
 MEMORY_RE  = re.compile(r'(\d{1,4})\s*(GB|TB)\b', re.I)
@@ -565,8 +686,6 @@ def subfamily_info(product, variant):
 
     if fam == 'macbook-air':
         size = '15' if (disp and disp >= 14.5) else '13'
-        # Require size to be followed by a display-unit indicator so
-        # "16 GB RAM" / "15-core" don't accidentally match "16\"" / "15\"".
         return (f'MacBook Air {size}',
                 r'\bmacbook\s+air\b[^\n]*?\b' + size + r'(?:[.,]\d)?\s*(?:"|\u201d|\u2033|inch|pulgad)')
     if fam == 'macbook-pro':
@@ -591,8 +710,6 @@ def subfamily_info(product, variant):
         return (f'iPad Air {size}',
                 r'\bipad\s+air\b[^\n]*?\b' + size + r'(?:[.,]\d)?\s*(?:"|\u201d|\u2033|inch|pulgad)')
     if fam == 'ipad-mini':
-        # Negative lookahead rejects 2nd-6th gen listings (e.g. "6 GEN");
-        # our DB iPad mini is always the latest (7th gen / 2024).
         return ('iPad mini',
                 r'\bipad\s+mini\b(?![^\n]*\b[2-6](?:th|\u00aa)?\s*(?:gen|generaci))')
     if fam == 'ipad':
@@ -679,9 +796,6 @@ def score_result(result, variant):
             else:
                 return -1
         elif v_chip.startswith('m'):
-            # Variant has an M-series chip (M1/M2/.../M5) but result
-            # mentions no M-chip at all → almost certainly an older
-            # Intel/A-series Mac. Reject (e.g. "iMac 27\" 5K 2020").
             return -1
 
     v_cpu_cores = _int_match(nombre, CPU_CORES_VARIANT_RE)
@@ -784,7 +898,7 @@ def find_best_match(variant, results, family_re):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#   DB access (same as worten.py)
+#   DB access
 # ════════════════════════════════════════════════════════════════════════════
 
 def load_products_with_variants():
@@ -903,12 +1017,12 @@ def make_driver():
 def warmup_driver(driver):
     try:
         driver.get(HOST + '/')
-        time.sleep(random.uniform(2.5, 4.5))
+        time.sleep(random.uniform(2.0, 4.0))
         try:
             from selenium.webdriver.common.by import By
-            for selector in ('button[data-cookie-consent-accept]',
-                             'button#onetrust-accept-btn-handler',
-                             'button[aria-label*="Aceptar"]'):
+            for selector in ('button#onetrust-accept-btn-handler',
+                             'button[aria-label*="Aceptar"]',
+                             'button.cookies-accept'):
                 btns = driver.find_elements(By.CSS_SELECTOR, selector)
                 for b in btns:
                     if b.is_displayed():
@@ -930,11 +1044,11 @@ def warmup_driver(driver):
 
 def run(dry_run=False, limit=None, only_cat=None, only_product=None,
         fallback=False, inspect=False):
-    print(f'\n🔴 MediaMarkt scraper ({STORE_ID})')
+    print(f'\n🍏 K-tuin scraper ({STORE_ID})')
     if dry_run:
         print('🔍 DRY RUN — no DB changes\n')
     if fallback:
-        print('⟳  Per-variant FALLBACK enabled (extra searches for unmatched)\n')
+        print('⟳  Per-variant FALLBACK enabled\n')
     if inspect:
         print('🔬 INSPECT mode — first page dumped; no matching\n')
 
@@ -965,7 +1079,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
     captcha_hit = False
     inspected = False
 
-    print('   🔥 Warming up session (home page + cookies)...')
+    print('   🔥 Warming up session...')
     warmup_driver(driver)
 
     try:
@@ -983,6 +1097,9 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                 pattern  = group['pattern']
                 variants = group['variants']
                 search_url = build_search_url(query, product['cat'])
+                if not search_url:
+                    print(f'   ⚠️  No URL mapping for sub-family "{query}" — skipping')
+                    continue
                 print(f'   🔎 "{query}"  ({len(variants)} variants)  →  {search_url}')
 
                 try:
@@ -1057,7 +1174,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                             print(f'            ❌ DB error: {type(e).__name__}: {str(e)[:100]}')
 
                 if group_matched == 0 and results:
-                    print(f'      🔍 No matches in this group. First 3 candidates returned by MediaMarkt:')
+                    print(f'      🔍 No matches in this group. First 3 candidates returned by K-tuin:')
                     for r in results[:3]:
                         print(f'           · {r["name"][:120]}')
 
@@ -1145,7 +1262,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
 
 
 def main():
-    ap = argparse.ArgumentParser(description='MediaMarkt.es price scraper (variant-driven)')
+    ap = argparse.ArgumentParser(description='K-tuin.com price scraper (variant-driven)')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--limit', type=int, default=None)
     ap.add_argument('--cat', default=None)

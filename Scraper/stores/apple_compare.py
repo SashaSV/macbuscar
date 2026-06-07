@@ -32,15 +32,31 @@ CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cache')
 
 COMPARE_MODELS = {
     'iphone': [
-        'iphone-17-pro-max', 'iphone-17-pro', 'iphone-air',
+        'iphone-17-pro', 'iphone-air',
         'iphone-17', 'iphone-17e',
-        'iphone-16-pro-max', 'iphone-16-pro', 'iphone-16-plus', 'iphone-16',
-        'iphone-16e',
+        'iphone-16'
+    ],
+    'mac': [
+        'macbook-pro', 'macbook-air', 'macbook-neo',
+        'imac', 'mac-mini', 'mac-studio',
+    ],
+    'ipad': [
+        'ipad-pro', 'ipad-air', 'ipad', 'ipad-mini'
+        
+    ],
+    'watch': [
+        'apple-watch-ultra-3', 'apple-watch-series-11', 'apple-watch-se-3'
+        
+    ],
+    'airpods': [
+        'airpods-pro-3', 'airpods-4', 'airpods-max-2'
+        
     ],
 }
 
 CATEGORY_PATHS = {
     'iphone': '/es/iphone/compare/',
+    'mac': '/es/mac/compare/',
 }
 
 SLUG_TO_DB_NAME = {
@@ -54,6 +70,12 @@ SLUG_TO_DB_NAME = {
     'iphone-16-plus':    'iPhone 16 Plus',
     'iphone-16':         'iPhone 16',
     'iphone-16e':        'iPhone 16e',
+    'macbook-pro':       'MacBook Pro',
+    'macbook-air':       'MacBook Air',
+    'macbook-neo':       'MacBook Neo',
+    'imac':              'iMac',
+    'mac-mini':          'Mac Mini',
+    'mac-studio':        'Mac Studio',
 }
 
 # ── Cache ──────────────────────────────────────────────────────────────────

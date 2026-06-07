@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-MediaMarkt.es scraper — variant-driven, prices only.
+Fnac.es scraper — variant-driven, prices only.
 
-Same architecture as amazon.py and worten.py.
+Same architecture as amazon.py / worten.py / mediamarkt.py:
+  - Load DB Products/Variants
+  - One search per sub-family
+  - Score / hard-reject / dedup by SKU / fallback for unmatched
+  - Upsert Price + ScrapedProduct, write PriceHistory on change
 
-MediaMarkt-specific quirks resolved here:
-  - JSON-LD <script type="application/ld+json"> on search pages carries the
-    full ItemList of products with Offer.price → that's the cleanest parse.
-  - When JSON-LD is missing/incomplete, we fall back to walking the DOM:
-    the visible card (anchor) contains only the title, so we anchor on the
-    parent <article data-test=*=product-list-item> and scan it for any
-    element whose text matches a euro-shaped price ("579,– €" included).
-  - The Akamai Bot Manager fronts the site. We warm up with a visit to the
-    home page (+ cookie banner accept) before any /search.html hit.
+Fnac.es uses ASP.NET-based legacy URLs:
+  https://www.fnac.es/SearchResult/ResultList.aspx?Search={query}
+
+Parsing path:
+  - Primary: JSON-LD ItemList on the search-results page (if available)
+  - Fallback: DOM walk over <article class="Article-itemContainer">
+
+Anti-bot: Fnac is typically Cloudflare-fronted; not as aggressive as MediaMarkt
+Akamai. Pacing 3.5–7s is enough in most cases.
 """
 import os
 import re
@@ -41,9 +45,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scanner.dbservice_postgres import get_connection
 
 
-STORE_ID = 'mediamarkt'
-HOST = 'https://www.mediamarkt.es'
-SEARCH_URL_TPL = '{host}/es/search.html?query={query}'
+STORE_ID = 'fnac'
+HOST = 'https://www.fnac.es'
+SEARCH_URL_TPL = '{host}/SearchResult/ResultList.aspx?Search={query}'
 
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -51,9 +55,8 @@ USER_AGENT = (
 )
 
 MIN_MATCH_SCORE = 50
-# MediaMarkt has stricter bot detection than Worten — slightly higher pacing.
-PAGE_DELAY_MIN  = 4.0
-PAGE_DELAY_MAX  = 8.0
+PAGE_DELAY_MIN  = 8.0
+PAGE_DELAY_MAX  = 14.0
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -61,7 +64,6 @@ PAGE_DELAY_MAX  = 8.0
 # ════════════════════════════════════════════════════════════════════════════
 
 def build_search_url(product_name, cat):
-    """Plain query search; MediaMarkt has no brand-filter URL param."""
     query = quote_plus(f'{product_name} Apple')
     return SEARCH_URL_TPL.format(host=HOST, query=query)
 
@@ -90,9 +92,6 @@ def _translate_color_for_search(color):
     return COLOR_TRANSLATIONS.get(key, color)
 
 
-# Multi-word Apple colors that have an English ↔ Spanish equivalent which is
-# NOT just a single-word translation. Used for color matching against result
-# names (MediaMarkt returns English color names in its JSON-LD for newer SKUs).
 APPLE_COLOR_SYNONYMS = {
     'medianoche':      'midnight',
     'blanco estrella': 'starlight',
@@ -109,21 +108,15 @@ APPLE_COLOR_SYNONYMS = {
 
 
 def _color_search_terms(color):
-    """Return lower-cased synonyms for `color` in BOTH languages.
-    Used to match against listing names that may be in Spanish or English."""
     if not color:
         return set()
     base = color.strip().lower()
     terms = {base}
-    # Forward: English -> Spanish via COLOR_TRANSLATIONS
     if base in COLOR_TRANSLATIONS:
         terms.add(COLOR_TRANSLATIONS[base].lower())
-    # Reverse: Spanish -> English (built from COLOR_TRANSLATIONS each call;
-    # COLOR_TRANSLATIONS is small enough this is cheap)
     for en, es in COLOR_TRANSLATIONS.items():
         if es.lower() == base:
             terms.add(en)
-    # Multi-word Apple-specific names
     if base in APPLE_COLOR_SYNONYMS:
         terms.add(APPLE_COLOR_SYNONYMS[base])
     for es, en in APPLE_COLOR_SYNONYMS.items():
@@ -149,11 +142,9 @@ def build_fallback_query(variant, subfamily_query):
 
 
 def parse_price(text):
-    """Spanish/German price ('1.299,99 €' or '579,– €') -> float."""
     if text is None or text == '':
         return None
     s = str(text).replace('€', '').replace('EUR', '').replace('\xa0', '').strip()
-    # European "579,–" / "579,-" notation: dash = no cents
     s = s.replace(',–', ',00').replace(',-', ',00').replace('.–', '.00')
     if '.' in s and ',' in s:
         s = s.replace('.', '').replace(',', '.')
@@ -166,23 +157,28 @@ def parse_price(text):
 
 
 def is_captcha(html):
-    """Detect Akamai Bot Manager challenges + generic ones.
-    Returns (marker, snippet) or (None, '')."""
+    """Fnac is generally Cloudflare-fronted; look for the usual challenge
+    markers + a few Fnac-specific ones."""
     if not html:
         return ('empty-html', '')
     low = html.lower()
     strong_markers = (
-        'akamai-error',
-        'reference&#32;&#35;',    # Akamai block page often has "Reference #..."
-        'akam_error',
         'cf-browser-verification',
         'checking your browser before accessing',
         'challenge-platform',
+        'cloudflare-static',
+        '__cf_chl_',
         'enable javascript and cookies to continue',
         'access to this page has been denied',
         'request blocked',
         'error 1015',
+        'fnac.es is using a security service',  # Cloudflare branded
     )
+    # Empty / redirect-stub pages count as blocked. Fnac sometimes
+    # returns a tiny shell with only the generic "fnac.es" title and
+    # no body content when Cloudflare interstitials are pending.
+    if len(html) < 5000 and 'fnac' in low:
+        return ('short-stub', html[:200])
     for m in strong_markers:
         if m in low:
             idx = low.find(m)
@@ -195,6 +191,7 @@ REJECT_ANYWHERE = (
     'reacondicionado', 'renewed', 'segunda mano', 'usado',
     'señales de uso', 'producto reacondicionado',
     'open box', 'outlet',
+    'restaurado',   # Fnac's term for refurbs sometimes
 )
 REJECT_AT_START = ('funda', 'protector', 'cargador', 'cable', 'adaptador',
                    'soporte', 'correa', 'pulsera', 'bandolera')
@@ -236,7 +233,6 @@ def _slug_from_url(url):
 # ════════════════════════════════════════════════════════════════════════════
 
 def _walk_jsonld_items(data):
-    """Yield Product nodes nested anywhere inside a JSON-LD blob."""
     if isinstance(data, list):
         for it in data:
             for x in _walk_jsonld_items(it):
@@ -262,7 +258,6 @@ def _walk_jsonld_items(data):
 
 
 def parse_jsonld(soup):
-    """Extract products from <script type='application/ld+json'> blocks."""
     out = []
     seen = set()
     for el in soup.select('script[type="application/ld+json"]'):
@@ -305,97 +300,129 @@ def parse_jsonld(soup):
     return out
 
 
-def _find_price_in_article(article):
-    """Scan article DOM for a sensible product price (50 .. 10000 EUR).
-    Returns (price, oldprice). Old-price detection follows class/tag hints."""
-    price = None
-    oldprice = None
-    for el in article.find_all(['span', 'div', 'p', 'strong']):
-        text = el.get_text(strip=True)
-        if not text or '€' not in text:
-            continue
-        # Filter-slider range labels are "17 €" / "625 €" — too short and
-        # appear in <label> ancestry, not product cards. Skip oddly long
-        # blobs (probably a wrapper that captured multiple things).
-        if len(text) > 25:
-            continue
-        candidate = parse_price(text)
-        if not candidate or candidate < 50 or candidate > 10000:
-            continue
-        # Strike-through ancestor / tag → old (struck-out) price.
-        is_old = False
-        for ancestor in [el] + list(el.parents)[:3]:
-            cls = ' '.join(ancestor.get('class', []) or []).lower()
-            if 'strike' in cls or 'oldprice' in cls or 'old-price' in cls:
-                is_old = True
-                break
-            if ancestor.name in ('s', 'del'):
-                is_old = True
-                break
-        if is_old:
-            if oldprice is None or candidate > oldprice:
-                oldprice = candidate
-        elif price is None:
-            price = candidate
-    return price, oldprice
+# Initial Fnac DOM selectors (guesses, refined via --inspect):
+#   <article class="Article-itemContainer">  ← Fnac's typical card
+#   <li class="Article-item">                ← list-view alternative
+#   Inside: a.Article-title, span.userPrice, span.Article-priceCurrent
+
+CARD_SELECTOR_STRATEGIES = (
+    'article.Article-itemContainer',
+    'li.Article-item',
+    'article[data-testid*="product"]',
+    'div[data-product]',
+    '[itemtype$="schema.org/Product"]',
+    'li[class*="productList"]',
+    'article[class*="product"]',
+)
+
+NAME_SELECTORS = (
+    'a.Article-title',
+    '[itemprop="name"]',
+    '[data-automation="productName"]',
+    'h3 a', 'h2 a', 'h3', 'h2',
+    '[class*="product-title"]',
+)
+
+PRICE_SELECTORS_MAIN = (
+    '[itemprop="price"]',
+    '.userPrice',
+    '.Article-priceCurrent',
+    '[data-automation="price"]',
+    '[class*="Price"][class*="current"]',
+    '[class*="price-current"]',
+)
+
+PRICE_SELECTORS_OLD = (
+    '.Article-priceOld',
+    '[class*="price-old"]',
+    '[class*="strikethrough"]',
+    '[class*="oldPrice"]',
+    '.old-price',
+    'del',
+    's',
+)
+
+LINK_SELECTORS = (
+    'a.Article-title',
+    'a[href*="/a"]',                # Fnac product URLs often contain /a{ID}
+    'a[itemprop="url"]',
+    'a[href*="/SearchResult"]',
+)
 
 
 def parse_search_results(html):
-    """Parse MediaMarkt search-result cards.
-    Primary: JSON-LD ItemList. Fallback: DOM walk over <article data-test>."""
+    """Fnac search-result parser. JSON-LD primary, DOM fallback."""
     soup = BeautifulSoup(html, 'html.parser')
 
-    # ───── Primary: JSON-LD ─────
     jsonld_results = parse_jsonld(soup)
     if jsonld_results:
         return jsonld_results
 
-    # ───── Fallback: DOM ─────
-    cards = (soup.select('article[data-test*="product-list-item"]') or
-             soup.select('article[data-test]') or
-             soup.select('[data-test*="product-list-item"]'))
+    # DOM fallback
+    cards = []
+    for sel in CARD_SELECTOR_STRATEGIES:
+        cards = soup.select(sel)
+        if cards:
+            break
+    if not cards:
+        return []
 
     out = []
     seen = set()
     for card in cards:
-        link_el = (card.select_one('a[data-test*="link"]') or
-                   card.select_one('a[href*="/product/"]') or
-                   card.select_one('a'))
+        link_el = None
+        for sel in LINK_SELECTORS:
+            link_el = card.select_one(sel)
+            if link_el and link_el.get('href'):
+                break
         if not link_el:
             continue
         href = link_el.get('href') or ''
         if href and not href.startswith('http'):
-            href = HOST + href
+            href = HOST + href if href.startswith('/') else HOST + '/' + href
 
         name = ''
-        title_el = card.select_one('[data-test="product-title"]')
-        if title_el:
-            name = title_el.get_text(strip=True)
+        for sel in NAME_SELECTORS:
+            el = card.select_one(sel)
+            if el and el.get_text(strip=True):
+                name = el.get_text(strip=True)
+                break
         if not name:
-            name = (link_el.get('title') or
-                    (card.select_one('[title]').get('title') if card.select_one('[title]') else '') or
-                    link_el.get_text(strip=True) or '')
+            name = link_el.get('title') or link_el.get_text(strip=True) or ''
         if not name:
             continue
         if is_accessory_listing(name) or is_non_apple_listing(name):
             continue
 
-        # SKU: data-* attribute, or numeric ID from URL slug like
-        # /es/product/_apple-airpods-max-…-1582273.html
-        sku = (card.get('data-test-product-id') or
-               card.get('data-product-id') or '')
-        if not sku:
-            m = re.search(r'-(\d{6,})\.html', href)
-            if m:
-                sku = m.group(1)
+        # SKU from URL — Fnac uses pattern /a{NUMERIC_ID} or product slug
+        sku = ''
+        m = re.search(r'/a(\d{5,})', href)
+        if m:
+            sku = m.group(1)
         if not sku:
             sku = _slug_from_url(href)
         if not sku or sku in seen:
             continue
 
-        price, oldprice = _find_price_in_article(card)
-        if not price:
+        price = None
+        for sel in PRICE_SELECTORS_MAIN:
+            el = card.select_one(sel)
+            if not el:
+                continue
+            raw = el.get('content') or el.get('data-price') or el.get_text(strip=True)
+            price = parse_price(raw)
+            if price:
+                break
+        if not price or price < 50:
             continue
+
+        oldprice = None
+        for sel in PRICE_SELECTORS_OLD:
+            el = card.select_one(sel)
+            if el and el.get_text(strip=True):
+                oldprice = parse_price(el.get_text(strip=True))
+                if oldprice:
+                    break
         if oldprice and oldprice <= price:
             oldprice = None
 
@@ -411,17 +438,22 @@ def parse_search_results(html):
     return out
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#   inspect_page  —  diagnostic
-# ════════════════════════════════════════════════════════════════════════════
-
 def inspect_page(html):
     soup = BeautifulSoup(html, 'html.parser')
     print('\n── PAGE INSPECTION ──')
     print(f'   <title>: {soup.title.get_text(strip=True) if soup.title else "(none)"}')
     print(f'   total HTML length: {len(html)} chars')
 
-    # JSON-LD path
+    # Suspiciously short HTML usually means a Cloudflare block / redirect
+    # stub. Dump the whole thing so we can craft a detection marker.
+    if len(html) < 5000:
+        print('\n   ⚠️  HTML is suspiciously short — dumping full content:')
+        print('   ─── FULL HTML ───')
+        for line in html.splitlines():
+            print(f'   {line}')
+        print('   ─── END FULL HTML ───')
+
+    # JSON-LD
     ld_scripts = soup.select('script[type="application/ld+json"]')
     print(f'\n   application/ld+json scripts: {len(ld_scripts)}')
     for i, el in enumerate(ld_scripts[:2]):
@@ -432,13 +464,56 @@ def inspect_page(html):
     for r in jsonld_products[:5]:
         print(f'     · [{str(r["asin"])[:24]:24}] {r["name"][:60]:60} | {r["price"]}€')
 
-    # DOM path
-    for sel in ('article[data-test*="product-list-item"]',
-                'article[data-test]',
-                '[data-test*="product-list-item"]'):
+    # DOM
+    for sel in CARD_SELECTOR_STRATEGIES:
         n = len(soup.select(sel))
         marker = '✅' if n else '  '
         print(f'   {marker} cards via "{sel}": {n}')
+
+    # Broad survey: what classes/attributes ACTUALLY exist?
+    print(f'\n   ─ Broad survey ─')
+    # Apple-relevant text presence
+    n_airpods_text = html.lower().count('airpods')
+    n_apple_text   = html.lower().count('apple')
+    print(f'   text "airpods" occurrences in HTML: {n_airpods_text}')
+    print(f'   text "apple" occurrences in HTML:   {n_apple_text}')
+
+    # Any links that look like products?
+    product_link_patterns = (
+        ('a[href*="/a"]',               '/a... (Fnac product URLs)'),
+        ('a[href*="/SearchResult"]',    '/SearchResult'),
+        ('a[href*="/shop/"]',           '/shop/...'),
+        ('a[href*="/audio/"]',          '/audio/...'),
+        ('a[href*="/Tablet/"]',         '/Tablet/...'),
+        ('a[href*="/portatil/"]',       '/portatil/...'),
+        ('a[href*="/movil/"]',          '/movil/...'),
+    )
+    for sel, label in product_link_patterns:
+        n = len(soup.select(sel))
+        if n:
+            print(f'   links {label!r}: {n}')
+
+    # Any element class containing 'product', 'article', 'item', 'card'
+    interesting_classes = set()
+    for el in soup.find_all(class_=True):
+        for c in (el.get('class') or []):
+            cl = c.lower()
+            if any(k in cl for k in ('product', 'article', 'card', 'tile', 'result')):
+                interesting_classes.add(c)
+    print(f'   distinct classes containing product/article/card/tile/result: {len(interesting_classes)}')
+    for c in sorted(interesting_classes)[:30]:
+        print(f'     · .{c}')
+
+    # data-* attributes that might mark products
+    interesting_attrs = set()
+    for el in soup.find_all(True):
+        for attr in el.attrs:
+            if attr.startswith('data-') and any(k in attr.lower() for k in
+                                                 ('product', 'item', 'sku', 'price', 'card')):
+                interesting_attrs.add(attr)
+    print(f'   data-* attrs with product/item/sku/price/card: {len(interesting_attrs)}')
+    for a in sorted(interesting_attrs)[:15]:
+        print(f'     · [{a}]')
 
     # Euros
     euro_positions = [i for i in range(len(html)) if html[i] == '€']
@@ -446,6 +521,14 @@ def inspect_page(html):
     for pos in euro_positions[:5]:
         ctx = html[max(0, pos - 80):pos + 30].replace('\n', ' ').strip()
         print(f'     • ...{ctx}...')
+
+    # Sample card
+    for sel in CARD_SELECTOR_STRATEGIES:
+        cards = soup.select(sel)
+        if cards:
+            print(f'\n   Sample card HTML via "{sel}" (1500 chars):')
+            print('   ' + str(cards[0])[:1500].replace('\n', '\n   '))
+            break
 
     parsed = parse_search_results(html)
     print(f'\n   parse_search_results() found {len(parsed)} usable products.')
@@ -455,7 +538,7 @@ def inspect_page(html):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#   Variant matching (same as Amazon/Worten)
+#   Variant matching (same as Amazon/Worten/MediaMarkt)
 # ════════════════════════════════════════════════════════════════════════════
 
 MEMORY_RE  = re.compile(r'(\d{1,4})\s*(GB|TB)\b', re.I)
@@ -565,8 +648,6 @@ def subfamily_info(product, variant):
 
     if fam == 'macbook-air':
         size = '15' if (disp and disp >= 14.5) else '13'
-        # Require size to be followed by a display-unit indicator so
-        # "16 GB RAM" / "15-core" don't accidentally match "16\"" / "15\"".
         return (f'MacBook Air {size}',
                 r'\bmacbook\s+air\b[^\n]*?\b' + size + r'(?:[.,]\d)?\s*(?:"|\u201d|\u2033|inch|pulgad)')
     if fam == 'macbook-pro':
@@ -591,8 +672,6 @@ def subfamily_info(product, variant):
         return (f'iPad Air {size}',
                 r'\bipad\s+air\b[^\n]*?\b' + size + r'(?:[.,]\d)?\s*(?:"|\u201d|\u2033|inch|pulgad)')
     if fam == 'ipad-mini':
-        # Negative lookahead rejects 2nd-6th gen listings (e.g. "6 GEN");
-        # our DB iPad mini is always the latest (7th gen / 2024).
         return ('iPad mini',
                 r'\bipad\s+mini\b(?![^\n]*\b[2-6](?:th|\u00aa)?\s*(?:gen|generaci))')
     if fam == 'ipad':
@@ -679,9 +758,6 @@ def score_result(result, variant):
             else:
                 return -1
         elif v_chip.startswith('m'):
-            # Variant has an M-series chip (M1/M2/.../M5) but result
-            # mentions no M-chip at all → almost certainly an older
-            # Intel/A-series Mac. Reject (e.g. "iMac 27\" 5K 2020").
             return -1
 
     v_cpu_cores = _int_match(nombre, CPU_CORES_VARIANT_RE)
@@ -784,7 +860,7 @@ def find_best_match(variant, results, family_re):
 
 
 # ════════════════════════════════════════════════════════════════════════════
-#   DB access (same as worten.py)
+#   DB access
 # ════════════════════════════════════════════════════════════════════════════
 
 def load_products_with_variants():
@@ -901,12 +977,14 @@ def make_driver():
 
 
 def warmup_driver(driver):
+    """Visit home page first to look more human (and accept cookies)."""
     try:
         driver.get(HOST + '/')
-        time.sleep(random.uniform(2.5, 4.5))
+        time.sleep(random.uniform(2.0, 4.0))
         try:
             from selenium.webdriver.common.by import By
-            for selector in ('button[data-cookie-consent-accept]',
+            for selector in ('button#didomi-notice-agree-button',
+                             'button[data-testid="cookies-accept"]',
                              'button#onetrust-accept-btn-handler',
                              'button[aria-label*="Aceptar"]'):
                 btns = driver.find_elements(By.CSS_SELECTOR, selector)
@@ -930,11 +1008,11 @@ def warmup_driver(driver):
 
 def run(dry_run=False, limit=None, only_cat=None, only_product=None,
         fallback=False, inspect=False):
-    print(f'\n🔴 MediaMarkt scraper ({STORE_ID})')
+    print(f'\n📚 Fnac scraper ({STORE_ID})')
     if dry_run:
         print('🔍 DRY RUN — no DB changes\n')
     if fallback:
-        print('⟳  Per-variant FALLBACK enabled (extra searches for unmatched)\n')
+        print('⟳  Per-variant FALLBACK enabled\n')
     if inspect:
         print('🔬 INSPECT mode — first page dumped; no matching\n')
 
@@ -1057,7 +1135,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                             print(f'            ❌ DB error: {type(e).__name__}: {str(e)[:100]}')
 
                 if group_matched == 0 and results:
-                    print(f'      🔍 No matches in this group. First 3 candidates returned by MediaMarkt:')
+                    print(f'      🔍 No matches in this group. First 3 candidates returned by Fnac:')
                     for r in results[:3]:
                         print(f'           · {r["name"][:120]}')
 
@@ -1145,7 +1223,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
 
 
 def main():
-    ap = argparse.ArgumentParser(description='MediaMarkt.es price scraper (variant-driven)')
+    ap = argparse.ArgumentParser(description='Fnac.es price scraper (variant-driven)')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--limit', type=int, default=None)
     ap.add_argument('--cat', default=None)

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-PostgreSQL service for Manzana.es scraper (v2 — schema with ProductVariant).
+PostgreSQL service for Manzana.es scraper (v2.1).
+
+DataScraps now has separate product_images (hero, for Product.fotos)
+and variant_images (variant-specific, for ProductVariant.fotos).
+Both are stored in ScrapedProduct.images JSON as {"hero":[...], "variant":[...]}
+so the matcher can dispatch them later without schema changes.
 """
 import os
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import datetime
 from dataclasses import dataclass, field
 
 def get_connection():
@@ -28,7 +32,11 @@ class DataScraps:
     vendor: str = ''
     available: str = ''
     techs: dict = field(default_factory=dict)
+    # Legacy combined list (still supported)
     images: list = field(default_factory=list)
+    # New v2.1: separate fields
+    product_images: list = field(default_factory=list)   # hero (model-wide)
+    variant_images: list = field(default_factory=list)   # variant-specific (color/size)
     color: str = ''
     memory: str = ''
     display: str = ''
@@ -38,15 +46,13 @@ class DataScraps:
 
 def vendor_to_store_id(vendor: str) -> str:
     mapping = {
-        'amazon.es': 'amazon',
-        'amazon.com': 'amazon',
+        'amazon.es': 'amazon', 'amazon.com': 'amazon',
         'mediamarkt.es': 'mediamarkt',
         'pccomponentes.com': 'pccomp',
         'fnac.es': 'fnac',
         'elcorteingles.es': 'elcorte',
         'worten.es': 'worten',
-        'istore.es': 'istore',
-        'k-tuin.com': 'istore',
+        'istore.es': 'istore', 'k-tuin.com': 'istore',
         'apple.com': 'apple',
     }
     return mapping.get(vendor.lower(), vendor.lower().split('.')[0])
@@ -60,17 +66,45 @@ def to_json_string(value) -> str:
     return str(value)
 
 
+def build_images_payload(d: dict) -> str:
+    """
+    Serialize images for ScrapedProduct.images JSON column.
+
+    If product_images or variant_images is set:
+        → {"hero":[...], "variant":[...]}
+    Otherwise (legacy):
+        → [...]
+    """
+    hero = d.get('product_images') or []
+    var  = d.get('variant_images') or []
+    if hero or var:
+        return json.dumps({'hero': hero, 'variant': var},
+                          ensure_ascii=False, default=str)
+    return to_json_string(d.get('images', []))
+
+
 def ensure_stores():
-    """Upsert all known stores."""
+    """
+    Upsert all known stores.
+
+    Logos are static files in /Web/public/logo/ (served by Next.js):
+      apple.svg, amazon.png, mediamarkt.png, pccomp.png, fnac.png,
+      elcorte.png, worten.png, istore.png
+
+    Public paths (start with /logo/...) so the frontend can use them as
+    <img src={store.logo} />.
+    """
     stores = [
-        ('apple',      'Apple Store',      '🍎', 'https://www.apple.com/es/shop/', 'OFICIAL', 2000),
-        ('amazon',     'Amazon.es',        '📦', 'https://www.amazon.es/',         'TOP',     800),
-        ('mediamarkt', 'MediaMarkt',       '🛒', 'https://www.mediamarkt.es/',     '',        1400),
-        ('pccomp',     'PcComponentes',    '💻', 'https://www.pccomponentes.com/', '',        1100),
-        ('fnac',       'Fnac',             '📚', 'https://www.fnac.es/',           '',        1600),
-        ('elcorte',    'El Corte Inglés',  '🏬', 'https://www.elcorteingles.es/',  '',        2000),
-        ('worten',     'Worten',           '🟢', 'https://www.worten.es/',         '',        1300),
-        ('istore',     'iStore (K-tuin)',  '🍏', 'https://www.k-tuin.com/',        '',        1500),
+        # id,         nombre,             logo (public path),         url,                                  badge,            delay
+        ('apple',       'Apple Store',     '/logo/apple.png',          'https://www.apple.com/es/shop/',     'OFICIAL',         2000),
+        ('amazon',      'Amazon.es',       '/logo/amazon.png',         'https://www.amazon.es/',             'TOP',              800),
+        ('mediamarkt',  'MediaMarkt',      '/logo/mediamarkt.png',     'https://www.mediamarkt.es/',         '',                1400),
+        ('pccomp',      'PcComponentes',   '/logo/pccomp.png',         'https://www.pccomponentes.com/',     '',                1100),
+        ('fnac',        'Fnac',            '/logo/fnac.png',           'https://www.fnac.es/',               '',                1600),
+        ('elcorte',     'El Corte Inglés', '/logo/elcorte.png',        'https://www.elcorteingles.es/',      '',                2000),
+        ('worten',      'Worten',          '/logo/worten.png',         'https://www.worten.es/',             '',                1300),
+        ('istore',      'K-tuin',          '/logo/istore.png',         'https://www.k-tuin.com/',            'Premium reseller',1500),
+        ('rossellimac', 'Rossellimac',     '/logo/rossellimac.png',    'https://www.rossellimac.es/',        'Premium partner', 1500),
     ]
     conn = get_connection()
     try:
@@ -79,7 +113,12 @@ def ensure_stores():
                 cur.execute("""
                     INSERT INTO "Store" (id, nombre, logo, url, badge, delay)
                     VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO NOTHING
+                    ON CONFLICT (id) DO UPDATE SET
+                        nombre = EXCLUDED.nombre,
+                        logo   = EXCLUDED.logo,
+                        url    = EXCLUDED.url,
+                        badge  = EXCLUDED.badge,
+                        delay  = EXCLUDED.delay
                 """, (id_, nombre, logo, url, badge, delay))
             conn.commit()
     finally:
@@ -87,10 +126,6 @@ def ensure_stores():
 
 
 def save_scraped_products(data_list: list, store_id: str = None):
-    """
-    Save scraped products to ScrapedProduct table (schema v2).
-    UPSERT by (sku, storeId).
-    """
     if not data_list:
         print('Nothing to save.')
         return
@@ -150,7 +185,7 @@ def save_scraped_products(data_list: list, store_id: str = None):
                         float(d.get('oldprice', 0) or 0),
                         d.get('available', ''),
                         to_json_string(d.get('techs', {})),
-                        to_json_string(d.get('images', [])),
+                        build_images_payload(d),
                         d.get('color', '') or '',
                         d.get('memory', '') or '',
                         d.get('display', '') or '',
