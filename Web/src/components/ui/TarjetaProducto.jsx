@@ -21,7 +21,15 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
   let fotos = [];
   try { fotos = typeof prod.fotos === 'string' ? JSON.parse(prod.fotos) : (prod.fotos || []); }
   catch { fotos = []; }
-  const hasRealPhoto = fotos.length > 0 && typeof fotos[0] === 'string' && fotos[0].startsWith('http');
+
+  // Resolve cover/hover with fallbacks
+  // matcher writes Product.cover/hover directly; if older rows still have only
+  // Product.fotos, fall back to that.
+  const coverSrc = prod.cover || fotos[0] || null;
+  const hoverSrc = prod.hover || fotos[1] || coverSrc;
+
+  const isValidUrl = (u) => typeof u === 'string' && (u.startsWith('/') || u.startsWith('http'));
+  const hasRealPhoto = isValidUrl(coverSrc);
 
   const tagColor = TAG_COLORS?.[prod.tag] || '#86868b';
 
@@ -78,11 +86,10 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
       }}
     >
       <div style={{
-aspectRatio: '1',
-        background: 'rgba(255, 255, 255, 0.65)', // М'яке світле підклад-тло від Apple
-        borderRadius: 16,                        // Закруглення внутрішньої вітрини
-        margin: '12px 12px 0 12px',              // Елегантні відступи від країв картки
-        border: '1px solid rgba(255, 255, 255, 0.7)', // Тонка преміальна рамка вітрини
+        aspectRatio: '1',
+        background: 'transparent',
+        borderRadius: 16,
+        margin: '12px 12px 0 12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -110,17 +117,16 @@ aspectRatio: '1',
         {hasRealPhoto ? (
           <>
             <img
-              src={fotos[0]}
+              src={coverSrc}
               alt={prod.nombre}
               style={{
                 position: 'absolute',
-                maxWidth: '180%',
-                maxHeight: '180%',
+                maxWidth: '170%',
+                maxHeight: '170%',
                 objectFit: 'contain',
                 transform: 'scale(1.05)',
-                opacity: hovered && fotos.length > 1 ? 0 : 1,
-                transition: 'opacity 0.35s ease',
-                mixBlendMode: 'multiply', // Повністю розчиняє білий фон у підкладці Bento
+                //opacity: hovered && hoverSrc && hoverSrc !== coverSrc ? 0 : 1,
+                //transition: 'opacity 0.35s ease',
               }}
               onError={e => {
                 e.target.style.display = 'none';
@@ -130,20 +136,22 @@ aspectRatio: '1',
                 e.target.parentElement.appendChild(fallback);
               }}
             />
-            {fotos.length > 1 && (
+            {hoverSrc && hoverSrc !== coverSrc && (
               <img
-                src={fotos[1]}
+                //hoverSrc
+                src={coverSrc}
                 alt={prod.nombre}
                 style={{
                   position: 'absolute',
-                  maxWidth: '180%',
-                  maxHeight: '180%',
+                  maxWidth: '170%',
+                  maxHeight: '170%',
                   objectFit: 'contain',
-                  transform: hovered ? 'scale(1.08)' : 'scale(1.05)',
-                  opacity: hovered ? 1 : 0,
-                  transition: 'opacity 0.35s ease, transform 0.35s ease',
-                  mixBlendMode: 'multiply', // Повністю розчиняє білий фон у підкладці Bento
-                }}
+                  //transform: hovered ? 'scale(1.08)' : 'scale(1.05)',
+                  transform: 'scale(1.05)',
+                  //opacity: hovered ? 1 : 0,
+                  //transition: 'opacity 0.35s ease, transform 0.35s ease',
+                  }}
+                onError={e => { e.target.style.display = 'none'; }}
               />
             )}
           </>

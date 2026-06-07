@@ -19,16 +19,113 @@ import { colorEstado } from '../shared/utils';
 
 const TABS = ['Precios', 'Galería', 'Características', 'Reseñas', 'Historial', '2ª mano'];
 
-// Filter dimensions to expose in UI (in order)
-const FILTER_FIELDS = ['memory', 'color', 'display', 'connectivity', 'cpu', 'bandSize'];
+// Filter dimensions to expose in UI (in order).
+// Note: 'cores' is a composite pseudo-field that bundles cpuCores+gpuCores
+// (since they are tied together — you can't pick 18-core CPU with 10-core GPU).
+const FILTER_FIELDS = ['memory', 'ram', 'color', 'display', 'connectivity', 'cpu', 'cores', 'screen', 'bandSize'];
 const FILTER_LABELS = {
   memory: 'Almacenamiento',
+  ram:    'Memoria RAM',
   color: 'Color',
   display: 'Pantalla',
   connectivity: 'Conectividad',
   cpu: 'Chip',
+  cores:  'Núcleos',
+  screen: 'Acabado pantalla',
   bandSize: 'Tamaño',
 };
+
+// Filter icons — inline SVG in Apple compare-page style (solid, monochrome).
+// Same stroke/fill language as the icons on the Características tab so the
+// two tabs feel like the same visual system.
+function FilterIcon({ name, size = 16 }) {
+  const props = { width: size, height: size, viewBox: '0 0 24 24', fill: 'currentColor', 'aria-hidden': true };
+  switch (name) {
+    case 'memory':   // SSD / storage drive
+      return (
+        <svg {...props}>
+          <rect x="3" y="7" width="18" height="10" rx="1.5" />
+          <circle cx="17" cy="12" r="1.2" fill="white" />
+        </svg>
+      );
+    case 'ram':      // memory chip
+      return (
+        <svg {...props}>
+          <rect x="4" y="5" width="16" height="14" rx="1.5" />
+          <rect x="9" y="9" width="6" height="6" rx="0.5" fill="white" />
+        </svg>
+      );
+    case 'color':    // paint palette
+      return (
+        <svg {...props}>
+          <circle cx="6" cy="11" r="2" />
+          <circle cx="11" cy="7" r="2" />
+          <circle cx="16" cy="11" r="2" />
+          <path d="M12 22c-5.5 0-10-4.5-10-10S6.5 2 12 2s10 4.5 10 10c0 2.8-2.2 5-5 5h-2c-0.9 0-1.3 0.8-1 1.5 0.5 1 0 2-1 2z"
+                fill="none" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      );
+    case 'display':  // phone / display
+      return (
+        <svg {...props}>
+          <rect x="6" y="2" width="12" height="20" rx="2" />
+          <rect x="8" y="5" width="8" height="13" rx="1" fill="white" />
+          <circle cx="12" cy="20" r="0.6" fill="white" />
+        </svg>
+      );
+    case 'connectivity':  // antenna / radio waves
+      return (
+        <svg {...props}>
+          <path d="M12 14a2 2 0 100-4 2 2 0 000 4z" />
+          <path d="M5 8c-1.5 2-1.5 6 0 8M19 8c1.5 2 1.5 6 0 8M8 11c-0.5 1-0.5 1 0 2M16 11c0.5 1 0.5 1 0 2"
+                stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </svg>
+      );
+    case 'cpu':      // chip with legs
+      return (
+        <svg {...props}>
+          <rect x="6" y="6" width="12" height="12" rx="0.5" />
+          <rect x="9" y="9" width="6" height="6" rx="0.5" fill="white" />
+          <line x1="9"  y1="3"  x2="9"  y2="6"  stroke="currentColor" strokeWidth="1.5" />
+          <line x1="15" y1="3"  x2="15" y2="6"  stroke="currentColor" strokeWidth="1.5" />
+          <line x1="9"  y1="18" x2="9"  y2="21" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="15" y1="18" x2="15" y2="21" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="3"  y1="9"  x2="6"  y2="9"  stroke="currentColor" strokeWidth="1.5" />
+          <line x1="3"  y1="15" x2="6"  y2="15" stroke="currentColor" strokeWidth="1.5" />
+          <line x1="18" y1="9"  x2="21" y2="9"  stroke="currentColor" strokeWidth="1.5" />
+          <line x1="18" y1="15" x2="21" y2="15" stroke="currentColor" strokeWidth="1.5" />
+        </svg>
+      );
+    case 'cores':    // stacked bars
+      return (
+        <svg {...props}>
+          <rect x="4" y="6"  width="16" height="3" />
+          <rect x="4" y="11" width="16" height="3" />
+          <rect x="4" y="16" width="16" height="3" />
+        </svg>
+      );
+    case 'screen':   // sparkle / finish quality
+      return (
+        <svg {...props}>
+          <path d="M12 2l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+        </svg>
+      );
+    case 'bandSize': // resize / size
+      return (
+        <svg {...props}>
+          <rect x="8" y="6" width="8" height="12" rx="1" />
+          <path d="M3 4l3 0 0 3M21 4l-3 0 0 3M3 20l3 0 0-3M21 20l-3 0 0-3"
+                stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </svg>
+      );
+    default:
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      );
+  }
+}
 
 // Apple compare badge icons → Tabler React components
 const ICON_MAP = {
@@ -104,10 +201,14 @@ const SECTION_LABELS = {
   apple:          'Servicios Apple',
 };
 
-export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne, tabInicial }) {
+export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne }) {
   const variants = prod.variants || [];
 
   // Build best price map per variant: variantId → { storeId: {price,url,updatedAt} }
+  // Build best price map per variant: variantId → { storeId: {price, url, updatedAt, storeLogo, storeName} }
+  // We keep storeLogo/storeName from the API so the modal renders the real
+  // logo files (Web/public/logo/*.png) instead of falling back to broken
+  // emoji from constants.js.
   const variantPriceMaps = useMemo(() => {
     const map = {};
     for (const v of variants) {
@@ -115,7 +216,13 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
       for (const pr of (v.prices || [])) {
         if (!pr.price || pr.price <= 0) continue;
         if (!m[pr.storeId] || pr.price < m[pr.storeId].price) {
-          m[pr.storeId] = { price: pr.price, url: pr.url, updatedAt: pr.updatedAt };
+          m[pr.storeId] = {
+            price:     pr.price,
+            url:       pr.url,
+            updatedAt: pr.updatedAt,
+            storeLogo: pr.storeLogo,
+            storeName: pr.storeName,
+          };
         }
       }
       map[v.id] = m;
@@ -129,16 +236,51 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     [variants, variantPriceMaps]
   );
 
-  // Build available options per filter dimension — only from priced variants
-  const filterOptions = useMemo(() => {
-    const opts = {};
-    const pool = variantsWithPrice.length ? variantsWithPrice : variants;
-    for (const field of FILTER_FIELDS) {
-      const values = [...new Set(pool.map(v => v[field]).filter(Boolean))];
-      if (values.length > 1) opts[field] = values;
+  // Sort helpers for filter option values.
+  //   - memory / ram: by byte size (256GB < 512GB < 1TB < 2TB)
+  //   - display:      by numeric inches (11" < 13" < 14" < 16" < 24")
+  //   - everything else (color, cpu, connectivity, bandSize): by the price
+  //     of the cheapest variant offering that value → cheapest first.
+  function sizeToBytes(s) {
+    if (!s) return Infinity;
+    const m = String(s).match(/(\d+(?:[.,]\d+)?)\s*(GB|TB|MB)/i);
+    if (!m) return Infinity;
+    const n = parseFloat(m[1].replace(',', '.'));
+    const unit = m[2].toUpperCase();
+    const mult = unit === 'TB' ? 1024 ** 4 : unit === 'GB' ? 1024 ** 3 : 1024 ** 2;
+    return n * mult;
+  }
+  function inchesOf(s) {
+    if (!s) return Infinity;
+    const m = String(s).match(/(\d+(?:[.,]\d+)?)/);
+    return m ? parseFloat(m[1].replace(',', '.')) : Infinity;
+  }
+  function minPriceForValue(field, value, pool) {
+    let best = Infinity;
+    for (const v of pool) {
+      if (v[field] !== value) continue;
+      for (const pr of (v.prices || [])) {
+        if (pr.price > 0 && pr.price < best) best = pr.price;
+      }
     }
-    return opts;
-  }, [variantsWithPrice, variants]);
+    return best;
+  }
+
+  // Helper: does variant v match selected filters, IGNORING `excludeField`?
+  // Used to compute available options per dimension: we want the set of
+  // values for `field` among variants that pass all OTHER current filters.
+  // 'cores' is a composite pseudo-field stored as `${cpuCores}|${gpuCores}`.
+  function variantMatchesExcept(v, selectedObj, excludeField) {
+    for (const [k, val] of Object.entries(selectedObj || {})) {
+      if (!val || k === excludeField) continue;
+      if (k === 'cores') {
+        if (`${v.cpuCores}|${v.gpuCores}` !== val) return false;
+      } else {
+        if (v[k] !== val) return false;
+      }
+    }
+    return true;
+  }
 
   // Find cheapest variant (default selection) — only consider priced variants
   const cheapestVariantId = useMemo(() => {
@@ -154,23 +296,195 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     return best || (pool[0]?.id);
   }, [variantsWithPrice, variants, variantPriceMaps]);
 
-  // Initial selected filters = filters of cheapest variant
-  const cheapestVariant = variants.find(v => v.id === cheapestVariantId);
-  const initialSelected = {};
-  if (cheapestVariant) {
-    for (const f of FILTER_FIELDS) {
-      if (filterOptions[f]) initialSelected[f] = cheapestVariant[f];
+  // Initial filters = traits of the cheapest variant (one value per dimension).
+  // We pick from FILTER_FIELDS that exist on the variant object — actual
+  // filter availability per-dimension is computed below in filterOptions and
+  // tolerates extra keys here. Note: `cores` is NEVER seeded into selected;
+  // it's purely an info chip derived from the resolved variant.
+  const [selected, setSelected] = useState(() => {
+    const cheapestVariant = variants.find(v => v.id === cheapestVariantId);
+    const init = {};
+    if (cheapestVariant) {
+      for (const f of FILTER_FIELDS) {
+        if (f === 'cores') continue;                    // info-only, no seeding
+        if (cheapestVariant[f]) init[f] = cheapestVariant[f];
+      }
     }
-  }
-  const [selected, setSelected] = useState(initialSelected);
-  const [tab, setTab] = useState(tabInicial || 'Precios');
+    return init;
+  });
+  const [tab, setTab] = useState('Precios');
 
-  // Find variant matching ALL selected filters
+  // Build available options per filter dimension. We ALWAYS show the full
+  // global value set for each dimension (so positions don't shift as the
+  // user picks filters) — incompatible values are rendered disabled by the
+  // button's `valueIsCompatible` check at render time.
+  //
+  // Sorting is also fixed (based purely on the value itself or its cheapest
+  // global price) so buttons stay in the same place across selections.
+  //
+  // 'cores' is a composite pseudo-field: each value is "cpuCores|gpuCores".
+  const filterOptions = useMemo(() => {
+    const opts = {};
+    const pool = variantsWithPrice.length ? variantsWithPrice : variants;
+
+    for (const field of FILTER_FIELDS) {
+      let values;
+      if (field === 'cores') {
+        values = [...new Set(
+          pool.map(v => (v.cpuCores && v.gpuCores) ? `${v.cpuCores}|${v.gpuCores}` : null)
+              .filter(Boolean)
+        )];
+      } else {
+        values = [...new Set(pool.map(v => v[field]).filter(Boolean))];
+      }
+      if (values.length <= 1) continue;   // not worth a filter row
+
+      let sorted;
+      if (field === 'memory' || field === 'ram') {
+        sorted = values.sort((a, b) => sizeToBytes(a) - sizeToBytes(b));
+      } else if (field === 'display' || field === 'bandSize') {
+        sorted = values.sort((a, b) => inchesOf(a) - inchesOf(b));
+      } else if (field === 'cores') {
+        sorted = values.sort((a, b) => {
+          const [ca, ga] = a.split('|').map(Number);
+          const [cb, gb] = b.split('|').map(Number);
+          return (ca + ga) - (cb + gb);
+        });
+      } else {
+        sorted = values.sort((a, b) =>
+          minPriceForValue(field, a, pool) - minPriceForValue(field, b, pool)
+        );
+      }
+      opts[field] = sorted;
+    }
+    return opts;
+  }, [variantsWithPrice, variants]);
+
+  // Find variant matching ALL selected filters. 'cores' is composite:
+  // we match it against `${v.cpuCores}|${v.gpuCores}`.
   const selectedVariant = useMemo(() => {
     return variants.find(v =>
-      Object.entries(selected).every(([k, val]) => !val || v[k] === val)
+      Object.entries(selected).every(([k, val]) => {
+        if (!val) return true;
+        if (k === 'cores') return `${v.cpuCores}|${v.gpuCores}` === val;
+        return v[k] === val;
+      })
     ) || variants[0];
   }, [variants, selected]);
+
+  // Smart filter pick: set `field` to `val`, but if that leaves zero matching
+  // variants we DROP sibling filters one by one (lowest-priority first) until
+  // at least one variant matches. This lets the user freely switch e.g.
+  // display 14" -> 16" or chip M5 -> M5 Max without getting stuck.
+  //
+  // Priority order = the field the user just clicked is most important, then
+  // the broad dimensions (display, cpu), then narrower ones (memory, ram,
+  // color, screen). Cores is dropped before memory because cores depend on
+  // chip choice — when chip changes, cores must usually change too.
+  const SIBLING_DROP_ORDER = [
+    'screen',     // first thing we'll let go
+    'color',
+    'cores',
+    'ram',
+    'memory',
+    'cpu',
+    'display',
+    'connectivity',
+    'bandSize',
+  ];
+
+  // When the user picks a "structural" filter we eagerly drop technical
+  // sub-fields that almost always become invalid. RAM/memory ARE listed
+  // here for display/cpu because moving between chip generations or screen
+  // sizes typically invalidates RAM offerings (e.g. 16" Pro has no 16GB).
+  // For chip/cpu we still keep memory as a preference if possible — the
+  // sibling-drop fallback will release it only if no match exists.
+  const STRUCTURAL_RESETS = {
+    display: ['cores', 'screen', 'cpu', 'ram', 'memory'],
+    cpu:     ['cores', 'screen', 'ram'],
+    memory:  ['ram'],
+    cores:   [],
+  };
+
+  function variantMatchesFull(v, sel) {
+    return Object.entries(sel).every(([k, val]) => {
+      if (!val) return true;
+      if (k === 'cores') return `${v.cpuCores}|${v.gpuCores}` === val;
+      return v[k] === val;
+    });
+  }
+
+  function pickFilter(field, val) {
+    setSelected(prev => {
+      let next = { ...prev, [field]: val };
+
+      // STRUCTURAL_RESETS lists fields that often go invalid when `field`
+      // changes. But we don't blindly delete them: we only drop a value if
+      // it's actually incompatible with the new selection. So switching
+      // display 14"→16" while you had memory=1TB keeps 1TB if 16" also
+      // offers 1TB. This stops options from "scattering" on every pick.
+      const droppedFields = [];
+      for (const k of (STRUCTURAL_RESETS[field] || [])) {
+        if (next[k] == null) continue;
+        if (!variants.some(v => variantMatchesFull(v, next))) {
+          delete next[k];
+          droppedFields.push(k);
+        }
+      }
+
+      // If full selection still has no match, drop more siblings in priority
+      // order until we get at least one matching variant.
+      if (!variants.some(v => variantMatchesFull(v, next))) {
+        for (const drop of SIBLING_DROP_ORDER) {
+          if (drop === field) continue;
+          if (next[drop] == null) continue;
+          delete next[drop];
+          droppedFields.push(drop);
+          if (variants.some(v => variantMatchesFull(v, next))) break;
+        }
+      }
+
+      // For each field we dropped, auto-pick the minimum compatible value
+      // (cheapest / smallest). This way the modal lands on a real variant
+      // with sensible defaults instead of leaving the row empty.
+      const minPick = (k) => {
+        const candidates = variants
+          .filter(v => variantMatchesFull(v, next))
+          .map(v => {
+            if (k === 'cores') {
+              return (v.cpuCores && v.gpuCores) ? `${v.cpuCores}|${v.gpuCores}` : null;
+            }
+            return v[k];
+          })
+          .filter(Boolean);
+        if (!candidates.length) return null;
+        const unique = [...new Set(candidates)];
+        if (k === 'memory' || k === 'ram') {
+          unique.sort((a, b) => sizeToBytes(a) - sizeToBytes(b));
+        } else if (k === 'display' || k === 'bandSize') {
+          unique.sort((a, b) => inchesOf(a) - inchesOf(b));
+        } else if (k === 'cores') {
+          unique.sort((a, b) => {
+            const [ca, ga] = a.split('|').map(Number);
+            const [cb, gb] = b.split('|').map(Number);
+            return (ca + ga) - (cb + gb);
+          });
+        } else {
+          // sort by cheapest variant price
+          unique.sort((a, b) => minPriceForValue(k, a, variants) - minPriceForValue(k, b, variants));
+        }
+        return unique[0];
+      };
+
+      for (const k of droppedFields) {
+        if (k === 'cores') continue;            // cores is info-only, never seeded
+        const v = minPick(k);
+        if (v != null) next[k] = v;
+      }
+
+      return next;
+    });
+  }
 
   // Active price map for selected variant
   const pP = selectedVariant ? (variantPriceMaps[selectedVariant.id] || {}) : {};
@@ -314,62 +628,185 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
 
                 {/* RIGHT: Filters */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {FILTER_FIELDS.filter(f => filterOptions[f]).map(field => (
-                    <div key={field}>
-                      <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(29,29,31,0.6)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                        {FILTER_LABELS[field] || field}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {filterOptions[field].map(val => {
-                          const active = selected[field] === val;
-                          if (field === 'color') {
-                            const swatchVariant = variants.find(v => v.color === val);
-                            const hex = swatchVariant?.colorHex || '#cccccc';
-                            return (
-                              <button
-                                key={val}
-                                onClick={() => setSelected(s => ({ ...s, [field]: val }))}
-                                title={val}
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 7,
-                                  padding: '5px 11px 5px 5px',
-                                  background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
-                                  color: active ? '#fff' : '#1d1d1f',
-                                  border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
-                                  borderRadius: 980, cursor: 'pointer',
-                                  fontSize: 11, fontWeight: 500, transition: 'all .15s',
-                                }}
-                              >
-                                <span style={{
-                                  width: 16, height: 16, borderRadius: '50%',
-                                  background: hex,
-                                  border: '1px solid rgba(0,0,0,0.15)',
-                                  display: 'inline-block',
-                                }} />
-                                {val}
-                              </button>
-                            );
-                          }
-                          return (
-                            <button
-                              key={val}
-                              onClick={() => setSelected(s => ({ ...s, [field]: val }))}
-                              style={{
-                                padding: '6px 12px',
-                                background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
-                                color: active ? '#fff' : '#1d1d1f',
-                                border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
-                                borderRadius: 980, cursor: 'pointer',
-                                fontSize: 11, fontWeight: 500, transition: 'all .15s',
-                              }}
-                            >
-                              {val}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                  {(() => {
+                    // PRIMARY filters per category. These render as big chips
+                    // up top and are always clickable (sibling-drop in
+                    // pickFilter resolves any cross-incompatibilities). The
+                    // intent is "pick your model first, customize details
+                    // after" — so we surface whichever fields define the
+                    // model variant for this category.
+                    //
+                    //   Mac     → screen size + chip + storage
+                    //   iPhone  → display + storage
+                    //   iPad    → display + storage
+                    //   Watch   → band size + connectivity
+                    //   AirPods → (no primary — too few variants)
+                    const PRIMARY_BY_CAT = {
+                      mac:     ['display', 'cpu', 'memory'],
+                      iphone:  ['display', 'memory'],
+                      ipad:    ['display', 'memory'],
+                      watch:   ['bandSize', 'connectivity'],
+                      airpods: [],
+                    };
+                    const PRIMARY = PRIMARY_BY_CAT[prod.cat] || ['display', 'memory'];
+
+                    const allFields = FILTER_FIELDS.filter(f => filterOptions[f]);
+                    const primaryFields = allFields.filter(f => PRIMARY.includes(f));
+                    const secondaryFields = allFields.filter(f => !PRIMARY.includes(f));
+
+                    function valueIsCompatible(field, val) {
+                      const trial = { ...selected, [field]: val };
+                      return variants.some(v =>
+                        Object.entries(trial).every(([k, v_]) => {
+                          if (!v_) return true;
+                          if (k === 'cores') return `${v.cpuCores}|${v.gpuCores}` === v_;
+                          return v[k] === v_;
+                        })
+                      );
+                    }
+
+                    const selectedVariantCoreKey = (selectedVariant?.cpuCores && selectedVariant?.gpuCores)
+                      ? `${selectedVariant.cpuCores}|${selectedVariant.gpuCores}`
+                      : null;
+
+                    // Renderer for one filter row. `primary` controls chip size
+                    // AND clickability: primary fields are always clickable —
+                    // if the new pick collides with sibling filters, pickFilter
+                    // resolves it by dropping incompatible siblings. This is
+                    // critical for products with few variants (e.g. Mac Studio
+                    // has 2 variants with no overlap, so every cross-pick
+                    // would otherwise be "disabled").
+                    function renderFilterRow(field, primary) {
+                      const isInfoOnly = field === 'cores';
+                      const chipPadding = primary ? '10px 18px' : '6px 12px';
+                      const chipFontSize = primary ? 13 : 11;
+                      const chipFontWeight = primary ? 600 : 500;
+                      return (
+                        <div key={field}>
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            fontSize: 11, fontWeight: 500, color: 'rgba(29,29,31,0.6)',
+                            marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4,
+                          }}>
+                            <FilterIcon name={field} size={14} />
+                            {FILTER_LABELS[field] || field}
+                          </div>
+                          <div style={{ display: 'flex', gap: primary ? 8 : 6, flexWrap: 'wrap' }}>
+                            {filterOptions[field].map(val => {
+                              const active = isInfoOnly
+                                ? (val === selectedVariantCoreKey)
+                                : (selected[field] === val);
+                              // Incompatible-with-current-siblings values are
+                              // visually dimmed in both primary and secondary
+                              // blocks. The difference: primary remains
+                              // CLICKABLE — clicking a dim primary triggers
+                              // pickFilter, which drops sibling filters to
+                              // resolve the conflict. Secondary stays
+                              // non-clickable so the user is nudged to
+                              // change the primary first.
+                              const incompatible = !isInfoOnly && !active && !valueIsCompatible(field, val);
+                              const disabled = incompatible && !primary;
+                              const dim = incompatible;
+
+                              if (field === 'color') {
+                                const swatchVariant = variants.find(v => v.color === val);
+                                const hex = swatchVariant?.colorHex || '#cccccc';
+                                return (
+                                  <button
+                                    key={val}
+                                    onClick={() => !disabled && pickFilter(field, val)}
+                                    title={val}
+                                    disabled={disabled}
+                                    style={{
+                                      display: 'flex', alignItems: 'center', gap: 7,
+                                      padding: '5px 11px 5px 5px',
+                                      background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
+                                      color: active ? '#fff' : '#1d1d1f',
+                                      border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
+                                      borderRadius: 980,
+                                      cursor: disabled ? 'not-allowed' : 'pointer',
+                                      fontSize: 11, fontWeight: 500,
+                                      transition: 'all .15s',
+                                      opacity: dim ? 0.35 : 1,
+                                    }}
+                                  >
+                                    <span style={{
+                                      width: 16, height: 16, borderRadius: '50%',
+                                      background: hex,
+                                      border: '1px solid rgba(0,0,0,0.15)',
+                                      display: 'inline-block',
+                                    }} />
+                                    {val}
+                                  </button>
+                                );
+                              }
+
+                              const DISPLAY_SUFFIX = {
+                                'iPhone 17 Pro': { '6.3"': 'Pro', '6.9"': 'Pro Max' },
+                                'iPhone 16':     { '6.1"': '',    '6.7"': 'Plus' },
+                              };
+                              let label;
+                              if (field === 'cores' && typeof val === 'string') {
+                                const [cpu, gpu] = val.split('|');
+                                label = `${cpu}c CPU · ${gpu}c GPU`;
+                              } else if (field === 'display' && DISPLAY_SUFFIX[prod.nombre]) {
+                                const suffix = DISPLAY_SUFFIX[prod.nombre][val];
+                                label = suffix ? `${val} ${suffix}` : val;
+                              } else {
+                                label = val;
+                              }
+
+                              return (
+                                <button
+                                  key={val}
+                                  onClick={isInfoOnly ? undefined : (() => !disabled && pickFilter(field, val))}
+                                  disabled={disabled || isInfoOnly}
+                                  style={{
+                                    padding: chipPadding,
+                                    background: active ? 'rgba(29,29,31,0.85)' : 'rgba(255,255,255,0.6)',
+                                    color: active ? '#fff' : '#1d1d1f',
+                                    border: `1px solid ${active ? 'rgba(29,29,31,0.85)' : 'rgba(0,0,0,0.1)'}`,
+                                    borderRadius: 980,
+                                    cursor: isInfoOnly ? 'default' : (disabled ? 'not-allowed' : 'pointer'),
+                                    fontSize: chipFontSize, fontWeight: chipFontWeight,
+                                    transition: 'all .15s',
+                                    opacity: dim ? 0.35 : 1,
+                                  }}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <>
+                        {/* Primary filters (display, memory) — big chips */}
+                        {primaryFields.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            {primaryFields.map(f => renderFilterRow(f, true))}
+                          </div>
+                        )}
+                        {/* Divider when we have both blocks */}
+                        {primaryFields.length > 0 && secondaryFields.length > 0 && (
+                          <div style={{
+                            height: 1,
+                            background: 'rgba(0,0,0,0.08)',
+                            margin: '2px 0',
+                          }} />
+                        )}
+                        {/* Secondary filters (cpu, ram, cores, color, ...) — small chips */}
+                        {secondaryFields.length > 0 && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            {secondaryFields.map(f => renderFilterRow(f, false))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -401,7 +838,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                 {maxP && minP && maxP - minP > 0 && (
                   <div style={{ background: 'rgba(52,168,83,0.1)', border: '1px solid rgba(52,168,83,0.3)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: '#34a853', fontWeight: 500 }}>AHORRO</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#34a853' }}>-{(maxP - minP).toFixed(0)}€</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#34a853' }}>{(maxP - minP).toFixed(0)}€</div>
                   </div>
                 )}
               </div>
@@ -419,6 +856,12 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     const productUrl = pP[t.id].url || t.url;
                     const upd = pP[t.id].updatedAt;
                     const updStr = upd ? new Date(upd).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
+                    // Prefer the logo path coming from the API (Web/public/logo/*.png).
+                    // Falls back to the constants emoji if the API didn't provide one
+                    // (older data, missing Store row, etc.).
+                    const logoSrc  = pP[t.id].storeLogo;
+                    const storeNom = pP[t.id].storeName || t.nombre;
+                    const isImg    = typeof logoSrc === 'string' && (logoSrc.startsWith('/') || logoSrc.startsWith('http'));
                     return (
                       <a key={t.id} href={productUrl} target="_blank" rel="noreferrer" style={{
                         display: 'flex', alignItems: 'center', gap: 9, padding: '12px 14px',
@@ -426,9 +869,34 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         border: `1px solid ${es ? 'rgba(52,168,83,0.4)' : 'rgba(0,0,0,0.06)'}`,
                         borderRadius: 12, textDecoration: 'none',
                       }}>
-                        <span style={{ fontSize: 20 }}>{t.logo}</span>
+                        {isImg ? (
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 36, height: 24,
+                            flexShrink: 0,
+                            overflow: 'hidden',
+                          }}>
+                            <img
+                              src={logoSrc}
+                              alt={storeNom}
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                width: 'auto',
+                                height: 'auto',
+                                objectFit: 'contain',
+                                display: 'block',
+                              }}
+                              onError={e => { e.target.style.display = 'none'; }}
+                            />
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 20 }}>{logoSrc || t.logo}</span>
+                        )}
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, color: 'rgba(29,29,31,0.5)' }}>{t.nombre}</div>
+                          <div style={{ fontSize: 11, color: 'rgba(29,29,31,0.5)' }}>{storeNom}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                             <Dot status={st} />
                             <span style={{ fontSize: 15, fontWeight: 700, color: es ? '#34a853' : '#1d1d1f', fontFamily: 'ui-monospace,monospace' }}>
@@ -451,127 +919,6 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   )}
                 </div>
               )}
-
-              {/* Second-hand listings for the CURRENT variant (compact, max 3) */}
-              {(() => {
-                if (!selectedVariant) return null;
-                const variantListings = (prod.listings || [])
-                  .filter(l => l.variantId === selectedVariant.id);
-                if (!variantListings.length) return null;
-
-                const top = variantListings.slice(0, 3);
-                const rest = Math.max(0, variantListings.length - top.length);
-
-                return (
-                  <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      marginBottom: 10,
-                    }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.2px' }}>
-                        Segunda mano
-                        <span style={{ fontSize: 11, fontWeight: 400, color: 'rgba(29,29,31,0.5)', marginLeft: 6 }}>
-                          · {variantListings.length} {variantListings.length === 1 ? 'anuncio' : 'anuncios'}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => setTab('2ª mano')}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          fontSize: 12, fontWeight: 500, color: '#7c3aed',
-                          padding: 0, display: 'inline-flex', alignItems: 'center', gap: 3,
-                        }}
-                      >
-                        Ver todos <span style={{ fontSize: 13 }}>→</span>
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {top.map(a => {
-                        const foto = Array.isArray(a.fotos) ? a.fotos[0] : null;
-                        const estadoColor = colorEstado(a.estado);
-                        return (
-                          <div
-                            key={a.id}
-                            onClick={() => setTab('2ª mano')}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 10,
-                              padding: '8px 10px',
-                              background: 'rgba(245,158,11,0.06)',
-                              border: '1px solid rgba(245,158,11,0.25)',
-                              borderRadius: 12,
-                              cursor: 'pointer',
-                              transition: 'background .15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.12)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,158,11,0.06)'}
-                          >
-                            {/* Thumbnail */}
-                            <div style={{
-                              width: 44, height: 44, borderRadius: 8,
-                              background: 'rgba(0,0,0,0.05)',
-                              overflow: 'hidden', flexShrink: 0,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {foto ? (
-                                <img src={foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  onError={e => { e.target.style.display = 'none'; }} />
-                              ) : (
-                                <span style={{ fontSize: 20 }}>{prod.emoji || '📦'}</span>
-                              )}
-                            </div>
-
-                            {/* Info */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{
-                                  fontSize: 15, fontWeight: 700, color: '#f5a623',
-                                  fontFamily: 'ui-monospace, monospace',
-                                }}>{a.precio}€</span>
-                                <span style={{
-                                  background: estadoColor + '22', color: estadoColor,
-                                  fontSize: 9, fontWeight: 600,
-                                  padding: '2px 7px', borderRadius: 980,
-                                }}>{a.estado}</span>
-                              </div>
-                              <div style={{
-                                fontSize: 11, color: 'rgba(29,29,31,0.55)', marginTop: 2,
-                                display: 'flex', alignItems: 'center', gap: 4,
-                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                              }}>
-                                <i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize: 11 }} />
-                                {a.ciudad}
-                                <span style={{ color: 'rgba(29,29,31,0.3)' }}>·</span>
-                                {a.vendedor}
-                              </div>
-                            </div>
-
-                            <span style={{ fontSize: 14, color: 'rgba(29,29,31,0.3)', flexShrink: 0 }}>›</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {rest > 0 && (
-                      <button
-                        onClick={() => setTab('2ª mano')}
-                        style={{
-                          marginTop: 8,
-                          width: '100%',
-                          background: 'rgba(0,0,0,0.03)',
-                          border: '1px solid rgba(0,0,0,0.06)',
-                          borderRadius: 10,
-                          padding: '8px',
-                          fontSize: 12, color: 'rgba(29,29,31,0.6)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        +{rest} {rest === 1 ? 'anuncio más' : 'anuncios más'}
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
             </>
           )}
 
@@ -664,72 +1011,65 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       </div>
                     )}
 
-                    {/* OTHER SECTIONS — two-column grid (Pantalla | Chip ...) */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                      gap: '0 40px',
-                      alignItems: 'start',
-                    }}>
-                      {otherSections.map(([sectionKey, items]) => {
-                        const IconComp = SECTION_ICONS[sectionKey] || IconDots;
-                        const label = SECTION_LABELS[sectionKey] || sectionKey;
-                        const firstWord = label.split(/\s+/)[0];
+                    {/* OTHER SECTIONS - clean lists with icon header */}
+                    {otherSections.map(([sectionKey, items]) => {
+                      const IconComp = SECTION_ICONS[sectionKey] || IconDots;
+                      const label = SECTION_LABELS[sectionKey] || sectionKey;
+                      const firstWord = label.split(/\s+/)[0];
 
-                        return (
-                          <div key={sectionKey} style={{ marginBottom: 32 }}>
-                            <div style={{
+                      return (
+                        <div key={sectionKey} style={{ marginBottom: 32 }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            marginBottom: 14,
+                            paddingBottom: 12,
+                            borderBottom: '1px solid rgba(0,0,0,0.06)',
+                          }}>
+                            <span style={{
+                              color: '#1d1d1f',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: 12,
-                              marginBottom: 14,
-                              paddingBottom: 12,
-                              borderBottom: '1px solid rgba(0,0,0,0.06)',
+                              justifyContent: 'center',
                             }}>
-                              <span style={{
-                                color: '#1d1d1f',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}>
-                                <IconComp size={22} stroke={1.5} />
-                              </span>
-                              <span style={{
-                                fontSize: 17,
-                                fontWeight: 600,
-                                color: '#1d1d1f',
-                                letterSpacing: '-0.3px',
-                              }}>{label}</span>
-                            </div>
-                            <ul style={{
-                              listStyle: 'none',
-                              padding: 0,
-                              margin: 0,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 6,
-                            }}>
-                              {items.map((item, i) => {
-                                const text = typeof item === 'object' && item !== null ? item.text : item;
-                                const cleanText = String(text)
-                                  .replace(new RegExp(`^${firstWord}:\\s*`, 'i'), '')
-                                  .replace(new RegExp(`^${label}:\\s*`, 'i'), '');
-                                return (
-                                  <li key={i} style={{
-                                    fontSize: 13,
-                                    lineHeight: 1.55,
-                                    color: 'rgba(29,29,31,0.85)',
-                                    padding: '2px 0',
-                                  }}>
-                                    {cleanText}
-                                  </li>
-                                );
-                              })}
-                            </ul>
+                              <IconComp size={22} stroke={1.5} />
+                            </span>
+                            <span style={{
+                              fontSize: 17,
+                              fontWeight: 600,
+                              color: '#1d1d1f',
+                              letterSpacing: '-0.3px',
+                            }}>{label}</span>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <ul style={{
+                            listStyle: 'none',
+                            padding: 0,
+                            margin: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 6,
+                          }}>
+                            {items.map((item, i) => {
+                              const text = typeof item === 'object' && item !== null ? item.text : item;
+                              const cleanText = String(text)
+                                .replace(new RegExp(`^${firstWord}:\\s*`, 'i'), '')
+                                .replace(new RegExp(`^${label}:\\s*`, 'i'), '');
+                              return (
+                                <li key={i} style={{
+                                  fontSize: 13,
+                                  lineHeight: 1.55,
+                                  color: 'rgba(29,29,31,0.85)',
+                                  padding: '2px 0',
+                                }}>
+                                  {cleanText}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      );
+                    })}
                   </>
                 );
               })()}

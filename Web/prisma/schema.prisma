@@ -35,22 +35,28 @@ model Product {
   rating      Float     @default(0)
   tag         String    @default("")            // "Novedad" | "Oferta" | "Pro" | ""
   desc        String    @default("")
-  
-  fotos       String    @default("[]")
+
+  fotos       String    @default("[]")          // full gallery as JSON array
   fotoLabels  String    @default("[]")
   specs       String    @default("{}")
-  
+
+  // Card images — picked deterministically from the gallery for grid cards.
+  // cover = main thumbnail shown on the card.
+  // hover = second image shown on mouse-hover (different angle / back view).
+  cover       String?
+  hover       String?
+
   basePrice   Float?                             // lowest variant price (denormalized)
   releasedAt  String?                             // "2025-09"
-  
+
   matchKeys   String    @default("[]")
-  
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
+
   variants    ProductVariant[]
   reviews     Review[]
-  
+
   @@index([cat])
   @@index([family])
 }
@@ -60,34 +66,41 @@ model Product {
 model ProductVariant {
   id          Int       @id @default(autoincrement())
   productId   Int
-  
+
   nombre      String                            // display name
   sku         String?   @unique
   ean         String?   @unique
-  
+
   // Specifications (filterable in UI)
-  memory      String?                           // "256GB"
+  memory      String?                           // "256GB" — storage
+  ram         String?                           // "24GB" — Mac RAM (separate from storage)
   color       String?                           // "Negro Titanio"
   colorHex    String?                           // "#1d1d1f"
   display     String?                           // "6.9 pulgadas"
   cpu         String?                           // "M5 Pro" | "A18 Pro"
+  cpuCores    String?                           // "10" | "14" | "18" — Mac CPU cores
   gpu         String?                           // "10-core GPU"
+  gpuCores    String?                           // "10" | "20" | "32" | "40" — Mac GPU cores
+  screen      String?                           // "Standard" | "Nano-texture" — Mac/iPad glass
   connectivity String?                          // "Wi-Fi" | "Wi-Fi + Cellular"
   bandSize    String?                           // "45mm" | "49mm"
-  fotos       Json     @default("[]")
+  fotos       Json     @default("[]")           // full variant gallery
+  // Card images for this specific SKU (variant-page cards / color-picker etc.)
+  cover       String?
+  hover       String?
   msrp        Float?                            // Apple official price
   matchKeys   String    @default("[]")
-  
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
+
   product       Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
   prices        Price[]
   priceHistory  PriceHistory[]
   scrapedItems  ScrapedProduct[]
   listings      Listing[]
   clicks        Click[]
-  
+
   @@index([productId])
   @@index([memory])
   @@index([color])
@@ -101,39 +114,39 @@ model Store {
   logo        String
   url         String
   badge       String   @default("")
-  
+
   // Geography
   country     String   @default("ES")           // "ES" | "DE" | "IT" | "FR"
   language    String   @default("es")
   currency    String   @default("EUR")
-  
+
   // Shipping to Spain
   shippingToES        Float?
   shippingDays        Int?
   freeShippingFrom    Float?
-  
+
   // Affiliate / Monetization
   affiliateProvider  String?                    // "awin" | "amazon" | "tradedoubler" | "cj" | "direct"
   affiliateId        String?                    // your partner ID
   affiliateTemplate  String?                    // URL template with {url} and {affId}
   commissionPct      Float?                     // % we receive (analytics)
-  
+
   // Scraper
   delay       Int      @default(1000)
   enabled     Boolean  @default(true)
   scraperType String   @default("selenium")     // "selenium" | "api" | "manual"
-  
+
   // Trust (future)
   rating      Float?
   reviewCount Int?
-  
+
   createdAt   DateTime @default(now())
-  
+
   prices       Price[]
   priceHistory PriceHistory[]
   scrapedItems ScrapedProduct[]
   clicks       Click[]
-  
+
   @@index([country])
 }
 
@@ -144,22 +157,22 @@ model Price {
   id          Int       @id @default(autoincrement())
   variantId   Int
   storeId     String
-  
+
   price       Float
   oldPrice    Float?
   url         String?
-  
+
   stock       String   @default("unknown")     // "in_stock" | "out_of_stock" | "preorder" | "unknown"
   shipping    Float?
   discountPct Float?                            // computed from oldPrice
   condition   String   @default("new")          // "new" | "open_box" | "refurbished"
-  
+
   scrapedAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   variant     ProductVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
   store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   @@unique([variantId, storeId])
   @@index([variantId])
   @@index([storeId])
@@ -171,13 +184,13 @@ model PriceHistory {
   id          Int       @id @default(autoincrement())
   variantId   Int
   storeId     String
-  
+
   price       Float
   date        DateTime  @default(now())
-  
+
   variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   store       Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   @@index([variantId, date])
   @@index([variantId, storeId, date])
 }
@@ -189,17 +202,17 @@ model Click {
   id          Int      @id @default(autoincrement())
   variantId   Int?
   storeId     String
-  
+
   source      String   @default("web")          // "web" | "email" | "push"
   userAgent   String?
   country     String?                            // from CF/Vercel header
   referer     String?
-  
+
   createdAt   DateTime @default(now())
-  
+
   variant     ProductVariant? @relation(fields: [variantId], references: [id])
   store       Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
+
   @@index([storeId, createdAt])
   @@index([variantId])
   @@index([createdAt])
@@ -212,34 +225,34 @@ model ScrapedProduct {
   sku          String
   storeId      String
   variantId    Int?                             // null until matched
-  
+
   url          String
   name         String
   manufacturer String   @default("Apple")
   category     String
-  
+
   price        Float    @default(0)
   oldprice     Float    @default(0)
   available    String   @default("")
-  
+
   techs        String   @default("{}")
   images       String   @default("[]")
-  
+
   ean          String?
   color        String   @default("")
   memory       String   @default("")
   display      String   @default("")
   cpu          String   @default("")
-  
+
   matchStatus  String   @default("pending")     // "pending" | "matched" | "auto_created" | "ignored"
   matchScore   Float?
-  
+
   scrapedAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-  
+
   variant      ProductVariant?  @relation(fields: [variantId], references: [id])
   store        Store            @relation(fields: [storeId], references: [id])
-  
+
   @@unique([sku, storeId])
   @@index([category])
   @@index([storeId])
@@ -257,7 +270,7 @@ model ScrapingLog {
   error       String?
   duration    Int?
   createdAt   DateTime @default(now())
-  
+
   @@index([storeId, createdAt])
 }
 
@@ -266,29 +279,29 @@ model ScrapingLog {
 model Listing {
   id          Int      @id @default(autoincrement())
   variantId   Int
-  
+
   source      String   @default("manzana")     // "manzana" | "wallapop" | "milanuncios"
   sourceUrl   String?
   sourceId    String?
-  
+
   precio      Float
   estado      String                             // "Excelente" | "Muy bueno" | "Bueno" | "Aceptable"
   ciudad      String
   vendedor    String
   descripcion String   @default("")
   fotos       String   @default("[]")
-  
+
   latitude    Float?
   longitude   Float?
-  
+
   active      Boolean  @default(true)
   views       Int      @default(0)
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  
+
   @@unique([source, sourceId])
   @@index([variantId])
   @@index([source])
@@ -300,15 +313,15 @@ model Listing {
 model Review {
   id        Int      @id @default(autoincrement())
   productId Int
-  
+
   fuente    String
   nota      Float
   texto     String
   url       String?
   fecha     String
-  
+
   product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+
   @@index([productId])
 }
 

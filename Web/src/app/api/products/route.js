@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolveCustomCover } from '@/lib/customCover';
 
 const safeParse = (s, fallback) => {
   if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
@@ -87,9 +88,14 @@ export async function GET(request) {
         display: v.display,
         cpu: v.cpu,
         gpu: v.gpu,
+        ram: v.ram,
+        cpuCores: v.cpuCores,
+        gpuCores: v.gpuCores,
         connectivity: v.connectivity,
         bandSize: v.bandSize,
         fotos: v.fotos,
+        cover: v.cover,
+        hover: v.hover,
         msrp: v.msrp,
         prices: v.prices.map(pr => ({
           id: pr.id,
@@ -159,7 +165,9 @@ export async function GET(request) {
           }
         }
       }
-
+      
+      const custom = resolveCustomCover(p.slug);
+      
       return {
         id: p.id,
         slug: p.slug,
@@ -172,6 +180,8 @@ export async function GET(request) {
         desc: p.desc,
         basePrice: p.basePrice,
         releasedAt: p.releasedAt,
+        cover: custom.cover || p.cover,
+        hover: custom.hover || p.hover,
         fotos,
         fotoLabels,
         specs,
