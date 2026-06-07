@@ -1,0 +1,8 @@
+# Never deploy archived PNG originals (kept locally for safety after WebP conversion).
+_originals-png/
+
+# Local dev artefacts that shouldn't ship to Vercel
+.next/
+node_modules/
+*.db
+*.db-journal

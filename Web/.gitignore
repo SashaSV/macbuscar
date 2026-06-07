@@ -5,7 +5,13 @@ node_modules/
 *.db
 *.db-journal
 /public/uploads/*
+/public/products_backup/*
 !public/uploads/.gitkeep
+
+# Archived PNG originals (moved out of /public after WebP conversion).
+# Kept locally for safety / future re-encoding; never deployed.
+/_originals-png/
+
 prisma/migrations/
 
 .vercel
