@@ -3,19 +3,28 @@
 // =============================================================
 // One-shot cleanup of /public/logo/ + Store.logo DB column.
 //
-// Problem: Windows is case-insensitive so /logo/mediamarkt.png and
-//          /logo/MediaMarkt.png look like the same file locally, but
-//          Vercel runs on Linux which is case-sensitive → logos that
-//          render fine in dev disappear in prod.
+// Why: Windows fs is case-insensitive so /logo/mediamarkt.png and
+//      /logo/MediaMarkt.png look like the same file locally, but
+//      Vercel runs on Linux which is case-sensitive → logos that
+//      render fine in dev disappear in prod when the DB column
+//      points to lowercase and the file is committed in PascalCase.
 //
-// Solution: normalize every file to lowercase = store.id, and set
-//           Store.logo = '/logo/${store.id}.png' for every row.
+// What this does:
+//   1. Renames git-tracked PascalCase logos to lowercase store.id.
+//      Uses a two-step `git mv` (via .tmp filename) because on
+//      Windows core.ignorecase=true ignores case-only renames.
+//   2. Deletes unused duplicates and orphan files (iStore (K-tuin).png,
+//      elcorteinglés.png, rossellimac.png, etc.) via `git rm`.
+//   3. Updates Store.logo in DB to canonical /logo/<id>.png so the
+//      API serves the right path.
 //
 // Usage:
 //   node scripts/fix-store-logos.mjs --dry-run   ← preview
 //   node scripts/fix-store-logos.mjs             ← apply
+//
+// After: review with `git status`, then commit + push.
 // =============================================================
-import { readdir, rename, unlink, stat } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,109 +36,112 @@ const ROOT = path.resolve(__dirname, '..');
 const LOGO_DIR = path.join(ROOT, 'public', 'logo');
 
 const DRY_RUN = process.argv.includes('--dry-run');
-const prisma = new PrismaClient();
 
-// Map every variant of a logo filename we've seen → canonical lowercase id.
-const FILE_TO_ID = {
-  'amazon.png':                'amazon',
-  'apple.png':                 'apple',
-  'mediamarkt.png':            'mediamarkt',
-  'MediaMarkt.png':            'mediamarkt',
-  'pccomp.png':                'pccomp',
-  'PcComponentes.jpg':         'pccomp',
-  'fnac.png':                  'fnac',
-  'Fnac.png':                  'fnac',
-  'elcorte.png':               'elcorte',
-  'El Corte Inglés.png':       'elcorte',
-  'worten.png':                'worten',
-  'Worten.png':                'worten',
-  'istore.png':                'istore',
-  'iStore (K-tuin).png':       'istore',
-  'rossellimac.png':           null,    // no such store in seed — delete
-};
+// Plan: source filename → action.
+//   ['rename', target]  → git mv via temp name (handles case-only changes)
+//   ['delete']          → git rm
+const PLAN = [
+  ['MediaMarkt.png',          'rename', 'mediamarkt.png'],
+  ['Worten.png',              'rename', 'worten.png'],
+  ['Fnac.png',                'rename', 'fnac.png'],
+  ['PcComponentes.jpg',       'delete'],
+  ['iStore (K-tuin).png',     'delete'],
+  ['El Corte Inglés.png',     'delete'],
+  ['elcorteinglés.png',       'delete'],
+  ['rossellimac.png',         'delete'],
+];
+
+function git(...args) {
+  if (DRY_RUN) {
+    console.log(`    [dry] git ${args.map(a => a.includes(' ') ? `"${a}"` : a).join(' ')}`);
+    return;
+  }
+  try {
+    execFileSync('git', args, { cwd: ROOT, stdio: 'pipe' });
+  } catch (err) {
+    const stderr = err.stderr?.toString() || '';
+    console.log(`    ❌ git ${args.join(' ')}\n       ${stderr.trim()}`);
+    throw err;
+  }
+}
+
+function gitTracked(relPath) {
+  try {
+    const out = execFileSync('git', ['ls-files', '--error-unmatch', relPath],
+      { cwd: ROOT, stdio: 'pipe' });
+    return out.toString().trim().length > 0;
+  } catch {
+    return false;
+  }
+}
 
 async function main() {
   console.log('━━━ Store-logo cleanup ━━━');
   console.log(`  mode: ${DRY_RUN ? 'DRY RUN' : 'APPLY'}`);
   console.log(`  dir:  ${LOGO_DIR}\n`);
 
-  // 1. Walk the dir, plan a rename/delete for each file.
-  const files = await readdir(LOGO_DIR);
-  const planByTarget = {};          // canonical-name → first source seen
-  const actions = [];               // {src, action, target?}
+  // ─── 1. File operations via git ─────────────────────────────
+  for (const [src, action, target] of PLAN) {
+    const srcRel = `public/logo/${src}`;
+    const srcAbs = path.join(LOGO_DIR, src);
 
-  for (const f of files) {
-    const id = FILE_TO_ID[f];
-    if (id === undefined) {
-      console.log(`   ⚠️  Unknown file ${f} — leaving alone (add to FILE_TO_ID if needed)`);
+    // Skip silently if neither the working tree nor the index knows it.
+    const onDisk  = existsSync(srcAbs);
+    const tracked = gitTracked(srcRel);
+    if (!onDisk && !tracked) {
+      console.log(`   ⏭  ${src}  (not in tree or index — already cleaned up)`);
       continue;
     }
-    if (id === null) {
-      actions.push({ src: f, action: 'delete' });
-      continue;
-    }
-    const target = `${id}.png`;
-    if (!planByTarget[target]) {
-      // First contender for this canonical name → use it.
-      planByTarget[target] = f;
-      if (f !== target) actions.push({ src: f, action: 'rename', target });
-    } else {
-      // Already have a canonical for this id → this one is a duplicate.
-      actions.push({ src: f, action: 'delete', reason: `duplicate of ${planByTarget[target]} → ${target}` });
+
+    if (action === 'delete') {
+      console.log(`   🗑  ${src}  →  (delete)`);
+      // -f because file may already be untracked or partially removed.
+      git('rm', '-f', srcRel);
+    } else if (action === 'rename') {
+      const dstRel = `public/logo/${target}`;
+      const tmpRel = `public/logo/__tmp_${target}`;
+      console.log(`   ✏  ${src}  →  ${target}`);
+      // Two-step to defeat Windows core.ignorecase=true for case-only renames.
+      git('mv', '-f', srcRel, tmpRel);
+      git('mv', '-f', tmpRel, dstRel);
     }
   }
 
-  console.log(`\n📋 Planned ${actions.length} file action(s):`);
-  for (const a of actions) {
-    if (a.action === 'rename') {
-      console.log(`   ✏  ${a.src}  →  ${a.target}`);
-    } else {
-      console.log(`   🗑  ${a.src}  ${a.reason ? `(${a.reason})` : ''}`);
-    }
-  }
-
-  if (!DRY_RUN) {
-    for (const a of actions) {
-      const src = path.join(LOGO_DIR, a.src);
-      if (!existsSync(src)) continue;
-      if (a.action === 'rename') {
-        const dst = path.join(LOGO_DIR, a.target);
-        // If a different file already sits at the canonical name, remove it first.
-        if (existsSync(dst)) await unlink(dst);
-        await rename(src, dst);
-      } else if (a.action === 'delete') {
-        await unlink(src);
-      }
-    }
-  }
-
-  // 2. Update Store.logo in DB to canonical /logo/<id>.png for every store.
+  // ─── 2. DB updates ──────────────────────────────────────────
+  const prisma = new PrismaClient();
   console.log(`\n🗄  Updating Store.logo in DB:`);
-  const stores = await prisma.store.findMany({ select: { id: true, nombre: true, logo: true } });
-  let dbChanged = 0;
-  for (const s of stores) {
-    const want = `/logo/${s.id}.png`;
-    if (s.logo === want) {
-      console.log(`   ⏭  [${s.id}] ${s.nombre}  already canonical`);
-      continue;
+  try {
+    const stores = await prisma.store.findMany({ select: { id: true, nombre: true, logo: true } });
+    let dbChanged = 0;
+    for (const s of stores) {
+      const want = `/logo/${s.id}.png`;
+      if (s.logo === want) {
+        console.log(`   ⏭  [${s.id}] already canonical`);
+        continue;
+      }
+      console.log(`   🔁 [${s.id}] '${s.logo}' → '${want}'`);
+      if (!DRY_RUN) {
+        await prisma.store.update({ where: { id: s.id }, data: { logo: want } });
+      }
+      dbChanged++;
     }
-    console.log(`   🔁 [${s.id}] ${s.nombre}  '${s.logo}' → '${want}'`);
-    if (!DRY_RUN) {
-      await prisma.store.update({ where: { id: s.id }, data: { logo: want } });
-    }
-    dbChanged++;
+    console.log(`\n━━━ Summary ━━━`);
+    console.log(`  db updates: ${dbChanged} ${DRY_RUN ? '(planned)' : '(applied)'}`);
+  } finally {
+    await prisma.$disconnect();
   }
 
-  console.log(`\n━━━ Summary ━━━`);
-  console.log(`  file actions:  ${actions.length} ${DRY_RUN ? '(planned)' : '(applied)'}`);
-  console.log(`  db updates:    ${dbChanged} ${DRY_RUN ? '(planned)' : '(applied)'}`);
-  if (DRY_RUN) console.log('\n  Re-run without --dry-run to apply.');
-
-  await prisma.$disconnect();
+  if (DRY_RUN) {
+    console.log('\n  Re-run without --dry-run to apply.');
+  } else {
+    console.log('\n  Next:');
+    console.log('    git status                                  # verify rename/delete entries');
+    console.log('    git commit -m "Normalize store logo filenames (Vercel case-sensitivity fix)"');
+    console.log('    git push');
+  }
 }
 
 main().catch(err => {
-  console.error('Fatal:', err);
-  prisma.$disconnect();
+  console.error('Fatal:', err.message);
   process.exit(1);
 });
