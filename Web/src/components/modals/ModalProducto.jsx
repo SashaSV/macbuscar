@@ -222,6 +222,10 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
             updatedAt: pr.updatedAt,
             storeLogo: pr.storeLogo,
             storeName: pr.storeName,
+            // Financing (may be null — only shown when monthlyPrice is set)
+            monthlyPrice:      pr.monthlyPrice,
+            monthlyMonths:     pr.monthlyMonths,
+            financingProvider: pr.financingProvider,
           };
         }
       }
@@ -903,6 +907,27 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                               {price}€
                             </span>
                           </div>
+                          {pP[t.id].monthlyPrice > 0 && (() => {
+                            // "desde 54,13 €/mes con Cetelem" — Spanish decimal
+                            // formatting (comma). Months suffix omitted when the
+                            // store didn't expose it. Provider suffix dropped
+                            // when null (rare).
+                            const m = pP[t.id].monthlyPrice;
+                            const months = pP[t.id].monthlyMonths;
+                            const prov   = pP[t.id].financingProvider;
+                            const fmt    = m.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            let label = `desde ${fmt} €/mes`;
+                            if (months) label += ` ×${months}`;
+                            if (prov)   label += ` con ${prov}`;
+                            return (
+                              <div style={{
+                                fontSize: 10,
+                                color: 'rgba(29,29,31,0.55)',
+                                marginTop: 2,
+                                fontVariantNumeric: 'tabular-nums',
+                              }}>{label}</div>
+                            );
+                          })()}
                           {updStr && <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.35)', marginTop: 2 }}>actualizado {updStr}</div>}
                         </div>
                         {es && <span>🏆</span>}

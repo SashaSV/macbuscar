@@ -167,6 +167,14 @@ model Price {
   discountPct Float?                            // computed from oldPrice
   condition   String   @default("new")          // "new" | "open_box" | "refurbished"
 
+  // ── Financing (Spain market — Apple gear €1000+ is often bought on monthly plans)
+  // All are NULL when the store doesn't expose financing info for this SKU.
+  // monthlyApr == 0.0 means "Sin Intereses" (interest-free); NULL means unknown.
+  monthlyPrice       Float?                     // e.g. 40.58
+  monthlyMonths      Int?                       // e.g. 24, 29, 36
+  financingProvider  String?                    // "CaixaBank", "Cetelem", "Younited", "Smart Plan", "Amazon"
+  monthlyApr         Float?                     // TAE %; 0.0 = interest-free, null = unknown
+
   scrapedAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

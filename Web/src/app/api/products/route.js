@@ -109,6 +109,12 @@ export async function GET(request) {
           discountPct: pr.discountPct,
           condition: pr.condition,
           updatedAt: pr.updatedAt,
+          // Financing (Spain market — monthly installments). Any/all may
+          // be null if the store doesn't expose financing for this SKU.
+          monthlyPrice:      pr.monthlyPrice,
+          monthlyMonths:     pr.monthlyMonths,
+          financingProvider: pr.financingProvider,
+          monthlyApr:        pr.monthlyApr,
         })),
         listings: v.listings.map(l => ({
           id: l.id,
