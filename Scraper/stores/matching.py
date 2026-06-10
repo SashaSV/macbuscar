@@ -717,6 +717,74 @@ def find_best_match(variant, results, family_re, *, strict_chip=True, strict_anc
     return (best, best_s) if best_s >= threshold else (None, 0)
 
 
+# ════════════════════════════════════════════════════════════════════════
+#   Financing extraction (Spain market: monthly installments + provider)
+# ════════════════════════════════════════════════════════════════════════
+
+def parse_financing(html, *, monthly_re, provider_re=None, provider_default=None,
+                    apr_re=None):
+    r"""Extract installment info from a product-detail HTML blob.
+
+    Returns a dict with keys monthly_price / monthly_months /
+    financing_provider / monthly_apr (any/all may be None if not found).
+    The dict is shaped so it can be merged straight into a `result` dict
+    and read out by upsert_scraped_and_price.
+
+    Caller provides store-specific patterns:
+      monthly_re   : regex with group(1)=price, group(2)=months
+                     e.g. compiled from r'o\s+([\d.,]+)\s*€/mes\s+en\s+(\d+)\s+meses'
+      provider_re  : regex with group(1)=provider name (optional)
+      provider_default : fallback provider name when provider_re absent or
+                         doesn't match (e.g. MediaMarkt where Cetelem is
+                         always the partner but isn't repeated on every
+                         product page)
+      apr_re       : regex with group(1)=TAE percent (optional)
+    """
+    out = {
+        'monthly_price':      None,
+        'monthly_months':     None,
+        'financing_provider': None,
+        'monthly_apr':        None,
+    }
+    if not html:
+        return out
+
+    # The text we care about ("o 59.54€/mes en 24 meses") is often spread
+    # across multiple HTML elements / contains &nbsp; entities. Strip tags
+    # and decode entities before regex matching.
+    from bs4 import BeautifulSoup
+    if '<' in html and '>' in html:
+        soup = BeautifulSoup(html, 'html.parser')
+        text = soup.get_text(separator=' ', strip=True)
+    else:
+        text = html
+
+    m = monthly_re.search(text)
+    if m:
+        out['monthly_price']  = parse_price(m.group(1))
+        try:
+            if m.lastindex and m.lastindex >= 2:
+                out['monthly_months'] = int(m.group(2))
+        except (ValueError, TypeError):
+            pass
+
+    if provider_re:
+        pm = provider_re.search(text)
+        if pm:
+            out['financing_provider'] = pm.group(1).strip()
+    if not out['financing_provider'] and provider_default:
+        out['financing_provider'] = provider_default
+
+    if apr_re:
+        am = apr_re.search(text)
+        if am:
+            try:
+                out['monthly_apr'] = float(am.group(1).replace(',', '.'))
+            except (ValueError, TypeError):
+                pass
+
+    return out
+
 # ════════════════════════════════════════════════════════════════════════════
 #   DB access
 # ════════════════════════════════════════════════════════════════════════════
@@ -799,9 +867,18 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
         cur.execute('''
             UPDATE "Price" SET
                 price = %s, "oldPrice" = %s, url = %s,
-                stock = 'in_stock', "scrapedAt" = NOW(), "updatedAt" = NOW()
+                stock = 'in_stock', "scrapedAt" = NOW(), "updatedAt" = NOW(),
+                "monthlyPrice"      = %s,
+                "monthlyMonths"     = %s,
+                "financingProvider" = %s,
+                "monthlyApr"        = %s
             WHERE id = %s
-        ''', (price, oldprice or None, url, price_id))
+        ''', (price, oldprice or None, url,
+              result.get('monthly_price'),
+              result.get('monthly_months'),
+              result.get('financing_provider'),
+              result.get('monthly_apr'),
+              price_id))
         if old_db_price is None or abs(float(old_db_price) - price) > 0.01:
             cur.execute('''
                 INSERT INTO "PriceHistory" ("variantId", "storeId", price, date)
@@ -811,9 +888,16 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
         cur.execute('''
             INSERT INTO "Price"
                 ("variantId", "storeId", price, "oldPrice", url, stock,
+                 "monthlyPrice", "monthlyMonths", "financingProvider", "monthlyApr",
                  "scrapedAt", "updatedAt")
-            VALUES (%s, %s, %s, %s, %s, 'in_stock', NOW(), NOW())
-        ''', (variant_id, store_id, price, oldprice or None, url))
+            VALUES (%s, %s, %s, %s, %s, 'in_stock',
+                    %s, %s, %s, %s,
+                    NOW(), NOW())
+        ''', (variant_id, store_id, price, oldprice or None, url,
+              result.get('monthly_price'),
+              result.get('monthly_months'),
+              result.get('financing_provider'),
+              result.get('monthly_apr')))
         cur.execute('''
             INSERT INTO "PriceHistory" ("variantId", "storeId", price, date)
             VALUES (%s, %s, %s, NOW())

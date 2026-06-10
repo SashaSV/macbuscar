@@ -187,6 +187,10 @@ def parse_standard_args(description=None):
                     help='per-variant fallback search for unmatched variants')
     ap.add_argument('--inspect', action='store_true',
                     help='dump first search page diagnostic and stop')
+    ap.add_argument('--with-financing', action='store_true',
+                    help='after each match, visit detail URL and extract monthly-installment info '
+                         '(adds 1 HTTP per matched variant; only useful with full-scrape, '
+                         'nightly refresh skips this)')
     return ap.parse_args()
 
 
@@ -198,6 +202,7 @@ def run_store(*, store_id, store_label, host,
               build_search_url, is_captcha, parse_search_results,
               warmup_driver,
               inspect_page=None,
+              parse_financing=None,
               page_delay=(3.5, 7.0),
               strict_chip=True,
               strict_anc=True,
@@ -231,12 +236,13 @@ def run_store(*, store_id, store_label, host,
     if args is None:
         args = parse_standard_args(description=f'{store_label} scraper')
 
-    dry_run      = args.dry_run
-    limit        = args.limit
-    only_cat     = args.cat
-    only_product = args.product
-    fallback     = args.fallback
-    inspect      = args.inspect
+    dry_run        = args.dry_run
+    limit          = args.limit
+    only_cat       = args.cat
+    only_product   = args.product
+    fallback       = args.fallback
+    inspect        = args.inspect
+    with_financing = getattr(args, 'with_financing', False) and parse_financing is not None
     delay_min, delay_max = page_delay
 
     # ── intro ──────────────────────────────────────────────────────────────
@@ -247,6 +253,8 @@ def run_store(*, store_id, store_label, host,
         print('⟳  Per-variant FALLBACK enabled\n')
     if inspect:
         print('🔬 INSPECT mode — first page dumped; no matching\n')
+    if with_financing:
+        print('💳 Financing extraction ENABLED — will visit each matched product page\n')
 
     # ── load + filter products ─────────────────────────────────────────────
     products = matching.load_products_with_variants()
@@ -369,6 +377,36 @@ def run_store(*, store_id, store_label, host,
                     print(f'         ✅ [{variant["id"]:4}] '
                           f'{variant["nombre"][:38]:38} → '
                           f'{best["name"][:55]:55} | {note} | s={score} | {str(best["asin"])[:30]}')
+
+                    # ── Financing enrichment (optional, opt-in) ────────────────
+                    # Visit the matched product's detail URL to pull monthly
+                    # installment data, then merge into the `best` dict so
+                    # upsert_scraped_and_price writes it to the Price row.
+                    if with_financing and best.get('url'):
+                        try:
+                            driver.get(best['url'])
+                            time.sleep(random.uniform(2.0, 4.0))
+                            fin_html = driver.page_source
+                            fin_marker, _ = is_captcha(fin_html)
+                            if fin_marker:
+                                print(f'            🚫 CAPTCHA on detail page ({fin_marker!r}); '
+                                      f'stopping financing extraction')
+                                captcha_hit = True
+                            else:
+                                fin = parse_financing(fin_html)
+                                best.update(fin)
+                                if fin.get('monthly_price'):
+                                    m_note = f'{fin["monthly_price"]:.2f}€/mes'
+                                    if fin.get('monthly_months'):
+                                        m_note += f' x{fin["monthly_months"]}'
+                                    if fin.get('financing_provider'):
+                                        m_note += f' — {fin["financing_provider"]}'
+                                    print(f'            💳 {m_note}')
+                                else:
+                                    print(f'            ⚠️  no monthly price found on detail page')
+                        except Exception as e:
+                            print(f'            ⚠️  financing fetch failed: '
+                                  f'{type(e).__name__}: {str(e)[:80]}')
 
                     if not dry_run:
                         try:

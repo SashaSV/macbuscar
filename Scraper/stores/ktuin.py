@@ -363,6 +363,29 @@ def inspect(html):
         print(f'     · [{str(r["asin"])[:24]:24}] {r["name"][:60]:60} | {r["price"]}€{oldp}')
 
 
+# K-tuin detail-page financing patterns. Headline example:
+#   o 59.54€/mes en 24 meses1
+# Footer with TAE: "TIN 0,0% TAE 9,54%. Financiación ofrecida por Banco Cetelem S.A.U."
+_FIN_MONTHLY_RE = re.compile(
+    r'o\s+([\d.,]+)\s*€\s*/\s*mes\s+en\s+(\d+)\s+meses',
+    re.I,
+)
+_FIN_PROVIDER_RE = re.compile(
+    r'Financiación\s+ofrecida\s+por\s+(?:Banco\s+)?([A-Za-zÀ-ſ]+)',
+    re.I,
+)
+_FIN_APR_RE = re.compile(r'TAE\s+([\d.,]+)\s*%', re.I)
+
+
+def parse_financing(html):
+    return matching.parse_financing(
+        html,
+        monthly_re=_FIN_MONTHLY_RE,
+        provider_re=_FIN_PROVIDER_RE,
+        apr_re=_FIN_APR_RE,
+    )
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════
@@ -378,6 +401,7 @@ def main():
         parse_search_results=parse_search_results,
         warmup_driver=warmup_driver,
         inspect_page=inspect,
+        parse_financing=parse_financing,
         page_delay=PAGE_DELAY,
         args=args,
     )
