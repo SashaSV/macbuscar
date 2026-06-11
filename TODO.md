@@ -139,6 +139,36 @@ Keeps the site's prices fresh without re-running the full match logic.
       - File `Scraper/stores/fnac.py` exists, blocked by DataDome
       - `pip install undetected-chromedriver`, rewrite `make_driver()`
       - All other logic is ready — only the driver layer changes
+- [ ] **Lollypop (used / refurbished items)** — populates the "2ª mano" tab
+      that already exists in `ModalProducto.jsx`. Different data shape than
+      new-only stores:
+      - Condition matters (`condition` column already in `Price`: "new" →
+        also "refurbished", "open_box", "used_good", "used_acceptable")
+      - Listings include grade + warranty length (typically 12-24 mo)
+      - Stock is per-unit (each refurbished iPhone is unique) — may need
+        different unique-key strategy than the SKU-based one we use now
+      - URL: lollypop.com or similar Spanish refurb marketplace; verify
+        which one before starting
+
+---
+
+## 📊 Content / data expansion
+
+- [ ] **Product reviews scraping** — reviews are a strong comparison axis
+      alongside price, and Spanish buyers lean heavily on them. Open
+      questions before starting:
+      - **Source per store** — Amazon has rich reviews (rating + count +
+        text), K-tuin shows aggregate score only, MediaMarkt/Worten have
+        their own scoring widgets. Need to inspect each.
+      - **Schema** — new `Review` table or aggregate into `Price`?
+        Aggregate (avg_rating + review_count + review_url) is enough for
+        comparison UI. Full review texts = much heavier, probably defer.
+      - **Per-product, not per-variant** — reviews attach to the Product
+        page on the store side, not individual colour/storage SKUs.
+      - **Refresh cadence** — ratings barely move day-to-day. Pull during
+        full scrape only, never during nightly refresh.
+      - **UI** — add a small rating widget to each store card in
+        `ModalProducto.jsx` (⭐⭐⭐⭐½ 4.6 / 1,247 reseñas), link to source.
 
 ---
 
@@ -156,6 +186,28 @@ Keeps the site's prices fresh without re-running the full match logic.
 
 ## 🎨 UI / web app
 
+- [ ] **Mobile UI adaptation** — site is desktop-first; needs responsive pass
+      for iPhone Safari + Android Chrome. Likely problem areas:
+      - HomePage product grid (cards may be too wide on 375px viewport)
+      - `ModalProducto.jsx` — store cards stack OK but font/padding tight,
+        the "desde X €/mes con Cetelem" line may wrap awkwardly
+      - Comparison rows (Apple Store / MediaMarkt / Amazon / Worten / iStore)
+        with horizontal price bar — needs touch-friendly scroll or stack
+      - Category nav / filters / search bar
+      - Touch target sizes (Apple HIG: ≥44px, Material: ≥48px)
+      - Image loading on slow mobile networks (already WebP'd but check
+        `loading="lazy"` is set everywhere)
+      Approach: Chrome DevTools mobile emulation first, then real device.
+      Tailwind breakpoints already exist; check what's actually used.
+- [ ] **Image gallery polish** — the existing "Galería" tab in `ModalProducto.jsx`
+      shows variant images but needs work:
+      - Lightbox / full-screen zoom on click (currently inline only)
+      - Thumbnail strip with smooth horizontal scroll
+      - Keyboard navigation (arrow keys, Esc)
+      - Lazy-loading offscreen images (Apple PR shots are 1-3 MB each)
+      - Fallback when a variant has no own photos — reuse the Product
+        cover so empty galleries don't look broken
+      - Mobile: pinch-zoom, swipe between images
 - [ ] **Compare-pages for Mac/iPad/Watch/AirPods** — extend `apple_compare.py` pattern
       (currently only iPhone has compare page)
 - [ ] **Banners CMS** — move banners from hardcoded `HomePage.jsx` to DB + admin panel
