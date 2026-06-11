@@ -1102,7 +1102,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
           )}
 
           {tab === 'Reseñas' && <Resenas reviews={prod.reviews || []} />}
-          {tab === 'Historial' && <HistorialChart historial={prod.priceHistory || []} />}
+          {tab === 'Historial' && <HistorialChart variant={selectedVariant} />}
 
           {tab === '2ª mano' && (
             <>

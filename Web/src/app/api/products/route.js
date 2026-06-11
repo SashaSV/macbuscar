@@ -55,7 +55,16 @@ export async function GET(request) {
         variants: {
           include: {
             prices: { include: { store: true } },
-            priceHistory: { orderBy: { date: 'asc' }, take: 30 },
+            // PriceHistory rows from the last 90 days. We DROP the
+            // `take: 30, orderBy: asc` pair the seed code had — that
+            // returned the OLDEST 30 rows, which meant any variant with
+            // a long change history (frequent price moves) hid its most
+            // recent values from the trend chart. 90 days of real change
+            // points across all variants is a small data set anyway.
+            priceHistory: {
+              where: { date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+              orderBy: { date: 'asc' },
+            },
             listings: { where: { active: true }, orderBy: { createdAt: 'desc' } },
           },
         },
@@ -116,6 +125,17 @@ export async function GET(request) {
           financingProvider: pr.financingProvider,
           monthlyApr:        pr.monthlyApr,
         })),
+        // Per-store price-change log. Powers the Historial tab: the chart
+        // builds a per-store timeline from these rows (plus current Price
+        // as the "now" snapshot) and reports the daily min across stores
+        // for THIS variant only. Sparse by design — a row exists only on
+        // an actual price change — so the chart carries the last known
+        // value forward when computing the daily snapshot.
+        priceHistory: (v.priceHistory || []).map(ph => ({
+          storeId: ph.storeId,
+          price:   ph.price,
+          date:    ph.date,
+        })),
         listings: v.listings.map(l => ({
           id: l.id,
           variantId: l.variantId,
@@ -145,11 +165,29 @@ export async function GET(request) {
         }
       }
 
-      // Use cheapest variant's price history for the chart
-      const cheapestVariant = variantsOut.find(v => v.id === bestVariantId) || variantsOut[0];
-      const priceHistory = (cheapestVariant?.prices?.[0])
-        ? (p.variants.find(v => v.id === cheapestVariant.id)?.priceHistory || [])
-        : [];
+      // Build price-history trend line.
+      //
+      // We aggregate PriceHistory across ALL variants (not just the cheapest)
+      // and take the MIN price per calendar day. The result is a daily
+      // "floor price" trend the user can use as a buying-decision signal:
+      // "the lowest you could pay for any configuration on day X was Y€".
+      //
+      // PriceHistory rows are written by the scrapers only on actual price
+      // changes (Scraper/stores/matching.py upsert_scraped_and_price /
+      // upsert_price_only), so the series is naturally sparse — each point
+      // marks a real movement somewhere in the product line.
+      const allHistoryRows = p.variants.flatMap(v => v.priceHistory || []);
+      const dayMap = new Map();    // 'YYYY-MM-DD' → { date, price }
+      for (const ph of allHistoryRows) {
+        if (!ph?.price || ph.price <= 0) continue;
+        const dayKey = new Date(ph.date).toISOString().slice(0, 10);
+        const existing = dayMap.get(dayKey);
+        if (!existing || ph.price < existing.price) {
+          dayMap.set(dayKey, { date: ph.date, price: ph.price });
+        }
+      }
+      const priceHistory = [...dayMap.values()]
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
       // Collect all listings across variants
       const allListings = variantsOut.flatMap(v => v.listings);
