@@ -71,7 +71,26 @@ the new shared matching.py. Possibilities:
 - [ ] If irrecoverable, accept the new baseline and let PA-API
       cover the gap when Amazon Associates is approved
 
-### Scheduled nightly price refresh
+### ~~Scheduled nightly price refresh~~ ✅ DONE (session 2026-06-09)
+*Shipped.* GitHub Actions cron `'0 2 * * *'` (03:00 Madrid winter / 04:00
+summer) runs `Scraper/refresh_all.py`. Local test: 645/953 refreshed in
+14.8 min across all 4 stores. K-tuin perfectly deterministic (287/287);
+others vary with store-side ranker noise (Amazon worst, ~38%).
+
+- [x] `matching.load_matched_variants_for_store()` + `upsert_price_only()`
+- [x] `runner.refresh_store()` + headless mode via `CI` env var
+- [x] `refresh()` entry point on all 4 stores
+- [x] `Scraper/refresh_all.py` orchestrator (per-store exception isolation)
+- [x] `.github/workflows/refresh-prices.yml` with `DATABASE_URL` secret
+- [x] Verified locally; nightly cron + manual trigger via Actions UI
+
+Follow-ups (not blocking):
+- [ ] Add per-variant detail-page fallback for variants that go un-matched
+      multiple nights in a row — catches Amazon ranker drift
+- [ ] Email/Slack notification on cron failure (GHA emails on workflow
+      failure by default to repo admin; might be enough)
+
+### _Original task description (kept for reference)_
 *From session 2026-06-08.* Once full scrapers are validated, set up a
 daily-at-night job that refreshes prices for already-matched variants only.
 Keeps the site's prices fresh without re-running the full match logic.

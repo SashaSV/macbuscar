@@ -386,6 +386,21 @@ def parse_financing(html):
     )
 
 
+def refresh(*, dry_run=False):
+    """Nightly refresh entry point. Called by refresh_all.py orchestrator."""
+    return runner.refresh_store(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        build_search_url=build_search_url,
+        is_captcha=is_captcha,
+        parse_search_results=parse_search_results,
+        warmup_driver=warmup_driver,
+        page_delay=PAGE_DELAY,
+        dry_run=dry_run,
+    )
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════

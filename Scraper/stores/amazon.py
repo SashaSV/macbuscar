@@ -171,6 +171,25 @@ def inspect(html):
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════
 
+def refresh(*, dry_run=False):
+    """Nightly refresh entry point. Called by refresh_all.py orchestrator.
+    Same per-store strictness as main() (strict_chip=False) so Amazon's
+    terse Mac titles don't drop matches during refresh."""
+    return runner.refresh_store(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        build_search_url=build_search_url,
+        is_captcha=is_captcha,
+        parse_search_results=parse_search_results,
+        warmup_driver=warmup_driver,
+        page_delay=PAGE_DELAY,
+        strict_chip=False,
+        strict_anc=True,
+        dry_run=dry_run,
+    )
+
+
 def main():
     args = runner.parse_standard_args(description='Amazon.es price scraper')
     runner.run_store(

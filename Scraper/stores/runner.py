@@ -30,6 +30,7 @@ is_captcha contract: callable(html) -> (marker_or_None, context_snippet).
   otherwise. context_snippet is shown to help diagnose what triggered.
 """
 import sys
+import os
 import time
 import random
 import argparse
@@ -56,15 +57,31 @@ from . import matching
 # ════════════════════════════════════════════════════════════════════════════
 
 def make_driver(user_agent=None):
-    """Chrome with stealth-style options. Same for every store."""
+    """Chrome with stealth-style options. Same for every store.
+
+    When the CI env var is truthy (GitHub Actions sets CI=true automatically),
+    we switch to headless mode + extra container-safe flags. This is what
+    lets the nightly refresh-prices workflow run on ubuntu-latest runners
+    that have no display."""
     ua = user_agent or matching.USER_AGENT
     opts = Options()
     opts.add_argument(f'--user-agent={ua}')
     opts.add_argument('--disable-blink-features=AutomationControlled')
     opts.add_experimental_option('excludeSwitches', ['enable-automation'])
     opts.add_experimental_option('useAutomationExtension', False)
-    opts.add_argument('--start-maximized')
     opts.add_argument('--lang=es-ES')
+    if os.environ.get('CI', '').lower() in ('1', 'true', 'yes'):
+        # Container-safe headless setup. --no-sandbox + --disable-dev-shm-usage
+        # are required on GitHub-hosted runners; --window-size is needed so
+        # responsive layouts render the desktop card grid (mobile breakpoints
+        # would change DOM selectors).
+        opts.add_argument('--headless=new')
+        opts.add_argument('--no-sandbox')
+        opts.add_argument('--disable-gpu')
+        opts.add_argument('--disable-dev-shm-usage')
+        opts.add_argument('--window-size=1920,1080')
+    else:
+        opts.add_argument('--start-maximized')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=opts)
     # Hide the webdriver flag from JS introspection — defeats some bot
@@ -515,3 +532,163 @@ def run_store(*, store_id, store_label, host,
         print(f'   By category:')
         for c, n in sorted(by_cat.items()):
             print(f'     {c:10} {n}')
+
+
+# Nightly refresh — price-only update for variants already matched in DB.
+# Companion to run_store(...); same sub-family search flow, but uses
+# matching.upsert_price_only() (Price.price -> Price.oldPrice, no
+# ScrapedProduct / financing writes). Called by refresh_all.py orchestrator,
+# which the GHA workflow `.github/workflows/refresh-prices.yml` runs at
+# 02:00 UTC nightly.
+def refresh_store(*, store_id, store_label, host,
+                  build_search_url, is_captcha, parse_search_results,
+                  warmup_driver,
+                  page_delay=(3.5, 7.0),
+                  strict_chip=True, strict_anc=True,
+                  dry_run=False):
+    """Returns (matched, missed, captcha_hit).
+
+    matched : variants whose price was refreshed in DB
+    missed  : variants previously matched but not found in today's results
+              (we don't touch their Price row; full scrape can re-match)
+    captcha_hit : True if the store served a captcha at any point
+    """
+    delay_min, delay_max = page_delay
+
+    products = matching.load_matched_variants_for_store(store_id)
+    total_variants = sum(len(p['variants']) for p in products)
+    print(f'\n{store_label} — nightly refresh')
+    print(f'   {len(products)} products, {total_variants} matched variants in DB')
+    if dry_run:
+        print('   🔍 DRY RUN — no DB writes\n')
+
+    if not products:
+        print('   Nothing to refresh.\n')
+        return (0, 0, False)
+
+    driver = make_driver()
+    conn = None
+    if not dry_run:
+        conn = matching.get_connection()
+
+    matched = 0
+    missed  = 0
+    captcha_hit = False
+
+    try:
+        warmup_driver(driver)
+
+        for i, product in enumerate(products, 1):
+            if captcha_hit:
+                break
+            print(f'\n[{i}/{len(products)}] {product["nombre"]:30}  '
+                  f'({product["cat"]}, {len(product["variants"])} matched)')
+
+            groups = matching.group_variants_by_subfamily(product)
+
+            for query, info in groups.items():
+                if captcha_hit:
+                    break
+                pattern = info['pattern']
+                variants = info['variants']
+                url = build_search_url(query, product['cat'])
+                if not url:
+                    print(f'   ⚠️  no URL for "{query}" — skipping {len(variants)} variant(s)')
+                    missed += len(variants)
+                    continue
+
+                print(f'   🔎 "{query}"  ({len(variants)} variants)  →  {url}')
+                try:
+                    driver.get(url)
+                except Exception as e:
+                    print(f'      ❌ navigation failed: {type(e).__name__}: {str(e)[:80]}')
+                    missed += len(variants)
+                    continue
+                time.sleep(random.uniform(delay_min, delay_max))
+                html = driver.page_source
+
+                marker, snippet = is_captcha(html)
+                if marker:
+                    print(f'      🚫 CAPTCHA detected (marker: {marker!r}). Stopping.')
+                    captcha_hit = True
+                    missed += len(variants)
+                    break
+
+                results = parse_search_results(html)
+                if not results:
+                    print(f'      ⚠️  no results returned')
+                    missed += len(variants)
+                    continue
+
+                # Same matching flow as run_store: score, dedup by SKU.
+                scored = []
+                unmatched_in_group = []
+                for variant in variants:
+                    best, score = matching.find_best_match(
+                        variant, results, pattern,
+                        strict_chip=strict_chip, strict_anc=strict_anc,
+                    )
+                    if best:
+                        scored.append((variant, best, score))
+                    else:
+                        unmatched_in_group.append(variant)
+
+                scored.sort(key=lambda x: (-x[2], x[0]['id']))
+                claimed_skus = set()
+                for variant, best, score in scored:
+                    if best['asin'] in claimed_skus:
+                        unmatched_in_group.append(variant)
+                        continue
+                    claimed_skus.add(best['asin'])
+
+                    if dry_run:
+                        print(f'      🔄 [{variant["id"]:4}] '
+                              f'{variant["nombre"][:38]:38} → '
+                              f'{best["price"]:>8.2f}€  (dry-run, no write)')
+                        matched += 1
+                        continue
+
+                    try:
+                        with conn.cursor() as cur:
+                            ok = matching.upsert_price_only(
+                                cur, store_id, variant['id'], best,
+                            )
+                        if ok:
+                            conn.commit()
+                            matched += 1
+                            print(f'      ✅ [{variant["id"]:4}] '
+                                  f'{variant["nombre"][:38]:38} → '
+                                  f'{best["price"]:>8.2f}€')
+                        else:
+                            print(f'      ⚠️  [{variant["id"]:4}] no Price row found')
+                            missed += 1
+                    except Exception as e:
+                        conn.rollback()
+                        print(f'      ❌ [{variant["id"]:4}] DB error: '
+                              f'{type(e).__name__}: {str(e)[:100]}')
+                        missed += 1
+
+                # Variants we couldn't match in current results — likely
+                # short-term Amazon ranker noise or store re-shuffle. We
+                # don't touch their Price row; site continues to show last
+                # value with a stale scrapedAt. Full scrape can re-match.
+                for variant in unmatched_in_group:
+                    missed += 1
+
+            if captcha_hit:
+                break
+
+    except KeyboardInterrupt:
+        print('\n⛔ Cancelled by user')
+    finally:
+        try: driver.quit()
+        except Exception: pass
+        if conn: conn.close()
+
+    print(f'\n📊 {store_label} refresh summary:')
+    print(f'   Refreshed:  {matched}')
+    print(f'   Missed:     {missed}  (no current-day match, kept as-is)')
+    if captcha_hit:
+        print(f'   ⚠️  Captcha encountered — partial run')
+
+    return (matched, missed, captcha_hit)

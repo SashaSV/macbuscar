@@ -902,3 +902,119 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
             INSERT INTO "PriceHistory" ("variantId", "storeId", price, date)
             VALUES (%s, %s, %s, NOW())
         ''', (variant_id, store_id, price))
+
+
+# ═════════════════════════════════════════════════════════════════════
+#   Refresh-only DB access (used by nightly cron, not full scrape)
+# ═════════════════════════════════════════════════════════════════════
+# The nightly refresh job ONLY updates Price.price for already-matched
+# variants. It deliberately does NOT touch:
+#   - ScrapedProduct (audit trail stays)
+#   - financing columns (static per SKU; only changes during full scrape)
+#   - Price.url (kept; if SKU moved, full scrape handles that)
+# This keeps the refresh fast, low-risk, and idempotent.
+
+def load_matched_variants_for_store(store_id):
+    """Like load_products_with_variants(), but filters variants down to only
+    those that already have a Price row for the given store. Sub-families
+    with zero matched variants get dropped naturally by the runner loop.
+    Returns the same shape as load_products_with_variants()."""
+    conn = get_connection()
+    products = []
+    try:
+        with conn.cursor() as cur:
+            # First, collect the IDs of variants that have a Price for this
+            # store. We do the JOIN in SQL rather than filtering in Python
+            # so the result set is small from the start.
+            cur.execute('''
+                SELECT DISTINCT v."productId", v.id
+                FROM "ProductVariant" v
+                JOIN "Price" pr ON pr."variantId" = v.id
+                WHERE pr."storeId" = %s AND pr.price > 0
+            ''', (store_id,))
+            rows = cur.fetchall()
+            if not rows:
+                return []
+            matched_product_ids = sorted({r[0] for r in rows})
+            matched_variant_ids = {r[1] for r in rows}
+
+            cur.execute('''
+                SELECT id, slug, nombre, cat, family
+                FROM "Product"
+                WHERE id = ANY(%s)
+                ORDER BY cat, nombre
+            ''', (matched_product_ids,))
+            for pid, slug, name, cat, family in cur.fetchall():
+                products.append({
+                    'id': pid, 'slug': slug, 'nombre': name,
+                    'cat': cat, 'family': family,
+                    'variants': [],
+                })
+
+            cur.execute('''
+                SELECT id, "productId", nombre, sku, memory, color, display,
+                       "bandSize", connectivity, cpu
+                FROM "ProductVariant"
+                WHERE id = ANY(%s)
+                ORDER BY "productId", id
+            ''', (list(matched_variant_ids),))
+            by_pid = {p['id']: p for p in products}
+            for (vid, pid, vname, sku, mem, color, disp,
+                 band, conn_, cpu) in cur.fetchall():
+                if pid in by_pid:
+                    by_pid[pid]['variants'].append({
+                        'id': vid, 'nombre': vname, 'sku': sku,
+                        'memory': mem, 'color': color, 'display': disp,
+                        'bandSize': band, 'connectivity': conn_, 'cpu': cpu,
+                    })
+    finally:
+        conn.close()
+    # Strip products that ended up with zero variants (defensive — shouldn't
+    # happen given the join filter above, but keeps the runner loop clean).
+    return [p for p in products if p['variants']]
+
+
+def upsert_price_only(cur, store_id, variant_id, result):
+    """Refresh-style update: move current Price.price into Price.oldPrice,
+    set the new price, bump timestamps. Logs PriceHistory on price change.
+
+    Does NOT touch:
+      - ScrapedProduct (audit trail — only full scrape rewrites it)
+      - financing columns (monthlyPrice/monthlyMonths/financingProvider/
+        monthlyApr — static per SKU until next full scrape)
+      - Price.url (kept; if SKU moved, full scrape will fix it)
+
+    Returns True if the Price row was updated; False if the variant has no
+    Price row for this store (shouldn't happen if caller filtered via
+    load_matched_variants_for_store, but defensive)."""
+    new_price = float(result['price'])
+    cur.execute('''
+        SELECT id, price FROM "Price"
+        WHERE "variantId" = %s AND "storeId" = %s
+        LIMIT 1
+    ''', (variant_id, store_id))
+    row = cur.fetchone()
+    if not row:
+        return False
+    price_id, prev_price = row
+
+    # PostgreSQL evaluates the right-hand side of SET against the row's
+    # PRE-update values, so `"oldPrice" = price` correctly captures the
+    # previous current price before `price = %s` overwrites it. (This is
+    # SQL standard — same in MySQL and SQL Server.)
+    cur.execute('''
+        UPDATE "Price" SET
+            "oldPrice"  = price,
+            price       = %s,
+            stock       = 'in_stock',
+            "scrapedAt" = NOW(),
+            "updatedAt" = NOW()
+        WHERE id = %s
+    ''', (new_price, price_id))
+
+    if prev_price is None or abs(float(prev_price) - new_price) > 0.01:
+        cur.execute('''
+            INSERT INTO "PriceHistory" ("variantId", "storeId", price, date)
+            VALUES (%s, %s, %s, NOW())
+        ''', (variant_id, store_id, new_price))
+    return True
