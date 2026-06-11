@@ -6,3 +6,8 @@ requests>=2.31.0
 python-dotenv>=1.0.0
 Pillow>=10.0.0
 numpy>=1.26.0
+# Undetected ChromeDriver — patched chromedriver that defeats fingerprint
+# bot-detection used by Akamai (MediaMarkt), DataDome (Worten/Fnac), and
+# Amazon's own anti-scraping system. Required when running from a GHA
+# runner IP. Locally, plain selenium also works.
+undetected-chromedriver>=3.5.5

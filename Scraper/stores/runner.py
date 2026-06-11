@@ -59,29 +59,45 @@ from . import matching
 def make_driver(user_agent=None):
     """Chrome with stealth-style options. Same for every store.
 
-    When the CI env var is truthy (GitHub Actions sets CI=true automatically),
-    we switch to headless mode + extra container-safe flags. This is what
-    lets the nightly refresh-prices workflow run on ubuntu-latest runners
-    that have no display."""
+    Two code paths:
+      - local dev (no CI env var): plain selenium + ChromeDriverManager.
+        Works fine on a residential IP for all 4 stores today.
+      - CI mode (CI env var truthy): undetected_chromedriver, which uses
+        a patched chromedriver binary to defeat fingerprint-level bot
+        detection (TLS fingerprint, navigator.webdriver, Chrome DevTools
+        Protocol traces). Required for Amazon and Worten from GitHub
+        Actions runner IPs — plain selenium gets fingerprinted there even
+        without ever hitting a visible captcha.
+    """
     ua = user_agent or matching.USER_AGENT
+    is_ci = os.environ.get('CI', '').lower() in ('1', 'true', 'yes')
+
+    if is_ci:
+        # ── undetected-chromedriver path (GitHub Actions) ──────────────
+        # uc handles navigator.webdriver / runtime-detection itself; we
+        # don't apply the CDP override the plain-selenium path uses.
+        import undetected_chromedriver as uc
+        opts = uc.ChromeOptions()
+        opts.add_argument(f'--user-agent={ua}')
+        opts.add_argument('--lang=es-ES')
+        opts.add_argument('--headless=new')
+        opts.add_argument('--no-sandbox')
+        opts.add_argument('--disable-gpu')
+        opts.add_argument('--disable-dev-shm-usage')
+        opts.add_argument('--window-size=1920,1080')
+        # version_main=None → auto-detect installed Chrome and download the
+        # matching patched driver. On ubuntu-latest the runner ships a
+        # recent Chrome stable; uc will resolve and cache the driver.
+        return uc.Chrome(options=opts, version_main=None, use_subprocess=True)
+
+    # ── plain selenium path (local dev) ────────────────────────────────
     opts = Options()
     opts.add_argument(f'--user-agent={ua}')
     opts.add_argument('--disable-blink-features=AutomationControlled')
     opts.add_experimental_option('excludeSwitches', ['enable-automation'])
     opts.add_experimental_option('useAutomationExtension', False)
     opts.add_argument('--lang=es-ES')
-    if os.environ.get('CI', '').lower() in ('1', 'true', 'yes'):
-        # Container-safe headless setup. --no-sandbox + --disable-dev-shm-usage
-        # are required on GitHub-hosted runners; --window-size is needed so
-        # responsive layouts render the desktop card grid (mobile breakpoints
-        # would change DOM selectors).
-        opts.add_argument('--headless=new')
-        opts.add_argument('--no-sandbox')
-        opts.add_argument('--disable-gpu')
-        opts.add_argument('--disable-dev-shm-usage')
-        opts.add_argument('--window-size=1920,1080')
-    else:
-        opts.add_argument('--start-maximized')
+    opts.add_argument('--start-maximized')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=opts)
     # Hide the webdriver flag from JS introspection — defeats some bot
