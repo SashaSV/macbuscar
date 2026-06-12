@@ -13,6 +13,7 @@ import Galeria from '../ui/Galeria';
 import BarraPrecios from '../ui/BarraPrecios';
 import HistorialChart from '../ui/HistorialChart';
 import Resenas from '../ui/Resenas';
+import BankBadge from '../ui/BankBadge';
 import Dot from '../ui/Dot';
 import { TIENDAS } from '../shared/constants';
 import { colorEstado } from '../shared/utils';
@@ -918,14 +919,21 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                             const fmt    = m.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                             let label = `desde ${fmt} €/mes`;
                             if (months) label += ` ×${months}`;
-                            if (prov)   label += ` con ${prov}`;
+                            // provider rendered as a colored BankBadge in the return block below
                             return (
                               <div style={{
                                 fontSize: 10,
                                 color: 'rgba(29,29,31,0.55)',
-                                marginTop: 2,
+                                marginTop: 3,
                                 fontVariantNumeric: 'tabular-nums',
-                              }}>{label}</div>
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                flexWrap: 'wrap',
+                              }}>
+                                <span>{label}</span>
+                                {prov && <BankBadge provider={prov} />}
+                              </div>
                             );
                           })()}
                           {updStr && <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.35)', marginTop: 2 }}>actualizado {updStr}</div>}

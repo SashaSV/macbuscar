@@ -16,6 +16,7 @@ Worten-specific quirks resolved here:
 Generic logic (scoring, sub-family routing, DB writes, the main loop, the
 Selenium driver) lives in stores/matching.py and stores/runner.py.
 """
+import re
 import time
 import random
 from urllib.parse import quote_plus
@@ -209,6 +210,42 @@ def inspect(html):
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════
 
+# Financing (monthly installments) — used by --with-financing flag.
+# Worten branding is "Worten Crédito", which in Spain is operated by
+# Cetelem. Worten's pages can show financing in either the price-first
+# wording ("X €/mes") or the months-first cuotas wording, so we try
+# both patterns. Default provider 'Worten Crédito' since that's the
+# label users see on the page.
+_FIN_MONTHLY_RES = [
+    # Price-first — most common on Worten product cards.
+    re.compile(
+        r'(?P<price>[\d.,]+)\s*€\s*/?\s*mes\s+(?:durante|en)\s+(?P<months>\d+)\s+meses?',
+        re.I,
+    ),
+    # Months-first — occasional financing simulators / promo banners.
+    re.compile(
+        r'(?P<months>\d+)\s+cuotas?\s*(?:\*+|de)?\s*(?P<price>[\d.,]+)\s*€',
+        re.I,
+    ),
+]
+_FIN_PROVIDER_RE = re.compile(
+    r'\b(Cetelem|Worten\s+Crédito|Aplazame|CaixaBank|Cofidis)\b',
+    re.I,
+)
+_FIN_APR_RE = re.compile(r'TAE\s*:?\s*([\d.,]+)\s*%', re.I)
+
+
+def parse_financing(html):
+    """Extract monthly-installment info from a Worten product page."""
+    return matching.parse_financing(
+        html,
+        monthly_re=_FIN_MONTHLY_RES,
+        provider_re=_FIN_PROVIDER_RE,
+        provider_default='Worten Crédito',
+        apr_re=_FIN_APR_RE,
+    )
+
+
 def refresh(*, dry_run=False):
     """Nightly refresh entry point. Called by refresh_all.py orchestrator."""
     return runner.refresh_store(
@@ -235,6 +272,7 @@ def main():
         parse_search_results=parse_search_results,
         warmup_driver=warmup_driver,
         inspect_page=inspect,
+        parse_financing=parse_financing,
         page_delay=PAGE_DELAY,
         args=args,
     )

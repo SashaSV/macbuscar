@@ -731,8 +731,14 @@ def parse_financing(html, *, monthly_re, provider_re=None, provider_default=None
     and read out by upsert_scraped_and_price.
 
     Caller provides store-specific patterns:
-      monthly_re   : regex with group(1)=price, group(2)=months
-                     e.g. compiled from r'o\s+([\d.,]+)\s*€/mes\s+en\s+(\d+)\s+meses'
+      monthly_re   : EITHER a single compiled regex, OR a list of compiled
+                     regexes tried in order (first match wins). Each pattern
+                     must expose price and months — preferably as named
+                     groups (?P<price>...) and (?P<months>...), but legacy
+                     positional groups (1=price, 2=months) also work.
+                     Use a list when a store has multiple common wordings
+                     (e.g. MediaMarkt: "10 cuotas de 58,95 €" AND
+                     "58,95 €/mes durante 10 meses").
       provider_re  : regex with group(1)=provider name (optional)
       provider_default : fallback provider name when provider_re absent or
                          doesn't match (e.g. MediaMarkt where Cetelem is
@@ -759,14 +765,27 @@ def parse_financing(html, *, monthly_re, provider_re=None, provider_default=None
     else:
         text = html
 
-    m = monthly_re.search(text)
-    if m:
-        out['monthly_price']  = parse_price(m.group(1))
-        try:
-            if m.lastindex and m.lastindex >= 2:
-                out['monthly_months'] = int(m.group(2))
-        except (ValueError, TypeError):
-            pass
+    # Normalize monthly_re to a list for uniform iteration. Single regex
+    # callers (K-tuin) keep working untouched.
+    patterns = monthly_re if isinstance(monthly_re, (list, tuple)) else [monthly_re]
+    for pat in patterns:
+        m = pat.search(text)
+        if not m:
+            continue
+        # Prefer named groups (?P<price>, ?P<months>) for clarity. Fall back
+        # to positional (1=price, 2=months) for legacy K-tuin-style regex.
+        gd = m.groupdict()
+        price_raw  = gd.get('price')  if 'price'  in gd else (m.group(1) if m.lastindex else None)
+        months_raw = gd.get('months') if 'months' in gd else (m.group(2) if m.lastindex and m.lastindex >= 2 else None)
+        if price_raw:
+            out['monthly_price'] = parse_price(price_raw)
+        if months_raw:
+            try:
+                out['monthly_months'] = int(months_raw)
+            except (ValueError, TypeError):
+                pass
+        if out['monthly_price']:
+            break   # first pattern with a valid price wins
 
     if provider_re:
         pm = provider_re.search(text)

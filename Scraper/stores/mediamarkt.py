@@ -256,6 +256,47 @@ def inspect(html):
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════
 
+# Financing (monthly installments) — used by --with-financing flag.
+# MediaMarkt's product detail pages expose Cetelem-backed installment
+# plans next to the price block. Wording observed on real product pages:
+#   "En 10 cuotas**48,89 € Mensual"     ← standard product card
+#   "10 cuotas de 58,95 €"               ← detail page table
+#   "24 cuotas de 33,98 €"               ← Plan Apple Forever variant
+# Note that the order on MediaMarkt is months-first ("10 cuotas" → then
+# the price), opposite to K-tuin's "X €/mes en N meses". Default provider
+# is Cetelem; APR is non-zero on some plans (TIN 9,95% / TAE 10,4%).
+_FIN_MONTHLY_RES = [
+    # Primary: months-first, with optional asterisk footnote markers or
+    # the word "de" between count and amount. Handles all three observed
+    # forms in one regex.
+    re.compile(
+        r'(?P<months>\d+)\s+cuotas?\s*(?:\*+|de)?\s*(?P<price>[\d.,]+)\s*€',
+        re.I,
+    ),
+    # Fallback for the rare "X €/mes durante N meses" wording that some
+    # MediaMarkt marketing banners use — cheap to try after the primary.
+    re.compile(
+        r'(?P<price>[\d.,]+)\s*€\s*/?\s*mes\s+(?:durante|en)\s+(?P<months>\d+)\s+meses?',
+        re.I,
+    ),
+]
+_FIN_PROVIDER_RE = re.compile(r'\b(Cetelem|CaixaBank|Cofidis|Aplazame|Younited)\b', re.I)
+_FIN_APR_RE      = re.compile(r'TAE\s*:?\s*([\d.,]+)\s*%', re.I)
+
+
+def parse_financing(html):
+    """Extract monthly-installment info from a MediaMarkt product page.
+    Falls back to 'Cetelem' as the provider when no explicit name appears
+    in the page text (they are the long-standing default for MediaMarkt)."""
+    return matching.parse_financing(
+        html,
+        monthly_re=_FIN_MONTHLY_RES,
+        provider_re=_FIN_PROVIDER_RE,
+        provider_default='Cetelem',
+        apr_re=_FIN_APR_RE,
+    )
+
+
 def refresh(*, dry_run=False):
     """Nightly refresh entry point. Called by refresh_all.py orchestrator."""
     return runner.refresh_store(
@@ -282,6 +323,7 @@ def main():
         parse_search_results=parse_search_results,
         warmup_driver=warmup_driver,
         inspect_page=inspect,
+        parse_financing=parse_financing,
         page_delay=PAGE_DELAY,
         args=args,
     )

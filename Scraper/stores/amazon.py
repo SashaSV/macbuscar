@@ -19,6 +19,7 @@ variants, iPad mini gen lookahead. This may shift Amazon's match counts
 slightly (typically: gains more than it loses by reducing false positives).
 """
 from urllib.parse import quote_plus
+import re
 from bs4 import BeautifulSoup
 
 from . import matching
@@ -171,6 +172,45 @@ def inspect(html):
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════
 
+# Financing (monthly installments) — used by --with-financing flag.
+# Amazon.es serves Apple device financing through their partnership with
+# CaixaBank. Amazon's pricing widget is often JS-rendered, so static HTML
+# may or may not contain the installment block; when present, wording is
+# usually one of:
+#   "N cuotas de X €"
+#   "X €/mes durante N meses"
+# When the regex doesn't match (JS-only widget), we leave columns NULL
+# rather than write a wrong default.
+_FIN_MONTHLY_RES = [
+    # Months-first — most common Amazon ES installment wording.
+    re.compile(
+        r'(?P<months>\d+)\s+cuotas?\s*(?:\*+|de)?\s*(?P<price>[\d.,]+)\s*€',
+        re.I,
+    ),
+    # Price-first — some promotional banners.
+    re.compile(
+        r'(?P<price>[\d.,]+)\s*€\s*/?\s*mes\s+(?:durante|en)\s+(?P<months>\d+)\s+meses?',
+        re.I,
+    ),
+]
+_FIN_PROVIDER_RE = re.compile(
+    r'\b(CaixaBank|Cetelem|Cofidis|Younited|Amazon\s+Financing)\b',
+    re.I,
+)
+_FIN_APR_RE = re.compile(r'TAE\s*:?\s*([\d.,]+)\s*%', re.I)
+
+
+def parse_financing(html):
+    """Extract monthly-installment info from an Amazon.es product page."""
+    return matching.parse_financing(
+        html,
+        monthly_re=_FIN_MONTHLY_RES,
+        provider_re=_FIN_PROVIDER_RE,
+        provider_default='CaixaBank',
+        apr_re=_FIN_APR_RE,
+    )
+
+
 def refresh(*, dry_run=False):
     """Nightly refresh entry point. Called by refresh_all.py orchestrator.
     Same per-store strictness as main() (strict_chip=False) so Amazon's
@@ -201,6 +241,7 @@ def main():
         parse_search_results=parse_search_results,
         warmup_driver=warmup_driver,
         inspect_page=inspect,
+        parse_financing=parse_financing,
         page_delay=PAGE_DELAY,
         # Amazon titles often omit chip names from Mac listings. The
         # strict M-chip check (designed for K-tuin/MediaMarkt's structured
