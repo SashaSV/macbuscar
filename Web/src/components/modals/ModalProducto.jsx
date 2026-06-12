@@ -16,6 +16,7 @@ import Resenas from '../ui/Resenas';
 import BankBadge from '../ui/BankBadge';
 import Dot from '../ui/Dot';
 import { TIENDAS } from '../shared/constants';
+import { getStoreBrand } from '../shared/storeBrand';
 import { colorEstado } from '../shared/utils';
 
 const TABS = ['Precios', 'Galería', 'Características', 'Reseñas', 'Historial', '2ª mano'];
@@ -867,12 +868,19 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     const logoSrc  = pP[t.id].storeLogo;
                     const storeNom = pP[t.id].storeName || t.nombre;
                     const isImg    = typeof logoSrc === 'string' && (logoSrc.startsWith('/') || logoSrc.startsWith('http'));
+                    // Per-retailer brand palette. Drives card tint + border
+                    // when this store is NOT the cheapest; the best-price
+                    // card still wears green (the universal "winner" cue).
+                    // Store name colour is brand even on the winner card,
+                    // so the retailer's identity is never fully hidden.
+                    const brand = getStoreBrand(t.id);
                     return (
                       <a key={t.id} href={productUrl} target="_blank" rel="noreferrer" style={{
-                        display: 'flex', alignItems: 'center', gap: 9, padding: '12px 14px',
-                        background: es ? 'rgba(52,168,83,0.08)' : 'rgba(0,0,0,0.03)',
-                        border: `1px solid ${es ? 'rgba(52,168,83,0.4)' : 'rgba(0,0,0,0.06)'}`,
+                        display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 13px',
+                        background: es ? 'rgba(52,168,83,0.08)' : brand.tint,
+                        border: `1px solid ${es ? 'rgba(52,168,83,0.4)' : brand.border}`,
                         borderRadius: 12, textDecoration: 'none',
+                        position: 'relative',
                       }}>
                         {isImg ? (
                           <span style={{
@@ -900,11 +908,37 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         ) : (
                           <span style={{ fontSize: 20 }}>{logoSrc || t.logo}</span>
                         )}
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11, color: 'rgba(29,29,31,0.5)' }}>{storeNom}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <Dot status={st} />
-                            <span style={{ fontSize: 15, fontWeight: 700, color: es ? '#34a853' : '#1d1d1f', fontFamily: 'ui-monospace,monospace' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Row 1: store name + dot on the left, price right-aligned.
+                              Pricing this card like a price tag pulls the eye
+                              straight to the number and saves a whole stacked row. */}
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                            marginBottom: 3,
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                              <span style={{
+                                fontSize: 11,
+                                color: brand.text,
+                                fontWeight: 600,
+                                letterSpacing: '-0.1px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}>{storeNom}</span>
+                              <Dot status={st} />
+                            </div>
+                            <span style={{
+                              fontSize: 19,
+                              fontWeight: 700,
+                              color: es ? '#34a853' : '#1d1d1f',
+                              fontFamily: 'ui-monospace,monospace',
+                              letterSpacing: '-0.5px',
+                              flexShrink: 0,
+                            }}>
                               {price}€
                             </span>
                           </div>
@@ -936,9 +970,9 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                               </div>
                             );
                           })()}
-                          {updStr && <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.35)', marginTop: 2 }}>actualizado {updStr}</div>}
+                          {updStr && <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.35)', marginTop: 1 }}>actualizado {updStr}</div>}
                         </div>
-                        {es && <span>🏆</span>}
+                        {es && <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 13 }}>🏆</span>}
                       </a>
                     );
                   })}
