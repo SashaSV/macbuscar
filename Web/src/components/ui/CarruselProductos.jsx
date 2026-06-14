@@ -13,7 +13,7 @@ import TarjetaProducto from '../ui/TarjetaProducto';
  *     onAbrir={setSelProd}
  *   />
  */
-export default function CarruselProductos({ titulo, productos, precios, scrapeStatus, onAbrir }) {
+export default function CarruselProductos({ titulo, productos, precios, scrapeStatus, onAbrir, ahorroMode }) {
   const scrollRef = useRef(null);
   const [canLeft, setCanLeft] = useState(false);
   const [canRight, setCanRight] = useState(true);
@@ -90,10 +90,16 @@ export default function CarruselProductos({ titulo, productos, precios, scrapeSt
           scrollBehavior: 'smooth',
           paddingTop: 12,
           paddingBottom: 16,
-          paddingLeft: 4,
-          paddingRight: 4,
-          marginLeft: -4,
-          marginRight: -4,
+          // Compensate for the −25px badge overhang on every card: a
+          // bigger paddingLeft + matching negative marginLeft keeps the
+          // cards visually aligned with the section title while giving
+          // each card's badge stack a 25–28 px corridor on the left where
+          // it can hang outside the card without being clipped by the
+          // scroll container's overflow-x:auto.
+          paddingLeft: 28,
+          paddingRight: 28,
+          marginLeft: -28,
+          marginRight: -28,
           // Hide scrollbar on most browsers
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -112,6 +118,7 @@ export default function CarruselProductos({ titulo, productos, precios, scrapeSt
               prod={p}
               precios={precios}
               scrapeStatus={scrapeStatus}
+              ahorroMode={ahorroMode}
               onClick={() => onAbrir && onAbrir(p)}
             />
           </div>

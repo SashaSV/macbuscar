@@ -49,6 +49,12 @@ model Product {
   basePrice   Float?                             // lowest variant price (denormalized)
   releasedAt  String?                             // "2025-09"
 
+  // View counter — incremented on each modal open via
+  // POST /api/products/[id]/view. Drives the "Más populares" listing
+  // on the home page. We index it for fast ORDER BY views DESC LIMIT N
+  // even though the catalog is small today; cheap insurance.
+  views       Int       @default(0)
+
   matchKeys   String    @default("[]")
 
   createdAt   DateTime  @default(now())
@@ -59,6 +65,7 @@ model Product {
 
   @@index([cat])
   @@index([family])
+  @@index([views])
 }
 
 /// ProductVariant = one specific SKU

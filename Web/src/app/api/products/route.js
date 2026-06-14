@@ -211,7 +211,15 @@ export async function GET(request) {
       }
       
       const custom = resolveCustomCover(p.slug);
-      
+
+      // Virtual 'A plazos' tag fuel — true if any (variant, store) pair on
+      // this product carries an installment offer (monthlyPrice > 0). The
+      // TarjetaProducto component appends a 'A plazos' pill when this is
+      // true, on top of whatever Product.tag is stored in the DB.
+      const hasFinancing = p.variants.some(v =>
+        (v.prices || []).some(pr => pr.monthlyPrice && pr.monthlyPrice > 0)
+      );
+
       return {
         id: p.id,
         slug: p.slug,
@@ -224,6 +232,8 @@ export async function GET(request) {
         desc: p.desc,
         basePrice: p.basePrice,
         releasedAt: p.releasedAt,
+        views: p.views ?? 0,
+        hasFinancing,
         cover: custom.cover || p.cover,
         hover: custom.hover || p.hover,
         fotos,

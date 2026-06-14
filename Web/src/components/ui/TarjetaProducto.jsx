@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { TAG_COLORS, TIENDAS } from '../shared/constants';
+import { TAG_COLORS, TAG_BADGES, TIENDAS } from '../shared/constants';
 import { getPrecioMap, getMejor } from '../shared/utils';
 
-export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeStatus, onClick }) {
+export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeStatus, onClick, ahorroMode }) {
   const [hovered, setHovered] = useState(false);
   // Support BOTH old (tiendas, abrir) and new (precios, onClick) prop styles
   const handleClick = onClick || abrir;
@@ -33,6 +33,29 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
 
   const tagColor = TAG_COLORS?.[prod.tag] || '#86868b';
 
+  // Badge stack: editorial Product.tag ("Novedad" / "Pro" / ...), then
+  // virtual derived chips. Order matters — solid promotional badges first,
+  // then the outline 'A plazos' chip, then the green savings pill last so
+  // the eye reads tag → financing → "how much you save" top-to-bottom.
+  const badges = [];
+  if (prod.tag && TAG_BADGES[prod.tag]) {
+    badges.push({ kind: 'tag', name: prod.tag });
+  }
+  if (prod.hasFinancing) {
+    badges.push({ kind: 'tag', name: 'A plazos' });
+  }
+
+  // Pretty-print large counts: 999 → "999", 1234 → "1.2k", 12000 → "12k".
+  // Mirrors how Spotify / TikTok / GitHub all render social-style counters.
+  const formatViews = (n) => {
+    if (!Number.isFinite(n) || n <= 0) return null;
+    if (n < 1000) return String(n);
+    if (n < 10000) return `${(n / 1000).toFixed(1).replace('.', ',')}k`;
+    if (n < 1000000) return `${Math.round(n / 1000)}k`;
+    return `${(n / 1000000).toFixed(1).replace('.', ',')}M`;
+  };
+  const viewsLabel = formatViews(prod.views);
+
   // Best price: from precios map OR product.minPrice OR product.basePrice
   let bestPrice = null;
   let bestStoreId = null;
@@ -53,38 +76,137 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
     ? tiendaList.find(t => t.id === bestStoreId)?.nombre
     : mejorTienda?.nombre;
 
-  const ahorro = (bestPrice && prod.specs?.precioReferencia)
-    ? Math.round(prod.specs.precioReferencia - bestPrice)
+  // Cross-store savings — the SAME metric as the AHORRO panel in the
+  // modal. "What you save by picking the cheapest store right now" for
+  // the cheapest variant of this product.
+  //
+  // We have to compute the spread for ONE variant (the one achieving
+  // bestPrice), not across all variants — otherwise a product like
+  // iPhone Air shows ahorro = (top-config 1TB max-store-price) − (256GB
+  // best-store-price) = ~820 €, which is nonsense (it's the configuration
+  // upsell on top of the discount).
+  //
+  // Preference order:
+  //  1. precioReferencia (MSRP) when known — strongest story ("savings off retail")
+  //  2. variant-level cross-store spread (max−min for THE cheapest variant)
+  //  3. nothing — show no ahorro line
+  const refPrice = prod.specs?.precioReferencia;
+  const useMsrp = !!(refPrice && bestPrice && refPrice > bestPrice);
+
+  // Find the variant achieving bestPrice. API hands us prod.bestVariantId,
+  // but fall back to scanning variants just in case the API output is stale.
+  const bestVariant = prod.bestVariantId
+    ? prod.variants?.find(v => v.id === prod.bestVariantId)
+    : prod.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
+  const variantStorePrices = (bestVariant?.prices || [])
+    .map(pr => pr.price)
+    .filter(p => typeof p === 'number' && p > 0);
+  const variantMax = variantStorePrices.length ? Math.max(...variantStorePrices) : null;
+  const variantMin = variantStorePrices.length ? Math.min(...variantStorePrices) : null;
+  const useSpread = !useMsrp && variantMax && variantMin && variantMax > variantMin;
+
+  const ahorro = useMsrp
+    ? Math.round(refPrice - bestPrice)
+    : useSpread
+      ? Math.round(variantMax - variantMin)
+      : null;
+  const ahorroBase = useMsrp ? refPrice : (useSpread ? variantMax : null);
+  const spreadAhorro = (ahorro && ahorroBase > 0)
+    ? { amount: ahorro, base: ahorroBase, pct: Math.round((ahorro / ahorroBase) * 100) }
     : null;
+
+  // "Bajada del mes" override — different metric: max price this variant
+  // touched in the last 30 days minus today's bestPrice. Answers "how
+  // much did this variant drop in the last month?" rather than "what's
+  // the cross-store spread today". PriceHistory rows are written only on
+  // actual price changes, so we also fold in today's per-store snapshot
+  // so the present moment is always represented when computing the max.
+  const monthAhorro = (() => {
+    if (!bestVariant || !bestPrice) return null;
+    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentHistory = (bestVariant.priceHistory || [])
+      .filter(ph => ph?.date && new Date(ph.date).getTime() >= monthAgo)
+      .map(ph => ph.price);
+    const currentPrices = (bestVariant.prices || []).map(pr => pr.price);
+    const all = [...recentHistory, ...currentPrices].filter(p => typeof p === 'number' && p > 0);
+    if (all.length === 0) return null;
+    const maxMonth = Math.max(...all);
+    if (maxMonth <= bestPrice) return null;
+    const drop = Math.round(maxMonth - bestPrice);
+    if (drop <= 0) return null;
+    return { amount: drop, base: maxMonth, pct: Math.round((drop / maxMonth) * 100) };
+  })();
+
+  // Pick which metric to display. In 'month' mode (Bajada del mes carousel)
+  // we show the windowed drop — even if it's smaller than today's cross-
+  // store spread — because that's what the section's title promises.
+  // Default mode falls back to the cross-store spread.
+  const displayAhorro = ahorroMode === 'month' ? monthAhorro : spreadAhorro;
+  const ahorroPct = displayAhorro?.pct ?? null;
+  const ahorroAmount = displayAhorro?.amount ?? null;
+
+  // Solid green savings chip lives at the bottom of the badge stack —
+  // last because it's the punch-line of the card. Skipped when there's
+  // no measurable discount to claim.
+  if (ahorroAmount && ahorroAmount > 0 && ahorroPct && ahorroPct > 0) {
+    badges.push({ kind: 'discount', amount: ahorroAmount, pct: ahorroPct });
+  }
 
   return (
     <div
       onClick={() => handleClick && handleClick(prod)}
       style={{
-        background: 'rgba(255,255,255,0.55)',
-        backdropFilter: 'blur(30px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(30px) saturate(180%)',
         borderRadius: 22,
-        overflow: 'hidden',
+        // overflow:visible (NOT hidden) lets the savings/tag badges in the
+        // top-left corner poke past the card's rounded edge. Photo clipping
+        // is handled deeper inside by the dedicated photo wrapper, so the
+        // image still respects the inner rounded square.
+        overflow: 'visible',
         cursor: 'pointer',
-        border: '0.5px solid rgba(255,255,255,0.8)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)',
-        transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s ease, background 0.3s',
         position: 'relative',
+        // Transition is on the outer wrapper because we still animate the
+        // hover lift here; the bg + shadow live on the inner backdrop
+        // layer so they don't clip the overhanging badges.
+        transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
       }}
       onMouseEnter={e => {
         setHovered(true);
         e.currentTarget.style.transform = 'translateY(-6px)';
-        e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(168,85,247,0.08)';
-        e.currentTarget.style.background = 'rgba(255,255,255,0.7)';
       }}
       onMouseLeave={e => {
         setHovered(false);
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)';
-        e.currentTarget.style.background = 'rgba(255,255,255,0.55)';
       }}
     >
+      {/* Backdrop-glass layer. backdrop-filter is intentionally NOT on the
+          outer card div: Chrome's compositor clips absolute descendants to
+          the rounded backdrop-filter region even with overflow:visible,
+          which would slice the badges we want to overhang. Hosting it on a
+          separate absolutely-positioned layer isolates the clip to this
+          rectangle and leaves the content layer free to escape the corner. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 22,
+          background: hovered ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.55)',
+          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+          border: '0.5px solid rgba(255,255,255,0.8)',
+          boxShadow: hovered
+            ? 'inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 40px rgba(0,0,0,0.1), 0 4px 12px rgba(168,85,247,0.08)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 14px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03)',
+          transition: 'background 0.3s, box-shadow 0.35s ease',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
+      {/* Content layer — sits ABOVE the backdrop-glass layer so the
+          badge stack inside image-area can still overhang the card's
+          rounded edge without being clipped. */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
       <div style={{
         aspectRatio: '1',
         background: 'transparent',
@@ -94,27 +216,92 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        overflow: 'hidden',
+        // overflow visible so the badge stack can hang slightly past the
+        // card's left edge. The inner .photo-frame below restores the
+        // rounded clip for the actual product image.
+        overflow: 'visible',
       }}>
-        {prod.tag && (
+        {badges.length > 0 && (
           <div style={{
             position: 'absolute',
-            top: 12,
-            left: 12,
-            background: tagColor,
-            color: '#fff',
-            fontSize: 10,
-            fontWeight: 500,
-            padding: '4px 9px',
-            borderRadius: 980,
-            letterSpacing: '0.2px',
-            zIndex: 1,
+            top: 14,
+            left: -25,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: 5,
+            zIndex: 2,
+            pointerEvents: 'none',
           }}>
-            {prod.tag}
+            {badges.map((b, i) => {
+              // Unified chip style: every badge — tag, financing, savings —
+              // uses a tinted-glass look in its own brand hue. Saturated
+              // brand colour for the text + emoji, ~15% opacity of the same
+              // colour for the background, low-opacity border in the same
+              // colour, plus a backdrop blur so it stays legible over any
+              // product photo underneath. Shadow is the same across the
+              // stack for visual consistency.
+              let color, label, emoji, useTabular = false;
+              if (b.kind === 'discount') {
+                // Discount severity gradient — green / amber / red bands.
+                color = b.pct > 25 ? '#dc2626'
+                       : b.pct > 10 ? '#f5a623'
+                       : '#34a853';
+                emoji = '💰';
+                label = `−${b.amount.toLocaleString('es-ES')} € (${b.pct}%)`;
+                useTabular = true;
+              } else {
+                const def = TAG_BADGES[b.name] || { color: '#86868b', emoji: '' };
+                color = def.color;
+                emoji = def.emoji;
+                label = b.name;
+              }
+              return (
+                <div
+                  key={b.kind === 'discount' ? `discount-${i}` : b.name}
+                  style={{
+                    background: `${color}26`,                     // ≈15% opacity of the brand hue
+                    color,
+                    border: `1px solid ${color}55`,               // ≈33% opacity outline
+                    backdropFilter: 'blur(10px) saturate(160%)',
+                    WebkitBackdropFilter: 'blur(10px) saturate(160%)',
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '3.5px 9px 3.5px 7px',
+                    borderRadius: 980,
+                    letterSpacing: '0.2px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                    whiteSpace: 'nowrap',
+                    ...(useTabular ? { fontVariantNumeric: 'tabular-nums' } : null),
+                  }}
+                >
+                  {emoji && <span style={{ fontSize: 11, lineHeight: 1 }}>{emoji}</span>}
+                  {label}
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {hasRealPhoto ? (
+        {/* (view counter moved to card footer next to the store name —
+            keeps the photo area clean and pairs the metric with the
+            other small metadata row visually) */}
+
+        {/* Photo frame — restores rounded clipping for the product image
+            that the parent had to give up so the badges can overhang. */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 16,
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {hasRealPhoto ? (
           <>
             <img
               src={coverSrc}
@@ -156,8 +343,9 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
             )}
           </>
         ) : (
-          <div style={{ fontSize: 70 }}>{prod.emoji || '📦'}</div>
-        )}
+            <div style={{ fontSize: 70 }}>{prod.emoji || '📦'}</div>
+          )}
+        </div>
       </div>
 
       <div style={{ padding: '16px 16px 18px' }}>
@@ -210,26 +398,54 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
           }}>
             {bestPrice ? `${bestPrice.toLocaleString('es-ES')} €` : '—'}
           </span>
-          {ahorro > 0 && (
-            <span style={{
-              fontSize: 11,
-              color: '#34a853',
-              fontWeight: 500,
-            }}>
-              −{ahorro} €
-            </span>
-          )}
+          {/* Savings line moved to badge stack on the image — here we just
+              show the headline price so the price/store row stays clean. */}
         </div>
 
-        {storeName && (
+        {(storeName || viewsLabel) && (
           <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            marginTop: 4,
             fontSize: 10,
             color: '#86868b',
-            marginTop: 4,
           }}>
-            en {storeName}
+            <span style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+            }}>
+              {storeName ? `en ${storeName}` : ''}
+            </span>
+            {viewsLabel && (
+              <span
+                title={`${prod.views} visualizaciones`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  flexShrink: 0,
+                  fontVariantNumeric: 'tabular-nums',
+                  fontWeight: 500,
+                  color: 'rgba(29,29,31,0.55)',
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" strokeWidth="2"
+                     strokeLinecap="round" strokeLinejoin="round"
+                     style={{ opacity: 0.7 }}>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                {viewsLabel}
+              </span>
+            )}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

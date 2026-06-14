@@ -272,11 +272,53 @@ function BannerCarousel() {
 
 export default function HomePage({ products, precios, scrapeStatus, onSelect, onCategoryClick }) {
   const novedades = products.filter(p => ['Novedad','Pro','Ultra','Exclusivo'].includes(p.tag));
-  const populares = [...products].sort((a,b) => b.rating - a.rating).slice(0, 12);
-  const mejorOferta = [...products].sort((a,b) => {
-    const drop = h => (h && h.length >= 2) ? h[0].price - h[h.length-1].price : 0;
-    return drop(b.priceHistory) - drop(a.priceHistory);
+  // "Más populares" is now driven by Product.views (modal-open counter
+  // incremented via POST /api/products/[id]/view). We tiebreak by rating
+  // so the list stays meaningful at cold start: until users start clicking
+  // around, every product has views = 0 and the ordering falls back to the
+  // editorial rating value. Once organic traffic kicks in, views dominates.
+  const populares = [...products].sort((a, b) => {
+    const va = a.views || 0;
+    const vb = b.views || 0;
+    if (va !== vb) return vb - va;                     // primary: views DESC
+    return (b.rating || 0) - (a.rating || 0);          // tiebreak: rating DESC
   }).slice(0, 12);
+  const mejorOferta = [...products].sort((a, b) => {
+    // Sort by PERCENT drop, not absolute Euros — a 100 EUR drop on a
+    // 200 EUR phone is far more interesting than the same drop on a
+    // 2000 EUR laptop. Falls back to 0 (no movement) for products
+    // without enough priceHistory points.
+    const dropPct = h => {
+      if (!h || h.length < 2) return 0;
+      const first = h[0].price;
+      const last  = h[h.length - 1].price;
+      if (!first || first <= 0) return 0;
+      return Math.max(0, (first - last) / first);   // negative drops = price went UP, ignore
+    };
+    return dropPct(b.priceHistory) - dropPct(a.priceHistory);
+  }).slice(0, 12);
+
+  // Companion to mejorOferta: same idea, but windowed to PriceHistory rows
+  // from the last 30 days. Surfaces "freshly cheaper" items — the strongest
+  // buy-now signal we have. We render this section only when there's at
+  // least one product with a non-zero monthly drop; before then the catalog
+  // hasn't accumulated enough nightly-refresh history to populate it.
+  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const dropPctMonth = h => {
+    if (!h || h.length === 0) return 0;
+    const recent = h.filter(p => p?.date && new Date(p.date).getTime() >= monthAgo);
+    if (recent.length < 2) return 0;
+    const first = recent[0].price;
+    const last  = recent[recent.length - 1].price;
+    if (!first || first <= 0) return 0;
+    return Math.max(0, (first - last) / first);
+  };
+  const bajadaMes = [...products]
+    .map(p => ({ p, drop: dropPctMonth(p.priceHistory) }))
+    .filter(x => x.drop > 0)
+    .sort((a, b) => b.drop - a.drop)
+    .slice(0, 12)
+    .map(x => x.p);
 
   return (
     <div>
@@ -366,6 +408,16 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
         scrapeStatus={scrapeStatus}
         onAbrir={onSelect}
       />
+      {bajadaMes.length > 0 && (
+        <CarruselProductos
+          titulo="Bajada del mes"
+          productos={bajadaMes}
+          precios={precios}
+          scrapeStatus={scrapeStatus}
+          ahorroMode="month"
+          onAbrir={onSelect}
+        />
+      )}
     </div>
   );
 }

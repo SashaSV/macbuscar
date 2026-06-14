@@ -180,6 +180,14 @@ const SECTION_ICONS = {
 };
 
 // Apple compare section keys → Spanish labels
+// Dedupe set for view-count POSTs. Lives at module scope so it survives
+// React's Strict-Mode unmount-then-remount in dev (otherwise the effect
+// fires twice per modal open and we double-count). In production Strict
+// Mode is off, but the set also doubles as session-level dedupe — the
+// same user reopening the same modal in the same tab counts only once,
+// which matches how every other view-counter on the web works.
+const _recordedViews = new Set();
+
 const SECTION_LABELS = {
   summary:        'Resumen',
   display:        'Pantalla',
@@ -507,6 +515,22 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     return () => window.removeEventListener('keydown', fn);
   }, [onCerrar]);
 
+  // Bump Product.views by one when the modal mounts. Fire-and-forget:
+  // we ignore the response — the in-memory `prod` object will refresh
+  // next time the homepage refetches anyway, and any error here
+  // (network, 404, etc) is a tracking miss, not a UX failure.
+  //
+  // The dedupe set guards against React Strict Mode's intentional
+  // double-mount-in-dev (would otherwise produce +2 per open) AND
+  // against a single user padding the count by re-opening the same
+  // modal in the same tab.
+  useEffect(() => {
+    if (!prod?.id) return;
+    if (_recordedViews.has(prod.id)) return;
+    _recordedViews.add(prod.id);
+    fetch(`/api/products/${prod.id}/view`, { method: 'POST' }).catch(() => {});
+  }, [prod?.id]);
+
   const tabStyle = a => ({
     flex: 1,
     padding: '16px 0',
@@ -556,7 +580,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
               {minP && (
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.4)' }}>mejor precio</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#34a853', fontFamily: 'ui-monospace,monospace' }}>{minP}€</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#34a853', fontFamily: 'ui-monospace,monospace', fontVariantNumeric: 'tabular-nums' }}>{Math.round(minP).toLocaleString('es-ES')} €</div>
                 </div>
               )}
               <button onClick={onCerrar} style={{
@@ -827,8 +851,8 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     {selectedVariant?.nombre || 'Configuración'}
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(29,29,31,0.4)' }}>{mejT?.nombre || (minP ? 'Mejor precio' : 'Sin precio activo')}</div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: minP ? '#34a853' : 'rgba(29,29,31,0.4)', fontFamily: 'ui-monospace,monospace', letterSpacing: '-0.5px' }}>
-                    {minP ? `${minP}€` : (selectedVariant?.msrp ? `Desde ${selectedVariant.msrp}€` : '—')}
+                  <div style={{ fontSize: 28, fontWeight: 700, color: minP ? '#34a853' : 'rgba(29,29,31,0.4)', fontFamily: 'ui-monospace,monospace', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>
+                    {minP ? `${Math.round(minP).toLocaleString('es-ES')} €` : (selectedVariant?.msrp ? `Desde ${Math.round(selectedVariant.msrp).toLocaleString('es-ES')} €` : '—')}
                   </div>
                   {(() => {
                     const dates = Object.values(pP).map(p => p.updatedAt).filter(Boolean).map(d => new Date(d));
@@ -843,8 +867,17 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                 </div>
                 {maxP && minP && maxP - minP > 0 && (
                   <div style={{ background: 'rgba(52,168,83,0.1)', border: '1px solid rgba(52,168,83,0.3)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: '#34a853', fontWeight: 500 }}>AHORRO</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#34a853' }}>{(maxP - minP).toFixed(0)}€</div>
+                    <div style={{ fontSize: 10, color: '#34a853', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                      <span style={{ fontSize: 10 }}>💰</span>AHORRO
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#34a853', fontVariantNumeric: 'tabular-nums' }}>
+                      {Math.round(maxP - minP).toLocaleString('es-ES')} €
+                    </div>
+                    {maxP > 0 && (
+                      <div style={{ fontSize: 11, color: '#34a853', fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
+                        {Math.round(((maxP - minP) / maxP) * 100)}%
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -876,11 +909,13 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     const brand = getStoreBrand(t.id);
                     return (
                       <a key={t.id} href={productUrl} target="_blank" rel="noreferrer" style={{
-                        display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 13px',
+                        // Three-zone layout: [logo] [info stack] [price]
+                        // align-items:center vertically centres each zone, so cards
+                        // with and without financing share the same vertical rhythm.
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
                         background: es ? 'rgba(52,168,83,0.08)' : brand.tint,
                         border: `1px solid ${es ? 'rgba(52,168,83,0.4)' : brand.border}`,
                         borderRadius: 12, textDecoration: 'none',
-                        position: 'relative',
                       }}>
                         {isImg ? (
                           <span style={{
@@ -906,41 +941,21 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                             />
                           </span>
                         ) : (
-                          <span style={{ fontSize: 20 }}>{logoSrc || t.logo}</span>
+                          <span style={{ fontSize: 20, flexShrink: 0 }}>{logoSrc || t.logo}</span>
                         )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          {/* Row 1: store name + dot on the left, price right-aligned.
-                              Pricing this card like a price tag pulls the eye
-                              straight to the number and saves a whole stacked row. */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            justifyContent: 'space-between',
-                            gap: 8,
-                            marginBottom: 3,
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                              <span style={{
-                                fontSize: 11,
-                                color: brand.text,
-                                fontWeight: 600,
-                                letterSpacing: '-0.1px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}>{storeNom}</span>
-                              <Dot status={st} />
-                            </div>
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {/* Zone 2 row 1: store name + status dot */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                             <span style={{
-                              fontSize: 19,
-                              fontWeight: 700,
-                              color: es ? '#34a853' : '#1d1d1f',
-                              fontFamily: 'ui-monospace,monospace',
-                              letterSpacing: '-0.5px',
-                              flexShrink: 0,
-                            }}>
-                              {price}€
-                            </span>
+                              fontSize: 12,
+                              color: brand.text,
+                              fontWeight: 600,
+                              letterSpacing: '-0.1px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>{storeNom}</span>
+                            <Dot status={st} />
                           </div>
                           {pP[t.id].monthlyPrice > 0 && (() => {
                             // "desde 54,13 €/mes con Cetelem" — Spanish decimal
@@ -972,7 +987,22 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                           })()}
                           {updStr && <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.35)', marginTop: 1 }}>actualizado {updStr}</div>}
                         </div>
-                        {es && <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 13 }}>🏆</span>}
+
+                        {/* ZONE 3 — price (with trophy inline on best card) */}
+                        <span style={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: es ? '#34a853' : '#1d1d1f',
+                          fontFamily: 'ui-monospace,monospace',
+                          fontVariantNumeric: 'tabular-nums',
+                          letterSpacing: '-0.5px',
+                          flexShrink: 0,
+                          textAlign: 'right',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {es && <span style={{ fontSize: 14, marginRight: 4 }}>🏆</span>}
+                          {Math.round(price).toLocaleString('es-ES')} €
+                        </span>
                       </a>
                     );
                   })}
