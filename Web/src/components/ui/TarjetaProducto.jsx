@@ -225,7 +225,7 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
           <div style={{
             position: 'absolute',
             top: 14,
-            left: -25,
+            left: -14,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
