@@ -19,6 +19,7 @@ variants, iPad mini gen lookahead. This may shift Amazon's match counts
 slightly (typically: gains more than it loses by reducing false positives).
 """
 from urllib.parse import quote_plus
+import os
 import re
 from bs4 import BeautifulSoup
 
@@ -30,6 +31,23 @@ STORE_ID    = 'amazon'
 STORE_LABEL = '🟧 Amazon scraper'
 HOST        = 'https://www.amazon.es'
 PAGE_DELAY  = (3.5, 6.5)
+
+# Amazon Associates affiliate tag. Attached to every product URL we save,
+# so a click from macbuscar.es → amazon.es counts toward our commission.
+# Hardcoded default for the production account; can be overridden with
+# AMAZON_AFFILIATE_TAG env var (useful when testing with a sandbox tag,
+# or temporarily disabling by setting it to an empty string).
+AFFILIATE_TAG = os.environ.get('AMAZON_AFFILIATE_TAG', 'macbuscar-21')
+
+
+def _product_url(asin):
+    """Build the public product URL for an ASIN, with affiliate tag attached
+    when one is configured. Empty AFFILIATE_TAG → plain URL (matches the
+    pre-affiliate behaviour and is useful for diagnostics)."""
+    base = f'{HOST}/dp/{asin}'
+    if not AFFILIATE_TAG:
+        return base
+    return f'{base}?tag={AFFILIATE_TAG}'
 
 # Amazon search params:
 #   k=...        query
@@ -143,7 +161,7 @@ def parse_search_results(html):
             'name': name,
             'price': price,
             'oldprice': oldprice,
-            'url': f'{HOST}/dp/{asin}',
+            'url': _product_url(asin),
         })
 
     return out
