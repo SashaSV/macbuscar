@@ -131,16 +131,29 @@ RAM_RE = re.compile(
 # ════════════════════════════════════════════════════════════════════════════
 
 def parse_price(text):
-    """Parse a price string ('1.299,99 €' / '579,–\xa0€' / '$899.00') → float.
-    Returns None on failure. Handles Spanish thousands separator,
-    European en-dash decimal placeholder ('–'), and plain US formats."""
+    """Parse a price string ('1.299,99 €' / '1,299.99 €' / '579,–\xa0€' /
+    '$899.00') → float. Returns None on failure.
+
+    Handles BOTH common Western formats:
+      - European: 1.299,99 — dot = thousands, comma = decimal
+      - English:  1,299.99 — comma = thousands, dot = decimal
+    Detected by which separator appears LAST (= the decimal).
+    Also accepts the European en-dash placeholder ('579,–' for ',00')
+    that MediaMarkt sometimes uses on legacy templates.
+    """
     if text is None or text == '':
         return None
     s = str(text).replace('€', '').replace('EUR', '').replace('\xa0', '').strip()
     # European en-dash placeholder for ",00" (MediaMarkt: "579,–")
     s = s.replace(',–', ',00').replace(',-', ',00').replace('.–', '.00')
     if '.' in s and ',' in s:
-        s = s.replace('.', '').replace(',', '.')
+        # Both separators present — the LAST one is the decimal.
+        # "1.299,99" → comma later  → EU: drop dots, swap comma→dot
+        # "1,299.99" → dot later    → EN: drop commas
+        if s.rfind(',') > s.rfind('.'):
+            s = s.replace('.', '').replace(',', '.')   # European
+        else:
+            s = s.replace(',', '')                     # English
     elif ',' in s:
         s = s.replace(',', '.')
     try:
