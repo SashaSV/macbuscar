@@ -30,7 +30,12 @@ from . import runner
 STORE_ID    = 'amazon'
 STORE_LABEL = '🟧 Amazon scraper'
 HOST        = 'https://www.amazon.es'
-PAGE_DELAY  = (3.5, 6.5)
+# Inter-search delay range. Amazon's bot stack scores request cadence —
+# tight 3-6 sec ranges look mechanical from a residential-like IP. Bumped
+# to 5-9 sec to leave more breathing room between search-results loads.
+# Cost: ~80 extra seconds on a 42-search nightly run (21 products × 2
+# sub-families). Worth it for the lower captcha probability.
+PAGE_DELAY  = (5.0, 9.0)
 
 # Amazon Associates affiliate tag. Attached to every product URL we save,
 # so a click from macbuscar.es → amazon.es counts toward our commission.
@@ -172,12 +177,85 @@ def parse_search_results(html):
 # ════════════════════════════════════════════════════════════════════════════
 
 def warmup_driver(driver):
+    """Human-like warmup for Amazon's bot detection.
+
+    The goal is to pre-populate the session with believable browsing
+    behavior so that when we hit /s?k=... we look like a returning
+    visitor exploring the site, not a fresh-spawned scraper. Amazon's
+    bot stack scores: load timing, scroll events, cookie acceptance,
+    mouse-move count, and session length before the first XHR. A
+    bare `get('/') + sleep(2.5)` scores poorly on every axis.
+
+    Steps:
+      1. Homepage with longer dwell (3-5 sec)
+      2. Accept cookie banner if it appears
+      3. Two smooth scrolls down to engage with recommendations
+      4. Scroll back up ("decide to search now")
+      5. Dispatch a couple of synthetic mousemove events
+
+    Total wall time: ~10-15 sec. Slower than the old warmup but
+    significantly reduces captcha probability on subsequent searches.
+    Failure-tolerant: every step is wrapped; a failing warmup never
+    aborts the scrape.
+    """
+    import time, random
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
     try:
+        # Step 1: homepage with dwell time
         driver.get(HOST + '/')
-        # Amazon's cookie banner is reasonable to ignore — it doesn't block
-        # search-result HTML from rendering. Just give the session a moment.
-        import time, random
-        time.sleep(random.uniform(2.0, 3.5))
+        time.sleep(random.uniform(3.0, 5.0))
+
+        # Step 2: accept cookie banner if shown (Amazon's id is sp-cc-accept)
+        try:
+            cookie_btn = WebDriverWait(driver, 3).until(
+                EC.element_to_be_clickable((By.ID, 'sp-cc-accept'))
+            )
+            cookie_btn.click()
+            time.sleep(random.uniform(1.0, 2.0))
+        except Exception:
+            pass
+
+        # Step 3: two staggered scrolls down with smooth behavior
+        # (single jumps to N pixels are suspicious; intermediate events
+        # from smooth-scroll mimic a real wheel/touchpad)
+        try:
+            driver.execute_script(
+                'window.scrollTo({top: 800, behavior: "smooth"})'
+            )
+            time.sleep(random.uniform(1.5, 3.0))
+            driver.execute_script(
+                'window.scrollTo({top: 1600, behavior: "smooth"})'
+            )
+            time.sleep(random.uniform(1.5, 3.0))
+
+            # Step 4: scroll back up to "decide to search"
+            driver.execute_script(
+                'window.scrollTo({top: 0, behavior: "smooth"})'
+            )
+            time.sleep(random.uniform(1.5, 2.5))
+        except Exception:
+            pass
+
+        # Step 5: synthetic mousemove events (Amazon tracks mouse-move
+        # count over the session window; 0 = suspicious, 3 = real-low-energy)
+        try:
+            driver.execute_script('''
+                for (let i = 0; i < 3; i++) {
+                    const evt = new MouseEvent('mousemove', {
+                        clientX: Math.random() * 1200,
+                        clientY: Math.random() * 800,
+                        bubbles: true
+                    });
+                    document.dispatchEvent(evt);
+                }
+            ''')
+            time.sleep(random.uniform(0.5, 1.5))
+        except Exception:
+            pass
+
     except Exception as e:
         print(f'   ⚠️  warmup failed: {type(e).__name__}: {str(e)[:80]}')
 
