@@ -236,6 +236,7 @@ def run_store(*, store_id, store_label, host,
               warmup_driver,
               inspect_page=None,
               parse_financing=None,
+              prepare_financing_page=None,
               page_delay=(3.5, 7.0),
               strict_chip=True,
               strict_anc=True,
@@ -418,7 +419,19 @@ def run_store(*, store_id, store_label, host,
                     if with_financing and best.get('url'):
                         try:
                             driver.get(best['url'])
-                            time.sleep(random.uniform(2.0, 4.0))
+                            if prepare_financing_page:
+                                # Store-specific page prep (scroll, JS wait,
+                                # etc.) for stores whose financing widget is
+                                # rendered client-side. Amazon is the typical
+                                # case — the installment block only fills in
+                                # after a scroll or several seconds of JS.
+                                try:
+                                    prepare_financing_page(driver)
+                                except Exception as e:
+                                    print(f'            ⚠️  prepare_financing_page raised: '
+                                          f'{type(e).__name__}: {str(e)[:80]}')
+                            else:
+                                time.sleep(random.uniform(2.0, 4.0))
                             fin_html = driver.page_source
                             fin_marker, _ = is_captcha(fin_html)
                             if fin_marker:

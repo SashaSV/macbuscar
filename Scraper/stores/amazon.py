@@ -204,28 +204,36 @@ def inspect(html):
 # ════════════════════════════════════════════════════════════════════════════
 
 # Financing (monthly installments) — used by --with-financing flag.
-# Amazon.es serves Apple device financing through their partnership with
-# CaixaBank. Amazon's pricing widget is often JS-rendered, so static HTML
-# may or may not contain the installment block; when present, wording is
-# usually one of:
-#   "N cuotas de X €"
-#   "X €/mes durante N meses"
+# Amazon.es serves Apple device financing through several providers — the
+# current default partner is Openbank Pay (Santander's digital bank, 6-month
+# 0% TIN/TAE for most Apple SKUs). CaixaBank and Cetelem also surface on
+# some pages. The widget is sometimes JS-rendered so static HTML may not
+# contain the installment block; when present, wording is usually one of:
+#   "185,35 € / x6 con Openbank Pay"            ← current default 2026
+#   "6 cuotas de 185,35 €"                       ← legacy 'N cuotas de X'
+#   "185,35 €/mes durante 6 meses"               ← legacy 'X €/mes durante N'
 # When the regex doesn't match (JS-only widget), we leave columns NULL
 # rather than write a wrong default.
 _FIN_MONTHLY_RES = [
-    # Months-first — most common Amazon ES installment wording.
+    # New Openbank Pay style — "X,XX € / xN con Provider". The 'con' is
+    # mandatory in the anchor so we don't false-match plain price strings.
+    re.compile(
+        r'(?P<price>[\d.,]+)\s*€\s*/\s*x(?P<months>\d+)\s+con\s+',
+        re.I,
+    ),
+    # Months-first — legacy 'N cuotas de X' wording.
     re.compile(
         r'(?P<months>\d+)\s+cuotas?\s*(?:\*+|de)?\s*(?P<price>[\d.,]+)\s*€',
         re.I,
     ),
-    # Price-first — some promotional banners.
+    # Price-first — legacy '/mes durante N meses' banners.
     re.compile(
         r'(?P<price>[\d.,]+)\s*€\s*/?\s*mes\s+(?:durante|en)\s+(?P<months>\d+)\s+meses?',
         re.I,
     ),
 ]
 _FIN_PROVIDER_RE = re.compile(
-    r'\b(CaixaBank|Cetelem|Cofidis|Younited|Amazon\s+Financing)\b',
+    r'\b(Openbank(?:\s+Pay)?|CaixaBank|Cetelem|Cofidis|Younited|Amazon\s+Financing)\b',
     re.I,
 )
 _FIN_APR_RE = re.compile(r'TAE\s*:?\s*([\d.,]+)\s*%', re.I)
@@ -237,9 +245,54 @@ def parse_financing(html):
         html,
         monthly_re=_FIN_MONTHLY_RES,
         provider_re=_FIN_PROVIDER_RE,
-        provider_default='CaixaBank',
+        provider_default='Openbank Pay',
         apr_re=_FIN_APR_RE,
     )
+
+
+def prepare_financing_page(driver, timeout=8.0):
+    """Trigger Amazon's lazy-loaded installment widget by scrolling into the
+    buy-box area and polling page_source for the marker text. Amazon ES
+    renders the financing block via JS after the user reaches (or appears
+    to reach) the price section — a naive 2-second sleep on the navigation
+    catches the widget on maybe 10% of product pages.
+
+    Concretely the widget looks like:
+        o 185,35 € / x6 con Openbank Pay
+        TIN 0% TAE 0.00%
+    and lives below the price line. We do two staggered scrolls (the page
+    has lazy ads above the fold that push the buy-box further down on some
+    SKUs) then poll for any of several wording cues. First hit returns; on
+    timeout we return anyway and let parse_financing leave columns NULL.
+    """
+    import time as _time
+    # Scroll the price area into view to trigger lazy-load. Two scrolls
+    # because Amazon's product page often has heavy sponsored content above
+    # the fold and the installment widget can be 600-900px below the title.
+    try:
+        driver.execute_script('window.scrollTo(0, 400)')
+        _time.sleep(0.8)
+        driver.execute_script('window.scrollTo(0, 900)')
+        _time.sleep(0.8)
+    except Exception:
+        pass
+
+    # Poll page_source for installment markers. The match itself is done
+    # by parse_financing() with the full regex pool — we just need to wait
+    # until the JS has filled the widget in. First hit on ANY of these
+    # exits the poll; on timeout we return anyway.
+    markers = ('Openbank', 'cuotas', ' x6 con ', '/mes durante', '€/mes')
+    deadline = _time.time() + timeout
+    while _time.time() < deadline:
+        try:
+            page = driver.page_source
+        except Exception:
+            return
+        if any(m in page for m in markers):
+            return
+        _time.sleep(0.4)
+    # Timed out — parse_financing will return None for all fields, which
+    # is the correct behavior (leave DB NULL rather than write wrong data).
 
 
 def refresh(*, dry_run=False):
@@ -273,6 +326,7 @@ def main():
         warmup_driver=warmup_driver,
         inspect_page=inspect,
         parse_financing=parse_financing,
+        prepare_financing_page=prepare_financing_page,
         page_delay=PAGE_DELAY,
         # Amazon titles often omit chip names from Mac listings. The
         # strict M-chip check (designed for K-tuin/MediaMarkt's structured
