@@ -6,7 +6,7 @@ import {
   IconZoom, IconAlertHexagon, IconScreenShare, IconDeviceImac,
   IconCameraPlus, IconRotate360, IconWifi, IconNfc, IconBluetooth,
   IconShield, IconFingerprint, IconRuler2, IconDatabase, IconPalette,
-  IconBroadcast, IconSim, IconMicrophone, IconBrandApple, IconWeight,
+  IconBroadcast, IconSimCard, IconMicrophone, IconBrandApple, IconWeight,
   IconCompass, IconLock, IconAccessPoint, IconDots,
 } from '@tabler/icons-react';
 import Galeria from '../ui/Galeria';
@@ -169,7 +169,7 @@ const SECTION_ICONS = {
   colors:         IconPalette,
   connector:      IconUsb,
   cellular:       IconBroadcast,
-  sim:            IconSim,
+  sim:            IconSimCard,
   resistance:     IconShield,
   safety:         IconAlertHexagon,
   sensors:        IconCompass,
