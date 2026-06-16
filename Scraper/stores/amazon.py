@@ -100,12 +100,25 @@ def parse_search_results(html):
         if not asin:
             continue
 
-        # Name (h2 has the product title)
-        name_el = card.select_one('h2 span') or card.select_one('h2 a span')
+        # Name — Amazon's product card now has THREE h2 elements:
+        #   h2.a-size-mini       → brand badge "Apple"           (skip)
+        #   h2.a-size-base-plus  → actual product title          (target)
+        #   h2.a-size-medium     → UI label "Energy Label"        (skip)
+        # The old `h2 span` selector matched the brand badge and produced
+        # "Apple" as the name for every card. We now target the title h2
+        # by its size class, with a-text-normal as a fallback in case
+        # Amazon shuffles class names again, and the old `h2 span` as a
+        # last-resort for legacy layouts that still ship occasionally.
+        name_el = (card.select_one('h2.a-size-base-plus')
+                   or card.select_one('h2.a-text-normal')
+                   or card.select_one('h2 span'))
         if not name_el:
             continue
         name = name_el.get_text(strip=True)
-        if not name:
+        if not name or name == 'Apple':
+            # "Apple" alone means we accidentally matched the brand badge.
+            # Skip the card rather than poison the matcher with a useless
+            # token list.
             continue
         if matching.is_accessory_listing(name):
             continue
