@@ -30,7 +30,13 @@ from . import runner
 STORE_ID    = 'worten'
 STORE_LABEL = '🟢 Worten scraper'
 HOST        = 'https://www.worten.es'
-PAGE_DELAY  = (3.5, 6.5)
+# Inter-search delay range. Worten sits behind DataDome (Cloudflare
+# challenge-platform), which scores request cadence aggressively —
+# tight 3-6 sec ranges from a datacenter IP get flagged within the
+# first few queries. Bumped to 5-9 sec to leave more breathing room.
+# Cost: ~80 extra seconds on a 42-search nightly run; worth it for
+# the lower captcha probability.
+PAGE_DELAY  = (5.0, 9.0)
 
 SEARCH_URL_TPL = '{host}/search?query={query}'
 
@@ -170,21 +176,88 @@ def parse_search_results(html):
 # ════════════════════════════════════════════════════════════════════════════
 
 def warmup_driver(driver):
+    """Human-like warmup for Worten's DataDome anti-bot stack.
+
+    DataDome scores: TLS fingerprint, request cadence, scroll events,
+    cookie acceptance, mouse-move count, and session length before the
+    first /search?query=. A bare `get('/') + sleep(2.5) + cookie click`
+    scores poorly on the behavioral axes (zero scrolls, zero mousemoves,
+    sub-3-second session length).
+
+    Steps:
+      1. Homepage with longer dwell (3-5 sec)
+      2. Accept cookie banner (Worten uses OneTrust + 2 fallback selectors)
+      3. Two smooth scrolls down to mimic browsing the featured banners
+      4. Scroll back up ("decide to search now")
+      5. Dispatch a few synthetic mousemove events
+
+    Total wall time: ~12-16 sec. Slower than the old warmup but
+    significantly reduces challenge-platform trigger probability.
+    Failure-tolerant: every step wrapped, a failing warmup never aborts.
+
+    Mirrors the same shape as amazon.warmup_driver — see comments there
+    for the rationale on each behavioral signal.
+    """
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+
     try:
+        # Step 1: homepage with dwell time
         driver.get(HOST + '/')
-        time.sleep(random.uniform(2.0, 4.0))
+        time.sleep(random.uniform(3.0, 5.0))
+
+        # Step 2: accept cookie banner (Worten + OneTrust)
         for selector in ('button#onetrust-accept-btn-handler',
                          'button[aria-label*="Aceptar"]',
                          'button.cookies-accept'):
             try:
-                btns = driver.find_elements(By.CSS_SELECTOR, selector)
-                for b in btns:
-                    if b.is_displayed():
-                        b.click()
-                        time.sleep(1.0)
-                        return
+                btn = WebDriverWait(driver, 2).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                )
+                btn.click()
+                time.sleep(random.uniform(1.0, 2.0))
+                break
             except Exception:
                 continue
+
+        # Step 3: two staggered scrolls down with smooth behavior
+        # (smooth-scroll dispatches intermediate scroll events that
+        # DataDome tracks; a single jump to N pixels is suspicious)
+        try:
+            driver.execute_script(
+                'window.scrollTo({top: 800, behavior: "smooth"})'
+            )
+            time.sleep(random.uniform(1.5, 3.0))
+            driver.execute_script(
+                'window.scrollTo({top: 1600, behavior: "smooth"})'
+            )
+            time.sleep(random.uniform(1.5, 3.0))
+
+            # Step 4: scroll back up to "decide to search"
+            driver.execute_script(
+                'window.scrollTo({top: 0, behavior: "smooth"})'
+            )
+            time.sleep(random.uniform(1.5, 2.5))
+        except Exception:
+            pass
+
+        # Step 5: synthetic mousemove events. DataDome tracks mouse-move
+        # count over the session; 0 = obvious bot, 3 = real low-energy user
+        try:
+            driver.execute_script('''
+                for (let i = 0; i < 3; i++) {
+                    const evt = new MouseEvent('mousemove', {
+                        clientX: Math.random() * 1200,
+                        clientY: Math.random() * 800,
+                        bubbles: true
+                    });
+                    document.dispatchEvent(evt);
+                }
+            ''')
+            time.sleep(random.uniform(0.5, 1.5))
+        except Exception:
+            pass
+
     except Exception as e:
         print(f'   ⚠️  warmup failed: {type(e).__name__}: {str(e)[:80]}')
 
