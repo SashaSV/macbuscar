@@ -13,7 +13,64 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from dataclasses import dataclass, field
 
+
+def _load_env_if_needed():
+    """If DATABASE_URL is missing from os.environ, try to load it from
+    Web/.env (sibling directory). Idempotent — only does work when the
+    var is actually missing, so PowerShell sessions that already exported
+    DATABASE_URL pay no cost.
+
+    Looks for Web/.env relative to this file:
+        Scraper/scanner/dbservice_postgres.py  ← we are here
+        Web/.env                                ← target
+    We walk parents upward looking for a `Web/.env` sibling, so the same
+    code works whether the script is run from Scraper/, Scraper/stores/,
+    or anywhere inside the repo.
+
+    Falls back silently on any error — get_connection() will then raise
+    its normal RuntimeError if the var still isn't set.
+    """
+    if os.environ.get('DATABASE_URL'):
+        return
+    try:
+        import pathlib
+        here = pathlib.Path(__file__).resolve()
+        for parent in here.parents:
+            env_path = parent / 'Web' / '.env'
+            if env_path.exists():
+                _parse_env_file(env_path)
+                break
+    except Exception:
+        pass
+
+
+def _parse_env_file(env_path):
+    """Minimal .env parser:
+       - lines like KEY=value / KEY="value" / KEY='value' are honored
+       - blanks and `#` comments are skipped
+       - Windows CRLF (`\r`) is stripped
+       - existing os.environ values are NOT overwritten (CLI exports win)
+    Hand-rolled instead of using python-dotenv so this works without
+    any extra runtime dependency.
+    """
+    import pathlib
+    text = pathlib.Path(env_path).read_text(encoding='utf-8', errors='replace')
+    for line in text.splitlines():
+        line = line.rstrip('\r').strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        key, _, val = line.partition('=')
+        key = key.strip()
+        val = val.strip()
+        # Strip matching outer quotes ("..." or '...')
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+            val = val[1:-1]
+        if key and not os.environ.get(key):
+            os.environ[key] = val
+
+
 def get_connection():
+    _load_env_if_needed()
     db_url = os.environ.get('DATABASE_URL')
     if not db_url:
         raise RuntimeError("DATABASE_URL not set.")
