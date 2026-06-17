@@ -1,0 +1,212 @@
+
+🟢 Worten scraper (worten)
+   Loaded 21 Products from DB
+
+[1/21] AirPods 4                       (airpods, 2 variants)
+   🔎 "AirPods"  (2 variants)  →  https://www.worten.es/search?query=AirPods+Apple
+      📋 26 candidate results
+         ✅ [ 341] Sin Cancelación Activa Ruido           → Airpods 4 APPLE (In Ear - Micrófono - Blanco)           | 129.99€ | s=50 | 8155131
+         ⚠️  [ 342] Cancelación Activa Ruido — no match
+
+[2/21] AirPods Max 2                   (airpods, 5 variants)
+   🔎 "AirPods Max"  (5 variants)  →  https://www.worten.es/search?query=AirPods+Max+Apple
+      📋 12 candidate results
+         ✅ [ 343] Azul                                   → Auriculares Bluetooth APPLE AirPods Max (Over Ear - Mic | 573.99€ | s=50 | 8156149
+         ✅ [ 344] Púrpura                                → Auriculares Bluetooth APPLE Airpods Max 2 (Over Ear - M | 602.79€ | s=50 | 8832922
+         ✅ [ 347] Naranja                                → Auriculares Bluetooth APPLE AirPods Max (Over Ear - Mic | 573.99€ | s=50 | 8156150
+         ⚠️  [ 345] Medianoche — no match
+         ⚠️  [ 346] Blanco Estrella — no match
+
+[3/21] AirPods Pro 3                   (airpods, 1 variants)
+   🔎 "AirPods Pro 3"  (1 variants)  →  https://www.worten.es/search?query=AirPods+Pro+3+Apple
+      📋 0 candidate results
+
+[4/21] iPad                            (ipad, 21 variants)
+   🔎 "iPad"  (21 variants)  →  https://www.worten.es/search?query=iPad+Apple
+      📋 48 candidate results
+         ✅ [ 275] 128GB · Amarillo · Wi-Fi + Cellular    → iPad APPLE (11'' - 128 GB - Wi -Fi + Cellular - Amarill | 749.70€ | s=115 | 8388035
+         ✅ [ 278] 128GB · Azul · Wi-Fi + Cellular        → iPad APPLE (11'' - 128 GB - Wi -Fi + Cellular - Azul)   | 535.04€ | s=115 | 8388034
+         ✅ [ 279] 256GB · Azul · Wi-Fi + Cellular        →  iPad APPLE Air (13'' - 256 GB - Wi-Fi + Cellular - Azu | 1200.04€ | s=115 | 8783005
+         ✅ [ 280] 512GB · Azul · Wi-Fi + Cellular        →  iPad APPLE Air (13'' - 512 GB - Wi-Fi + Cellular - Azu | 1339.35€ | s=115 | 8783009
+         ✅ [ 282] 256GB · Rosa · Wi-Fi + Cellular        → iPad APPLE (11'' - 256 GB - Wi -Fi + Cellular - Rosa)   | 886.34€ | s=115 | 8388040
+         ✅ [ 285] 256GB · Plata · Wi-Fi + Cellular       → iPad APPLE (11'' - 256 GB - Wi -Fi + Cellular - Plata)  | 713.05€ | s=115 | 8388037
+         ✅ [ 266] 128GB · Plata                          → iPad APPLE (11'' - 128 GB - Wi-Fi - Plata)              | 345.00€ | s=100 | 8387693
+         ✅ [ 269] 128GB · Rosa                           → iPad APPLE (11'' - 128 GB - Wi-Fi - Rosa)               | 345.00€ | s=100 | 8388024
+         ✅ [ 272] 128GB · Amarillo                       → iPad APPLE (11'' - 128 GB - Wi-Fi - Amarillo)           | 345.00€ | s=100 | 8388023
+         ⤵  [ 267] 256GB · Plata — lost dedup (SKU 8388037 claimed by higher-scoring variant)
+         ⤵  [ 270] 256GB · Rosa — lost dedup (SKU 8388040 claimed by higher-scoring variant)
+         ⤵  [ 281] 128GB · Rosa · Wi-Fi + Cellular — lost dedup (SKU 8388024 claimed by higher-scoring variant)
+         ⤵  [ 284] 128GB · Plata · Wi-Fi + Cellular — lost dedup (SKU 8387693 claimed by higher-scoring variant)
+         ⚠️  [ 268] 512GB · Plata — no match
+         ⚠️  [ 271] 512GB · Rosa — no match
+         ⚠️  [ 273] 256GB · Amarillo — no match
+         ⚠️  [ 274] 512GB · Amarillo — no match
+         ⚠️  [ 276] 256GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 277] 512GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 283] 512GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 286] 512GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 267] 256GB · Plata — no match
+         ⚠️  [ 270] 256GB · Rosa — no match
+         ⚠️  [ 281] 128GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 284] 128GB · Plata · Wi-Fi + Cellular — no match
+
+[5/21] iPad Air                        (ipad, 64 variants)
+   🔎 "iPad Air 11"  (32 variants)  →  https://www.worten.es/search?query=iPad+Air+11+Apple
+      📋 14 candidate results
+         ✅ [ 216] 11" · 1TB · Azul · Wi-Fi + Cellular    → iPad Air APPLE (11'' - 1 TB - Wi-Fi + Cellular - Azul)  | 1586.47€ | s=115 | 8048568
+         ✅ [ 218] 11" · 256GB · Azul · Wi-Fi + Cellular  → iPad Air APPLE (11'' - 256 GB - Wi -Fi + Cellular - Azu | 928.47€ | s=115 | 8388066
+         ✅ [ 220] 11" · 128GB · Gris Espacial · Wi-Fi +  → iPad Air APPLE (11'' - 128 GB - Wi-Fi + Cellular - Gris | 909.31€ | s=115 | 8048555
+         ✅ [ 226] 11" · 256GB · Blanco Estrella · Wi-Fi  → iPad Air APPLE (11'' - 256 GB - Wi-Fi + Cellular - Blan | 841.39€ | s=115 | 8388067
+         ✅ [ 228] 11" · 1TB · Púrpura · Wi-Fi + Cellular → iPad Air APPLE (11'' - 1 TB - Wi-Fi + Cellular - Púrpur | 1586.47€ | s=115 | 8048570
+         ✅ [ 229] 11" · 128GB · Púrpura · Wi-Fi + Cellul → iPad Air APPLE (11'' - 128 GB - Wi -Fi + Cellular - Púr | 777.25€ | s=115 | 8388064
+         ✅ [ 201] 11" · 128GB · Gris Espacial            → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Gris Espacial)  | 622.68€ | s=100 | 8388045
+         ✅ [ 205] 11" · 128GB · Blanco Estrella          → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Blanco Estrella | 776.70€ | s=100 | 8048541
+         ✅ [ 206] 11" · 256GB · Blanco Estrella          → iPad Air APPLE (11'' - 256 GB - Wi-Fi - Blanco Estrella | 640.99€ | s=100 | 8388051
+         ✅ [ 209] 11" · 128GB · Púrpura                  → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Púrpura)        | 523.61€ | s=100 | 8388048
+         ✅ [ 213] 11" · 128GB · Azul                     → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Azul)           | 509.93€ | s=100 | 8388046
+         ⤵  [ 208] 11" · 1TB · Púrpura — lost dedup (SKU 8048570 claimed by higher-scoring variant)
+         ⤵  [ 212] 11" · 1TB · Azul — lost dedup (SKU 8048568 claimed by higher-scoring variant)
+         ⤵  [ 214] 11" · 256GB · Azul — lost dedup (SKU 8388066 claimed by higher-scoring variant)
+         ⤵  [ 217] 11" · 128GB · Azul · Wi-Fi + Cellular — lost dedup (SKU 8388046 claimed by higher-scoring variant)
+         ⤵  [ 225] 11" · 128GB · Blanco Estrella · Wi-Fi + Cellular — lost dedup (SKU 8048541 claimed by higher-scoring variant)
+         ⚠️  [ 199] 11" · 512GB · Gris Espacial — no match
+         ⚠️  [ 200] 11" · 1TB · Gris Espacial — no match
+         ⚠️  [ 202] 11" · 256GB · Gris Espacial — no match
+         ⚠️  [ 203] 11" · 512GB · Blanco Estrella — no match
+         ⚠️  [ 204] 11" · 1TB · Blanco Estrella — no match
+         ⚠️  [ 207] 11" · 512GB · Púrpura — no match
+         ⚠️  [ 210] 11" · 256GB · Púrpura — no match
+         ⚠️  [ 211] 11" · 512GB · Azul — no match
+         ⚠️  [ 215] 11" · 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 219] 11" · 1TB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 221] 11" · 256GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 222] 11" · 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 223] 11" · 512GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 224] 11" · 1TB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 227] 11" · 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 230] 11" · 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 208] 11" · 1TB · Púrpura — no match
+         ⚠️  [ 212] 11" · 1TB · Azul — no match
+         ⚠️  [ 214] 11" · 256GB · Azul — no match
+         ⚠️  [ 217] 11" · 128GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 225] 11" · 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+   🔎 "iPad Air 13"  (32 variants)  →  https://www.worten.es/search?query=iPad+Air+13+Apple
+      📋 7 candidate results
+         ✅ [ 255] 13" · 512GB · Blanco Estrella · Wi-Fi  → iPad Air APPLE (13'' - 512 GB - Wi-Fi + Cellular - Blan | 1804.81€ | s=115 | 8388087
+         ✅ [ 234] 13" · 256GB · Blanco Estrella          → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Blanco Estrella | 1024.75€ | s=100 | 8387926
+         ✅ [ 236] 13" · 256GB · Gris Espacial            → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Gris Espacial)  | 1022.00€ | s=100 | 8387924
+         ✅ [ 241] 13" · 128GB · Púrpura                  → iPad Air APPLE (13'' - 128 GB - Wi-Fi - Púrpura)        | 769.17€ | s=100 | 8387923
+         ✅ [ 246] 13" · 256GB · Azul                     → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Azul)           | 787.07€ | s=100 | 8387925
+         ✅ [ 262] 13" · 256GB · Gris Espacial · Wi-Fi +  → iPad Air APPLE (13'' - 256 GB - Wi -Fi + Cellular - Gri | 1448.20€ | s=100 | 8388081
+         ⤵  [ 231] 13" · 512GB · Blanco Estrella — lost dedup (SKU 8388087 claimed by higher-scoring variant)
+         ⤵  [ 250] 13" · 256GB · Azul · Wi-Fi + Cellular — lost dedup (SKU 8387925 claimed by higher-scoring variant)
+         ⤵  [ 253] 13" · 128GB · Púrpura · Wi-Fi + Cellular — lost dedup (SKU 8387923 claimed by higher-scoring variant)
+         ⤵  [ 258] 13" · 256GB · Blanco Estrella · Wi-Fi + Cellular — lost dedup (SKU 8387926 claimed by higher-scoring variant)
+         ⚠️  [ 232] 13" · 128GB · Blanco Estrella — no match
+         ⚠️  [ 233] 13" · 1TB · Blanco Estrella — no match
+         ⚠️  [ 235] 13" · 128GB · Gris Espacial — no match
+         ⚠️  [ 237] 13" · 1TB · Gris Espacial — no match
+         ⚠️  [ 238] 13" · 512GB · Gris Espacial — no match
+         ⚠️  [ 239] 13" · 1TB · Púrpura — no match
+         ⚠️  [ 240] 13" · 512GB · Púrpura — no match
+         ⚠️  [ 242] 13" · 256GB · Púrpura — no match
+         ⚠️  [ 243] 13" · 128GB · Azul — no match
+         ⚠️  [ 244] 13" · 512GB · Azul — no match
+         ⚠️  [ 245] 13" · 1TB · Azul — no match
+         ⚠️  [ 247] 13" · 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 248] 13" · 1TB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 249] 13" · 128GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 251] 13" · 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 252] 13" · 1TB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 254] 13" · 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 256] 13" · 1TB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 257] 13" · 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 259] 13" · 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 260] 13" · 1TB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 261] 13" · 128GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 231] 13" · 512GB · Blanco Estrella — no match
+         ⚠️  [ 250] 13" · 256GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 253] 13" · 128GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 258] 13" · 256GB · Blanco Estrella · Wi-Fi + Cellular — no match
+
+[6/21] iPad Pro                        (ipad, 48 variants)
+   🔎 "iPad Pro 11"  (24 variants)  →  https://www.worten.es/search?query=iPad+Pro+11+Apple
+      📋 0 candidate results
+   🔎 "iPad Pro 13"  (24 variants)  →  https://www.worten.es/search?query=iPad+Pro+13+Apple
+      📋 0 candidate results
+
+[7/21] iPad mini                       (ipad, 24 variants)
+   🔎 "iPad mini"  (24 variants)  →  https://www.worten.es/search?query=iPad+mini+Apple
+      📋 0 candidate results
+
+[8/21] iPhone 16                       (iphone, 15 variants)
+   🔎 "iPhone 16 Plus"  (10 variants)  →  https://www.worten.es/search?query=iPhone+16+Plus+Apple
+      📋 0 candidate results
+   🔎 "iPhone 16"  (5 variants)  →  https://www.worten.es/search?query=iPhone+16+Apple
+      📋 0 candidate results
+
+[9/21] iPhone 17                       (iphone, 10 variants)
+   🔎 "iPhone 17"  (10 variants)  →  https://www.worten.es/search?query=iPhone+17+Apple
+      📋 0 candidate results
+
+[10/21] iPhone 17 Pro                   (iphone, 21 variants)
+   🔎 "iPhone 17 Pro Max"  (12 variants)  →  https://www.worten.es/search?query=iPhone+17+Pro+Max+Apple
+      📋 0 candidate results
+   🔎 "iPhone 17 Pro"  (9 variants)  →  https://www.worten.es/search?query=iPhone+17+Pro+Apple
+      📋 0 candidate results
+
+[11/21] iPhone 17e                      (iphone, 6 variants)
+   🔎 "iPhone 17e"  (6 variants)  →  https://www.worten.es/search?query=iPhone+17e+Apple
+      📋 0 candidate results
+
+[12/21] iPhone Air                      (iphone, 12 variants)
+   🔎 "iPhone Air"  (12 variants)  →  https://www.worten.es/search?query=iPhone+Air+Apple
+      📋 0 candidate results
+
+[13/21] Mac Studio                      (mac, 2 variants)
+   🔎 "Mac Studio"  (2 variants)  →  https://www.worten.es/search?query=Mac+Studio+Apple
+      📋 0 candidate results
+
+[14/21] Mac mini                        (mac, 3 variants)
+   🔎 "Mac mini"  (3 variants)  →  https://www.worten.es/search?query=Mac+mini+Apple
+      📋 0 candidate results
+
+[15/21] MacBook Air                     (mac, 30 variants)
+   🔎 "MacBook Air 15"  (15 variants)  →  https://www.worten.es/search?query=MacBook+Air+15+Apple
+      📋 0 candidate results
+   🔎 "MacBook Air 13"  (15 variants)  →  https://www.worten.es/search?query=MacBook+Air+13+Apple
+      📋 0 candidate results
+
+[16/21] MacBook Neo                     (mac, 8 variants)
+   🔎 "MacBook Neo"  (8 variants)  →  https://www.worten.es/search?query=MacBook+Neo+Apple
+      📋 0 candidate results
+
+[17/21] MacBook Pro                     (mac, 24 variants)
+   🔎 "MacBook Pro 14"  (16 variants)  →  https://www.worten.es/search?query=MacBook+Pro+14+Apple
+      📋 0 candidate results
+   🔎 "MacBook Pro 16"  (8 variants)  →  https://www.worten.es/search?query=MacBook+Pro+16+Apple
+      📋 0 candidate results
+
+[18/21] iMac                            (mac, 19 variants)
+   🔎 "iMac"  (19 variants)  →  https://www.worten.es/search?query=iMac+Apple
+      📋 0 candidate results
+
+[19/21] Apple Watch SE 3                (watch, 8 variants)
+   🔎 "Apple Watch SE"  (8 variants)  →  https://www.worten.es/search?query=Apple+Watch+SE+Apple
+      📋 0 candidate results
+
+[20/21] Apple Watch Series 11           (watch, 22 variants)
+   🔎 "Apple Watch Series 11"  (22 variants)  →  https://www.worten.es/search?query=Apple+Watch+Series+11+Apple
+      📋 0 candidate results
+
+[21/21] Apple Watch Ultra 3             (watch, 2 variants)
+   🔎 "Apple Watch Ultra"  (2 variants)  →  https://www.worten.es/search?query=Apple+Watch+Ultra+Apple
+      📋 0 candidate results
+
+📊 Summary:
+   Searches:   27
+   Matched:    30
+   No match:   62
+   By category:
+     airpods    4
+     ipad       26

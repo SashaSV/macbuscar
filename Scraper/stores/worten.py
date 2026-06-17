@@ -64,11 +64,19 @@ USER_AGENT = (
     '(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'
 )
 
-# Scoring threshold and request pacing (same defaults as Amazon — Worten is
-# similarly sensitive to volume but doesn't typically throw CAPTCHAs as easily).
+# Scoring threshold and request pacing. Worten is fronted by DataDome,
+# which soft-throttles after the first ~5-6 search queries (200 OK with
+# normal layout but 0 products). To stay below that throttle threshold:
+#   1. Long inter-request delays — 10-20 sec, not the 3-6 sec we use for
+#      Amazon. From a residential IP this still completes 27 searches in
+#      ~8-12 min, which is fine for a nightly Windows Task Scheduler run.
+#   2. A real homepage visit + cookie-banner click at session start
+#      (see _warmup_session below) so the first /search?query= isn't
+#      our very first request — DataDome treats fresh-session-straight-
+#      to-search as a strong bot signal.
 MIN_MATCH_SCORE = 50
-PAGE_DELAY_MIN  = 3.5
-PAGE_DELAY_MAX  = 6.5
+PAGE_DELAY_MIN  = 10.0
+PAGE_DELAY_MAX  = 18.0
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -786,6 +794,40 @@ def make_driver():
     return driver
 
 
+def _warmup_session(driver):
+    """Visit the Worten homepage, click the cookie banner, dwell briefly.
+
+    The goal is to make our first /search?query= request look like a return
+    visitor's session continuation, not a fresh-spawned scraper jumping
+    straight at the search endpoint. DataDome scores fresh-session-to-search
+    as a strong bot signal; warming up with a cookie-accepting homepage visit
+    knocks the score down enough that 5-10 subsequent searches usually go
+    through cleanly.
+
+    Failure-tolerant: if the cookie banner selector is stale or the homepage
+    redirects to a challenge, we just log and continue — the actual scrape
+    will fail with a clear CAPTCHA marker anyway.
+    """
+    from selenium.webdriver.common.by import By
+    try:
+        driver.get(HOST + '/')
+        time.sleep(random.uniform(3.0, 5.0))
+        for selector in ('button#onetrust-accept-btn-handler',
+                         'button[aria-label*="Aceptar"]',
+                         'button.cookies-accept'):
+            try:
+                btns = driver.find_elements(By.CSS_SELECTOR, selector)
+                for b in btns:
+                    if b.is_displayed():
+                        b.click()
+                        time.sleep(random.uniform(1.5, 2.5))
+                        return
+            except Exception:
+                continue
+    except Exception as e:
+        print(f'   ⚠️  warmup failed: {type(e).__name__}: {str(e)[:80]}')
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #   Main loop
 # ════════════════════════════════════════════════════════════════════════════
@@ -814,11 +856,18 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
         products = products[:limit]
         print(f'   Limit: {limit}')
 
+    # Randomize product order so retries on different nights don't always
+    # leave the same SKUs in the "throttled tail". DataDome's soft-throttle
+    # kicks in after ~5-6 successful queries; reshuffling means each product
+    # has a fair chance over time.
+    random.shuffle(products)
+
     if not products:
         print('\n⚠️  Nothing to scrape.')
         return
 
     driver = make_driver()
+    _warmup_session(driver)
     conn = get_connection() if not dry_run else None
     total_matched = 0
     total_no_match = 0
