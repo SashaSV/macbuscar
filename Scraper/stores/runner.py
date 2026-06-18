@@ -34,6 +34,7 @@ import os
 import time
 import random
 import argparse
+import subprocess
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -50,6 +51,45 @@ if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
         pass
 
 from . import matching
+
+
+# ════════════════════════════════════════════════════════════════════════════
+#   Chrome version detection
+# ════════════════════════════════════════════════════════════════════════════
+
+def _detect_chrome_major():
+    """Discover installed Chrome's major version (e.g. 149) so we can pin
+    undetected-chromedriver to a matching driver.
+
+    Why: UC's `version_main=None` makes it auto-detect, but in practice it
+    pulls the latest chromedriver from Google's CDN, which is often ahead
+    of whatever apt has installed locally (Google staggers Chrome stable
+    releases). The mismatch crashes the driver at startup with
+        "This version of ChromeDriver only supports Chrome version 150
+         Current browser version is 149.0.7827.X"
+    Pinning version_main to the installed major fixes it: UC will
+    download the matching driver, even if that's not the newest one.
+
+    Tries common Chrome binary names; returns int (149) on success, None
+    on failure (caller falls back to UC's auto-detect, same as before).
+    """
+    for binary in ('google-chrome', 'google-chrome-stable',
+                   'chromium-browser', 'chromium'):
+        try:
+            out = subprocess.check_output(
+                [binary, '--version'],
+                timeout=3, stderr=subprocess.DEVNULL,
+            )
+            txt = out.decode('utf-8', errors='replace').strip()
+            # Output looks like "Google Chrome 149.0.7827.155"
+            for tok in txt.split():
+                if '.' in tok and tok.replace('.', '').isdigit():
+                    return int(tok.split('.')[0])
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
+            continue
+        except Exception:
+            continue
+    return None
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -85,10 +125,17 @@ def make_driver(user_agent=None):
         opts.add_argument('--disable-gpu')
         opts.add_argument('--disable-dev-shm-usage')
         opts.add_argument('--window-size=1920,1080')
-        # version_main=None → auto-detect installed Chrome and download the
-        # matching patched driver. On ubuntu-latest the runner ships a
-        # recent Chrome stable; uc will resolve and cache the driver.
-        return uc.Chrome(options=opts, version_main=None, use_subprocess=True)
+        # Pin to the installed Chrome major version so UC downloads a
+        # compatible chromedriver. Auto-detect (version_main=None) used
+        # to be enough on ubuntu-latest GHA runners but turned out to
+        # break in the wild: UC sometimes pulls a newer chromedriver
+        # than the locally installed Chrome, and the driver refuses to
+        # talk to a Chrome whose major is behind it. Detected at runtime
+        # by _detect_chrome_major(); falls back to None on failure to
+        # preserve the old auto-detect behavior.
+        chrome_major = _detect_chrome_major()
+        return uc.Chrome(options=opts, version_main=chrome_major,
+                         use_subprocess=True)
 
     # ── plain selenium path (local dev) ────────────────────────────────
     opts = Options()

@@ -283,38 +283,105 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
     if (va !== vb) return vb - va;                     // primary: views DESC
     return (b.rating || 0) - (a.rating || 0);          // tiebreak: rating DESC
   }).slice(0, 12);
-  const mejorOferta = [...products].sort((a, b) => {
-    // Sort by PERCENT drop, not absolute Euros — a 100 EUR drop on a
-    // 200 EUR phone is far more interesting than the same drop on a
-    // 2000 EUR laptop. Falls back to 0 (no movement) for products
-    // without enough priceHistory points.
-    const dropPct = h => {
-      if (!h || h.length < 2) return 0;
-      const first = h[0].price;
-      const last  = h[h.length - 1].price;
-      if (!first || first <= 0) return 0;
-      return Math.max(0, (first - last) / first);   // negative drops = price went UP, ignore
-    };
-    return dropPct(b.priceHistory) - dropPct(a.priceHistory);
-  }).slice(0, 12);
+  // "Mejor bajada de precio" — sort by the SAME metric we display on
+  // each card's discount chip, so the visual order matches the percentages
+  // the user can read. The card shows whichever is bigger of:
+  //   - MSRP discount    (refPrice → bestPrice)           → % off retail
+  //   - cross-store spread for the best variant           → today's gap
+  // We mirror TarjetaProducto's logic 1-to-1, including the precios-map
+  // lookup for bestPrice (using p.minPrice directly diverges slightly
+  // because precios is live API state while minPrice is server-render).
+  const calcSavingsPct = (p) => {
+    // Derive bestPrice the same way TarjetaProducto does: scan the precios
+    // map first, then fall back to minPrice/basePrice. This is what makes
+    // the sort order line up with the % printed on each card.
+    const precioMap = precios?.[p.id] || getPrecioMap(p);
+    let bestPrice = null;
+    if (precioMap && typeof precioMap === 'object') {
+      for (const val of Object.values(precioMap)) {
+        const pv = getPriceValue(val);
+        if (typeof pv === 'number' && pv > 0 && (bestPrice == null || pv < bestPrice)) {
+          bestPrice = pv;
+        }
+      }
+    }
+    if (bestPrice == null) bestPrice = p.minPrice;
+    if (bestPrice == null) bestPrice = p.basePrice;
+    if (!bestPrice || bestPrice <= 0) return 0;
 
-  // Companion to mejorOferta: same idea, but windowed to PriceHistory rows
-  // from the last 30 days. Surfaces "freshly cheaper" items — the strongest
-  // buy-now signal we have. We render this section only when there's at
-  // least one product with a non-zero monthly drop; before then the catalog
-  // hasn't accumulated enough nightly-refresh history to populate it.
-  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-  const dropPctMonth = h => {
-    if (!h || h.length === 0) return 0;
-    const recent = h.filter(p => p?.date && new Date(p.date).getTime() >= monthAgo);
-    if (recent.length < 2) return 0;
-    const first = recent[0].price;
-    const last  = recent[recent.length - 1].price;
-    if (!first || first <= 0) return 0;
-    return Math.max(0, (first - last) / first);
+    // 1. MSRP path — strongest "savings off retail" story
+    const refPrice = p.specs?.precioReferencia;
+    if (refPrice && refPrice > bestPrice) {
+      return (refPrice - bestPrice) / refPrice;
+    }
+
+    // 2. Cross-store spread path — today's max-min gap on the cheapest
+    //    variant only. Computing across ALL variants would let upsell
+    //    configurations (1TB vs 256GB) inflate the number nonsensically.
+    const bestVar = p.bestVariantId
+      ? p.variants?.find(v => v.id === p.bestVariantId)
+      : p.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
+    const varPrices = (bestVar?.prices || [])
+      .map(pr => pr.price)
+      .filter(pr => typeof pr === 'number' && pr > 0);
+    if (varPrices.length < 2) return 0;
+    const max = Math.max(...varPrices);
+    const min = Math.min(...varPrices);
+    if (max <= min) return 0;
+    return (max - min) / max;
+  };
+  const mejorOferta = [...products]
+    .map(p => ({ p, pct: calcSavingsPct(p) }))
+    .filter(x => x.pct > 0)
+    .sort((a, b) => b.pct - a.pct)         // descending by %
+    .slice(0, 12)
+    .map(x => x.p);
+
+  // "Bajada del mes" — same alignment fix as "Mejor bajada de precio":
+  // sort by the SAME metric the card displays in ahorroMode='month'.
+  // The card's monthAhorro is variant-level (bestVariant only, 30-day
+  // priceHistory window + today's per-store snapshot), so the previous
+  // dropPctMonth(prod.priceHistory) at product level could diverge from
+  // what gets shown on the chip and break monotonicity.
+  const calcMonthDropPct = (p) => {
+    // bestPrice: precios-map first, fallback to minPrice/basePrice —
+    // identical to calcSavingsPct + TarjetaProducto.
+    const precioMap = precios?.[p.id] || getPrecioMap(p);
+    let bestPrice = null;
+    if (precioMap && typeof precioMap === 'object') {
+      for (const val of Object.values(precioMap)) {
+        const pv = getPriceValue(val);
+        if (typeof pv === 'number' && pv > 0 && (bestPrice == null || pv < bestPrice)) {
+          bestPrice = pv;
+        }
+      }
+    }
+    if (bestPrice == null) bestPrice = p.minPrice;
+    if (bestPrice == null) bestPrice = p.basePrice;
+    if (!bestPrice || bestPrice <= 0) return 0;
+
+    const bestVar = p.bestVariantId
+      ? p.variants?.find(v => v.id === p.bestVariantId)
+      : p.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
+    if (!bestVar) return 0;
+
+    // 30-day window on this variant's priceHistory + today's per-store
+    // snapshot (so the present moment is always represented when finding
+    // the max). Mirrors the card's monthAhorro IIFE 1-to-1.
+    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentHistory = (bestVar.priceHistory || [])
+      .filter(ph => ph?.date && new Date(ph.date).getTime() >= monthAgo)
+      .map(ph => ph.price);
+    const currentPrices = (bestVar.prices || []).map(pr => pr.price);
+    const all = [...recentHistory, ...currentPrices]
+      .filter(pr => typeof pr === 'number' && pr > 0);
+    if (all.length === 0) return 0;
+    const maxMonth = Math.max(...all);
+    if (maxMonth <= bestPrice) return 0;
+    return (maxMonth - bestPrice) / maxMonth;
   };
   const bajadaMes = [...products]
-    .map(p => ({ p, drop: dropPctMonth(p.priceHistory) }))
+    .map(p => ({ p, drop: calcMonthDropPct(p) }))
     .filter(x => x.drop > 0)
     .sort((a, b) => b.drop - a.drop)
     .slice(0, 12)
