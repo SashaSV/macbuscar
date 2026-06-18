@@ -483,10 +483,27 @@ def subfamily_info(product, variant):
             return (f'Apple Watch Series {n}',
                     rf'\bapple\s+watch\s+series\s+{n}\b')
         return ('Apple Watch Series', r'\bapple\s+watch\s+series\b')
+    # Ultra and SE both have multi-generation history (Ultra 1/2/3, SE 1/2/3)
+    # so we extract the generation digit from product.nombre and tie the
+    # regex to it. Without this, "Apple Watch Ultra 3" search-results regex
+    # `\bapple\s+watch\s+ultra\b` also matched "Apple Watch Ultra 2" listings,
+    # letting an Amazon Ultra 2 SKU (488€) win as best match for our Ultra 3
+    # variant. The negative-lookahead `(?!\s*\d)` on the fallback path keeps
+    # the generic regex safe when product.nombre is missing the number.
     if fam == 'apple-watch-ultra':
-        return ('Apple Watch Ultra', r'\bapple\s+watch\s+ultra\b')
+        m = re.search(r'ultra\s+(\d+)', (product.get('nombre') or '').lower())
+        if m:
+            n = m.group(1)
+            return (f'Apple Watch Ultra {n}',
+                    rf'\bapple\s+watch\s+ultra\s+{n}\b')
+        return ('Apple Watch Ultra', r'\bapple\s+watch\s+ultra\b(?!\s*\d)')
     if fam == 'apple-watch-se':
-        return ('Apple Watch SE', r'\bapple\s+watch\s+se\b')
+        m = re.search(r'\bse\s+(\d+)', (product.get('nombre') or '').lower())
+        if m:
+            n = m.group(1)
+            return (f'Apple Watch SE {n}',
+                    rf'\bapple\s+watch\s+se\s+{n}\b')
+        return ('Apple Watch SE', r'\bapple\s+watch\s+se\b(?!\s*\d)')
 
     # ── AirPods
     # Same generation-extraction pattern as Apple Watch. AirPods Max also
