@@ -285,67 +285,14 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
   }).slice(0, 12);
   // "Mejor bajada de precio" — sort by the SAME metric we display on
   // each card's discount chip, so the visual order matches the percentages
-  // the user can read. The card shows whichever is bigger of:
-  //   - MSRP discount    (refPrice → bestPrice)           → % off retail
-  //   - cross-store spread for the best variant           → today's gap
-  // We mirror TarjetaProducto's logic 1-to-1, including the precios-map
-  // lookup for bestPrice (using p.minPrice directly diverges slightly
-  // because precios is live API state while minPrice is server-render).
+  // the user can read. Mirrors TarjetaProducto's logic 1-to-1:
+  //   1. Primary: % off Apple MSRP for the bestVariant
+  //   2. Fallback (no MSRP): cross-store spread on the bestVariant only
+  // 100% of catalog variants currently have variant.msrp populated, so the
+  // primary path is what's in play for every product today.
   const calcSavingsPct = (p) => {
-    // Derive bestPrice the same way TarjetaProducto does: scan the precios
-    // map first, then fall back to minPrice/basePrice. This is what makes
-    // the sort order line up with the % printed on each card.
-    const precioMap = precios?.[p.id] || getPrecioMap(p);
-    let bestPrice = null;
-    if (precioMap && typeof precioMap === 'object') {
-      for (const val of Object.values(precioMap)) {
-        const pv = getPriceValue(val);
-        if (typeof pv === 'number' && pv > 0 && (bestPrice == null || pv < bestPrice)) {
-          bestPrice = pv;
-        }
-      }
-    }
-    if (bestPrice == null) bestPrice = p.minPrice;
-    if (bestPrice == null) bestPrice = p.basePrice;
-    if (!bestPrice || bestPrice <= 0) return 0;
-
-    // 1. MSRP path — strongest "savings off retail" story
-    const refPrice = p.specs?.precioReferencia;
-    if (refPrice && refPrice > bestPrice) {
-      return (refPrice - bestPrice) / refPrice;
-    }
-
-    // 2. Cross-store spread path — today's max-min gap on the cheapest
-    //    variant only. Computing across ALL variants would let upsell
-    //    configurations (1TB vs 256GB) inflate the number nonsensically.
-    const bestVar = p.bestVariantId
-      ? p.variants?.find(v => v.id === p.bestVariantId)
-      : p.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
-    const varPrices = (bestVar?.prices || [])
-      .map(pr => pr.price)
-      .filter(pr => typeof pr === 'number' && pr > 0);
-    if (varPrices.length < 2) return 0;
-    const max = Math.max(...varPrices);
-    const min = Math.min(...varPrices);
-    if (max <= min) return 0;
-    return (max - min) / max;
-  };
-  const mejorOferta = [...products]
-    .map(p => ({ p, pct: calcSavingsPct(p) }))
-    .filter(x => x.pct > 0)
-    .sort((a, b) => b.pct - a.pct)         // descending by %
-    .slice(0, 12)
-    .map(x => x.p);
-
-  // "Bajada del mes" — same alignment fix as "Mejor bajada de precio":
-  // sort by the SAME metric the card displays in ahorroMode='month'.
-  // The card's monthAhorro is variant-level (bestVariant only, 30-day
-  // priceHistory window + today's per-store snapshot), so the previous
-  // dropPctMonth(prod.priceHistory) at product level could diverge from
-  // what gets shown on the chip and break monotonicity.
-  const calcMonthDropPct = (p) => {
     // bestPrice: precios-map first, fallback to minPrice/basePrice —
-    // identical to calcSavingsPct + TarjetaProducto.
+    // identical to TarjetaProducto.
     const precioMap = precios?.[p.id] || getPrecioMap(p);
     let bestPrice = null;
     if (precioMap && typeof precioMap === 'object') {
@@ -365,9 +312,61 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
       : p.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
     if (!bestVar) return 0;
 
-    // 30-day window on this variant's priceHistory + today's per-store
-    // snapshot (so the present moment is always represented when finding
-    // the max). Mirrors the card's monthAhorro IIFE 1-to-1.
+    // 1. Primary: vs Apple MSRP
+    const msrp = bestVar.msrp;
+    if (msrp && msrp > bestPrice) {
+      return (msrp - bestPrice) / msrp;
+    }
+
+    // 2. Fallback: cross-store spread on this variant only
+    const varPrices = (bestVar.prices || [])
+      .map(pr => pr.price)
+      .filter(pr => typeof pr === 'number' && pr > 0);
+    if (varPrices.length < 2) return 0;
+    const max = Math.max(...varPrices);
+    const min = Math.min(...varPrices);
+    if (max <= min) return 0;
+    return (max - min) / max;
+  };
+  const mejorOferta = [...products]
+    .map(p => ({ p, pct: calcSavingsPct(p) }))
+    .filter(x => x.pct > 0)
+    .sort((a, b) => b.pct - a.pct)         // descending by %
+    .slice(0, 12)
+    .map(x => x.p);
+
+  // "Bajada del mes" — windowed version of the MSRP comparison: % off
+  // Apple MSRP that this variant REACHED in the last 30 days. Surfaces
+  // "recent biggest drops". Even if a variant is back at 10% off today,
+  // a mid-month dip to 35% off makes it a "−35% този місяць" candidate —
+  // because the user wants to be reminded that such a deal is possible.
+  const calcMonthDropPct = (p) => {
+    const bestVar = p.bestVariantId
+      ? p.variants?.find(v => v.id === p.bestVariantId)
+      : null;
+    if (!bestVar) {
+      // Resolve bestPrice for variant fallback search.
+      const precioMap = precios?.[p.id] || getPrecioMap(p);
+      let bestPrice = null;
+      if (precioMap && typeof precioMap === 'object') {
+        for (const val of Object.values(precioMap)) {
+          const pv = getPriceValue(val);
+          if (typeof pv === 'number' && pv > 0 && (bestPrice == null || pv < bestPrice)) {
+            bestPrice = pv;
+          }
+        }
+      }
+      if (bestPrice == null) bestPrice = p.minPrice;
+      if (bestPrice == null) bestPrice = p.basePrice;
+      const found = p.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
+      if (!found) return 0;
+      return calcWindowDrop(found);
+    }
+    return calcWindowDrop(bestVar);
+  };
+  const calcWindowDrop = (bestVar) => {
+    const msrp = bestVar?.msrp;
+    if (!msrp || msrp <= 0) return 0;
     const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const recentHistory = (bestVar.priceHistory || [])
       .filter(ph => ph?.date && new Date(ph.date).getTime() >= monthAgo)
@@ -376,9 +375,9 @@ export default function HomePage({ products, precios, scrapeStatus, onSelect, on
     const all = [...recentHistory, ...currentPrices]
       .filter(pr => typeof pr === 'number' && pr > 0);
     if (all.length === 0) return 0;
-    const maxMonth = Math.max(...all);
-    if (maxMonth <= bestPrice) return 0;
-    return (maxMonth - bestPrice) / maxMonth;
+    const minMonth = Math.min(...all);
+    if (minMonth >= msrp) return 0;
+    return (msrp - minMonth) / msrp;
   };
   const bajadaMes = [...products]
     .map(p => ({ p, drop: calcMonthDropPct(p) }))

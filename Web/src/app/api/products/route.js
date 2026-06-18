@@ -39,12 +39,17 @@ export async function GET(request) {
       where: {
         ...(cat && cat !== 'all' ? { cat } : {}),
         ...(q ? { nombre: { contains: q, mode: 'insensitive' } } : {}),
-        // Show only products that have at least one variant with at least one price
+        // Show only products that have at least one variant with at least one
+        // ACTIVE price. discontinued=true rows are SKUs the scraper couldn't
+        // find on the store in its last attempt — hiding them prevents stale
+        // "too good to be true" prices from sticking around in the UI after
+        // the actual deal expired (e.g. MediaMarkt iPad Pro 592€ from 5 jun).
         variants: {
           some: {
             prices: {
               some: {
                 price: { gt: 0 },
+                discontinued: false,
               },
             },
           },
@@ -54,7 +59,16 @@ export async function GET(request) {
         reviews: true,
         variants: {
           include: {
-            prices: { include: { store: true } },
+            // Only load ACTIVE Price rows. Discontinued ones stay in the
+            // DB (the scraper might flip them back when the SKU returns),
+            // but they're invisible to every UI consumer: minPrice/maxPrice
+            // aggregation, precios map, AHORRO calculation, store cards.
+            // PriceHistory below is NOT filtered — the chart keeps the
+            // full timeline so users can see how prices moved historically.
+            prices: {
+              where: { discontinued: false },
+              include: { store: true },
+            },
             // PriceHistory rows from the last 90 days. We DROP the
             // `take: 30, orderBy: asc` pair the seed code had — that
             // returned the OLDEST 30 rows, which meant any variant with

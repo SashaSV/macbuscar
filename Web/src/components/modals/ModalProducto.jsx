@@ -865,21 +865,45 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     );
                   })()}
                 </div>
-                {maxP && minP && maxP - minP > 0 && (
-                  <div style={{ background: 'rgba(52,168,83,0.1)', border: '1px solid rgba(52,168,83,0.3)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: '#34a853', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                      <span style={{ fontSize: 10 }}>💰</span>AHORRO
-                    </div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#34a853', fontVariantNumeric: 'tabular-nums' }}>
-                      {Math.round(maxP - minP).toLocaleString('es-ES')} €
-                    </div>
-                    {maxP > 0 && (
-                      <div style={{ fontSize: 11, color: '#34a853', fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
-                        {Math.round(((maxP - minP) / maxP) * 100)}%
+                {(() => {
+                  // AHORRO badge — mirror TarjetaProducto's chip logic so the
+                  // modal and the homepage card always agree.
+                  //
+                  // Primary metric: % off Apple MSRP for THIS specific variant
+                  // (selectedVariant.msrp). 100% of catalog variants currently
+                  // carry msrp, so this is always the path used.
+                  //
+                  // Fallback: cross-store spread (maxP − minP). Kept for any
+                  // future variant added without msrp, but never reached today.
+                  //
+                  // Previously the badge used (maxP − minP) which inflated %
+                  // whenever any reseller priced above Apple — e.g. Apple Watch
+                  // Ultra 3 49mm Natural showed 204 € (21%) against K-tuin's
+                  // 955 € instead of the correct 148 € (16%) vs Apple's 899 €.
+                  const msrp = selectedVariant?.msrp;
+                  let ahorroAmount = null, ahorroPct = null;
+                  if (msrp && minP && msrp > minP) {
+                    ahorroAmount = Math.round(msrp - minP);
+                    ahorroPct = Math.round(((msrp - minP) / msrp) * 100);
+                  } else if (maxP && minP && maxP > minP) {
+                    ahorroAmount = Math.round(maxP - minP);
+                    ahorroPct = Math.round(((maxP - minP) / maxP) * 100);
+                  }
+                  if (!ahorroAmount || ahorroAmount <= 0) return null;
+                  return (
+                    <div style={{ background: 'rgba(52,168,83,0.1)', border: '1px solid rgba(52,168,83,0.3)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, color: '#34a853', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                        <span style={{ fontSize: 10 }}>💰</span>AHORRO
                       </div>
-                    )}
-                  </div>
-                )}
+                      <div style={{ fontSize: 20, fontWeight: 700, color: '#34a853', fontVariantNumeric: 'tabular-nums' }}>
+                        {ahorroAmount.toLocaleString('es-ES')} €
+                      </div>
+                      <div style={{ fontSize: 11, color: '#34a853', fontWeight: 600, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
+                        {ahorroPct}%
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Bar chart */}

@@ -864,7 +864,12 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
     """Upsert ScrapedProduct + Price; write PriceHistory on price change.
 
     Same code as before, but `store_id` is now an explicit parameter
-    instead of a module-level constant (so all stores share this fn)."""
+    instead of a module-level constant (so all stores share this fn).
+
+    Lifecycle tracking: a successful upsert ALWAYS resets the lifecycle
+    flags — the SKU is alive again as of right now, regardless of whatever
+    discontinued/nextCheckAt was previously set.
+    """
     sku      = str(result['asin'])
     name     = result['name']
     url      = result['url']
@@ -903,7 +908,10 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
                 "monthlyPrice"      = %s,
                 "monthlyMonths"     = %s,
                 "financingProvider" = %s,
-                "monthlyApr"        = %s
+                "monthlyApr"        = %s,
+                "discontinued"      = false,
+                "lastSeenAt"        = NOW(),
+                "nextCheckAt"       = NULL
             WHERE id = %s
         ''', (price, oldprice or None, url,
               result.get('monthly_price'),
@@ -921,9 +929,11 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
             INSERT INTO "Price"
                 ("variantId", "storeId", price, "oldPrice", url, stock,
                  "monthlyPrice", "monthlyMonths", "financingProvider", "monthlyApr",
+                 "discontinued", "lastSeenAt", "nextCheckAt",
                  "scrapedAt", "updatedAt")
             VALUES (%s, %s, %s, %s, %s, 'in_stock',
                     %s, %s, %s, %s,
+                    false, NOW(), NULL,
                     NOW(), NOW())
         ''', (variant_id, store_id, price, oldprice or None, url,
               result.get('monthly_price'),
@@ -948,9 +958,17 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
 
 def load_matched_variants_for_store(store_id):
     """Like load_products_with_variants(), but filters variants down to only
-    those that already have a Price row for the given store. Sub-families
-    with zero matched variants get dropped naturally by the runner loop.
-    Returns the same shape as load_products_with_variants()."""
+    those that already have a Price row for the given store.
+
+    Lifecycle gating: variants whose Price.nextCheckAt is in the future
+    (i.e. currently in cooldown after recent miss) are EXCLUDED from this
+    night's work. They'll come back into rotation when their cooldown
+    elapses. This is how the 1-day-then-7-day cooldown is enforced:
+    the cron just skips them; mark_price_missed() sets the timer.
+
+    Sub-families with zero matched variants get dropped naturally by the
+    runner loop. Returns the same shape as load_products_with_variants().
+    """
     conn = get_connection()
     products = []
     try:
@@ -958,11 +976,15 @@ def load_matched_variants_for_store(store_id):
             # First, collect the IDs of variants that have a Price for this
             # store. We do the JOIN in SQL rather than filtering in Python
             # so the result set is small from the start.
+            # nextCheckAt IS NULL means "check on every run" — the normal
+            # state. A future timestamp means "in cooldown, skip tonight."
             cur.execute('''
                 SELECT DISTINCT v."productId", v.id
                 FROM "ProductVariant" v
                 JOIN "Price" pr ON pr."variantId" = v.id
-                WHERE pr."storeId" = %s AND pr.price > 0
+                WHERE pr."storeId" = %s
+                  AND pr.price > 0
+                  AND (pr."nextCheckAt" IS NULL OR pr."nextCheckAt" <= NOW())
             ''', (store_id,))
             rows = cur.fetchall()
             if not rows:
@@ -1010,6 +1032,10 @@ def upsert_price_only(cur, store_id, variant_id, result):
     """Refresh-style update: move current Price.price into Price.oldPrice,
     set the new price, bump timestamps. Logs PriceHistory on price change.
 
+    Lifecycle: a successful refresh always resets the lifecycle flags —
+    the SKU is alive again as of right now, regardless of whether it was
+    previously discontinued or in cooldown.
+
     Does NOT touch:
       - ScrapedProduct (audit trail — only full scrape rewrites it)
       - financing columns (monthlyPrice/monthlyMonths/financingProvider/
@@ -1036,11 +1062,14 @@ def upsert_price_only(cur, store_id, variant_id, result):
     # SQL standard — same in MySQL and SQL Server.)
     cur.execute('''
         UPDATE "Price" SET
-            "oldPrice"  = price,
-            price       = %s,
-            stock       = 'in_stock',
-            "scrapedAt" = NOW(),
-            "updatedAt" = NOW()
+            "oldPrice"     = price,
+            price          = %s,
+            stock          = 'in_stock',
+            "scrapedAt"    = NOW(),
+            "updatedAt"    = NOW(),
+            "discontinued" = false,
+            "lastSeenAt"   = NOW(),
+            "nextCheckAt"  = NULL
         WHERE id = %s
     ''', (new_price, price_id))
 
@@ -1049,4 +1078,63 @@ def upsert_price_only(cur, store_id, variant_id, result):
             INSERT INTO "PriceHistory" ("variantId", "storeId", price, date)
             VALUES (%s, %s, %s, NOW())
         ''', (variant_id, store_id, new_price))
+    return True
+
+
+def mark_price_missed(cur, store_id, variant_id):
+    """Mark a Price row as discontinued because today's scrape didn't find
+    the SKU on the store's search results.
+
+    Cooldown ladder, derived from lastSeenAt timestamp (no missCount
+    column needed):
+      - If the SKU was successfully scraped ≤ 1 day ago, this is the
+        FIRST consecutive miss — retry tomorrow (NOW() + 1 day). Could
+        be a one-night blip (captcha, throttle, network glitch); not
+        worth a week of stale-hiding penalty.
+      - Otherwise this is a continuing miss; the SKU has been gone for
+        a while — fall back to the slow 7-day cooldown so we don't burn
+        scrape budget on it every night.
+
+    Either way, discontinued=true means UI hides the price immediately
+    (the user sees the next-best store as the new bestPrice). Flipping
+    back to false happens automatically the moment the SKU reappears in
+    upsert_price_only() or upsert_scraped_and_price().
+
+    Returns True if a Price row was updated, False if no row found
+    (defensive — caller should have filtered to known variants).
+    """
+    cur.execute('''
+        SELECT id, "lastSeenAt" FROM "Price"
+        WHERE "variantId" = %s AND "storeId" = %s
+        LIMIT 1
+    ''', (variant_id, store_id))
+    row = cur.fetchone()
+    if not row:
+        return False
+    price_id, last_seen = row
+
+    # "Seen recently" = within 1.5 days. The 0.5 day buffer keeps the
+    # logic robust to slight clock drift / cron-time variation, so a SKU
+    # scraped at 02:00 yesterday and missed at 02:00 today still counts
+    # as a fresh first-miss.
+    if last_seen is not None:
+        cur.execute('''
+            SELECT EXTRACT(EPOCH FROM (NOW() - %s)) / 86400.0
+        ''', (last_seen,))
+        days_since = float(cur.fetchone()[0])
+    else:
+        days_since = 999.0   # never seen → long cooldown
+
+    if days_since <= 1.5:
+        cooldown_clause = "NOW() + INTERVAL '1 day'"
+    else:
+        cooldown_clause = "NOW() + INTERVAL '7 days'"
+
+    cur.execute(f'''
+        UPDATE "Price" SET
+            "discontinued" = true,
+            "nextCheckAt"  = {cooldown_clause},
+            "updatedAt"    = NOW()
+        WHERE id = %s
+    ''', (price_id,))
     return True

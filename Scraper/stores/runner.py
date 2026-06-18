@@ -744,12 +744,31 @@ def refresh_store(*, store_id, store_label, host,
                               f'{type(e).__name__}: {str(e)[:100]}')
                         missed += 1
 
-                # Variants we couldn't match in current results — likely
-                # short-term Amazon ranker noise or store re-shuffle. We
-                # don't touch their Price row; site continues to show last
-                # value with a stale scrapedAt. Full scrape can re-match.
+                # Variants we couldn't match in current results — the SKU
+                # genuinely wasn't surfaced by this store today. We mark
+                # them discontinued so the UI immediately hides the stale
+                # price (the next-best store becomes bestPrice for that
+                # variant). The cooldown logic in mark_price_missed picks
+                # 1 day vs 7 days based on lastSeenAt:
+                #   - seen ≤ 1 day ago: first miss, retry tomorrow
+                #     (one-night blip insurance — captcha, throttle, etc.)
+                #   - seen earlier or never: long miss, wait 7 days before
+                #     burning another scrape budget on it
+                # Successful re-match in any future run flips it back to
+                # discontinued=false + nextCheckAt=NULL automatically.
                 for variant in unmatched_in_group:
                     missed += 1
+                    if not dry_run:
+                        try:
+                            with conn.cursor() as cur:
+                                matching.mark_price_missed(
+                                    cur, store_id, variant['id'],
+                                )
+                            conn.commit()
+                        except Exception as e:
+                            conn.rollback()
+                            print(f'      ⚠️  [{variant["id"]:4}] mark_missed error: '
+                                  f'{type(e).__name__}: {str(e)[:80]}')
 
             if captcha_hit:
                 break

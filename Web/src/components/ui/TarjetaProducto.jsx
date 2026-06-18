@@ -76,53 +76,65 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
     ? tiendaList.find(t => t.id === bestStoreId)?.nombre
     : mejorTienda?.nombre;
 
-  // Cross-store savings — the SAME metric as the AHORRO panel in the
-  // modal. "What you save by picking the cheapest store right now" for
-  // the cheapest variant of this product.
+  // Savings vs Apple's official price (MSRP). Per-variant.
   //
-  // We have to compute the spread for ONE variant (the one achieving
-  // bestPrice), not across all variants — otherwise a product like
-  // iPhone Air shows ahorro = (top-config 1TB max-store-price) − (256GB
-  // best-store-price) = ~820 €, which is nonsense (it's the configuration
-  // upsell on top of the discount).
+  // We base every ahorro chip on the Apple MSRP of the bestVariant
+  // because that's the comparison shoppers actually run in their head:
+  // "what would I pay direct from Apple?". 100% of catalog variants
+  // currently have variant.msrp populated, so this is the primary path.
   //
-  // Preference order:
-  //  1. precioReferencia (MSRP) when known — strongest story ("savings off retail")
-  //  2. variant-level cross-store spread (max−min for THE cheapest variant)
-  //  3. nothing — show no ahorro line
-  const refPrice = prod.specs?.precioReferencia;
-  const useMsrp = !!(refPrice && bestPrice && refPrice > bestPrice);
+  // Cross-store spread (max-min across stores for the same variant) is
+  // a legacy fallback for any future variant added without an MSRP —
+  // we still want SOMETHING on the card if it lacks Apple-base data.
+  // It also caps inflation: spread is computed on ONE variant (the one
+  // achieving bestPrice), not across variants, so storage-tier upsell
+  // never pretends to be a discount.
 
   // Find the variant achieving bestPrice. API hands us prod.bestVariantId,
   // but fall back to scanning variants just in case the API output is stale.
   const bestVariant = prod.bestVariantId
     ? prod.variants?.find(v => v.id === prod.bestVariantId)
     : prod.variants?.find(v => (v.prices || []).some(pr => pr.price === bestPrice));
+
+  // Primary metric: vs Apple MSRP for THIS variant.
+  const variantMsrp = bestVariant?.msrp;
+  const msrpAhorro = (variantMsrp && bestPrice && variantMsrp > bestPrice)
+    ? {
+        amount: Math.round(variantMsrp - bestPrice),
+        base: variantMsrp,
+        pct: Math.round(((variantMsrp - bestPrice) / variantMsrp) * 100),
+      }
+    : null;
+
+  // Safety fallback: cross-store spread on the bestVariant — used only
+  // when MSRP path didn't apply (no msrp, or bestPrice >= msrp).
   const variantStorePrices = (bestVariant?.prices || [])
     .map(pr => pr.price)
     .filter(p => typeof p === 'number' && p > 0);
   const variantMax = variantStorePrices.length ? Math.max(...variantStorePrices) : null;
   const variantMin = variantStorePrices.length ? Math.min(...variantStorePrices) : null;
-  const useSpread = !useMsrp && variantMax && variantMin && variantMax > variantMin;
-
-  const ahorro = useMsrp
-    ? Math.round(refPrice - bestPrice)
-    : useSpread
-      ? Math.round(variantMax - variantMin)
-      : null;
-  const ahorroBase = useMsrp ? refPrice : (useSpread ? variantMax : null);
-  const spreadAhorro = (ahorro && ahorroBase > 0)
-    ? { amount: ahorro, base: ahorroBase, pct: Math.round((ahorro / ahorroBase) * 100) }
+  const spreadFallback = (!msrpAhorro && variantMax && variantMin && variantMax > variantMin)
+    ? {
+        amount: Math.round(variantMax - variantMin),
+        base: variantMax,
+        pct: Math.round(((variantMax - variantMin) / variantMax) * 100),
+      }
     : null;
 
-  // "Bajada del mes" override — different metric: max price this variant
-  // touched in the last 30 days minus today's bestPrice. Answers "how
-  // much did this variant drop in the last month?" rather than "what's
-  // the cross-store spread today". PriceHistory rows are written only on
-  // actual price changes, so we also fold in today's per-store snapshot
-  // so the present moment is always represented when computing the max.
+  const spreadAhorro = msrpAhorro || spreadFallback;
+
+  // "Bajada del mes" override — windowed temporal version of the same
+  // MSRP comparison. Question answered: "what % off Apple price did this
+  // variant reach IN THE LAST 30 DAYS?". We scan priceHistory + today's
+  // per-store snapshot for the variant's LOWEST observed price in the
+  // window, then compare that minimum to MSRP. This way a price that
+  // dipped 35% mid-month but is now back to 10% off still shows up as
+  // "−35% този місяць" — which is the more honest signal for a buyer
+  // looking at "recent biggest drops".
   const monthAhorro = (() => {
-    if (!bestVariant || !bestPrice) return null;
+    if (!bestVariant) return null;
+    const msrp = bestVariant.msrp;
+    if (!msrp || msrp <= 0) return null;
     const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const recentHistory = (bestVariant.priceHistory || [])
       .filter(ph => ph?.date && new Date(ph.date).getTime() >= monthAgo)
@@ -130,11 +142,11 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
     const currentPrices = (bestVariant.prices || []).map(pr => pr.price);
     const all = [...recentHistory, ...currentPrices].filter(p => typeof p === 'number' && p > 0);
     if (all.length === 0) return null;
-    const maxMonth = Math.max(...all);
-    if (maxMonth <= bestPrice) return null;
-    const drop = Math.round(maxMonth - bestPrice);
+    const minMonth = Math.min(...all);
+    if (minMonth >= msrp) return null;
+    const drop = Math.round(msrp - minMonth);
     if (drop <= 0) return null;
-    return { amount: drop, base: maxMonth, pct: Math.round((drop / maxMonth) * 100) };
+    return { amount: drop, base: msrp, pct: Math.round((drop / msrp) * 100) };
   })();
 
   // Pick which metric to display. In 'month' mode (Bajada del mes carousel)

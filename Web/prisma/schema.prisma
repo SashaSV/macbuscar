@@ -185,6 +185,25 @@ model Price {
   scrapedAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // ── Lifecycle tracking (added 2026-06-18)
+  // discontinued: scraper couldn't find this SKU on the store's search
+  //               results in the last attempt. UI filters these out so
+  //               stale prices don't pretend to be live offers.
+  //               Flipped back to false automatically the moment the SKU
+  //               reappears in a future scrape (no manual intervention).
+  // lastSeenAt:   timestamp of the last scrape that DID find this SKU.
+  //               Lets the next-cooldown logic decide between "first miss,
+  //               retry tomorrow" (recently seen) vs "long miss, retry
+  //               in a week" (gone for a while).
+  // nextCheckAt:  earliest time the nightly cron should try this SKU
+  //               again. NULL means "always try" (the normal state for
+  //               actively-stocked SKUs). On a miss we set this to
+  //               NOW()+1day on the first miss, NOW()+7days afterwards.
+  //               Indexed because cron filters on it heavily.
+  discontinued Boolean   @default(false)
+  lastSeenAt   DateTime?
+  nextCheckAt  DateTime?
+
   variant     ProductVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
   store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -192,6 +211,8 @@ model Price {
   @@index([variantId])
   @@index([storeId])
   @@index([discountPct])
+  @@index([discontinued])
+  @@index([nextCheckAt])
 }
 
 /// Historical prices (daily snapshots)
