@@ -8,8 +8,10 @@ import ModalAnuncio from './modals/ModalAnuncio';
 import { TIENDAS, CATS } from './shared/constants';
 import { CATEGORY_ICON } from './shared/categoryIcons';
 import { getPrecioMap, safeParse, getPriceValue } from './shared/utils';
+import { useIsMobile } from './shared/useIsMobile';
 
 export default function ManzanaApp() {
+  const isMobile = useIsMobile();
   const [page, setPage] = useState('home');
   const [cat, setCat] = useState('all');
   const [busq, setBusq] = useState('');
@@ -139,13 +141,13 @@ export default function ManzanaApp() {
       <div style={{ position:'relative', zIndex:1 }}>
 
         {/* ── Single max-width container for BOTH nav and content ── */}
-        <div style={{ maxWidth:1600, margin:'0 auto', padding:'0 32px' }}>
+        <div style={{ maxWidth:1600, margin:'0 auto', padding: isMobile ? '0 14px' : '0 32px' }}>
 
           {/* Sticky nav */}
           <div style={{ position:'sticky', top:0, zIndex:50, paddingTop:14, paddingBottom:4 }}>
             <div style={{
-              display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
-              padding:'10px 18px',
+              display:'flex', alignItems:'center', justifyContent:'space-between', gap: isMobile ? 6 : 10,
+              padding: isMobile ? '8px 12px' : '10px 18px',
               background:'rgba(255,255,255,0.55)',
               backdropFilter:'blur(30px) saturate(180%)',
               WebkitBackdropFilter:'blur(30px) saturate(180%)',
@@ -153,33 +155,54 @@ export default function ManzanaApp() {
               borderRadius:980,
               boxShadow:'inset 0 1px 0 rgba(255,255,255,0.9), 0 4px 16px rgba(0,0,0,0.04)',
             }}>
-              <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }} onClick={() => setPage('home')}>
-                  <span style={{ fontSize:22 }}>🍎</span>
+              <div style={{ display:'flex', alignItems:'center', gap: isMobile ? 8 : 14, minWidth: 0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap: isMobile ? 6 : 8, cursor:'pointer', flexShrink: 0 }} onClick={() => setPage('home')}>
+                  <span style={{ fontSize: isMobile ? 20 : 22 }}>🍎</span>
                   <div>
-                    <div style={{ fontSize:14, fontWeight:500, color:'#1d1d1f', letterSpacing:-0.2 }}>macbuscar</div>
-                    <div style={{ fontSize:9, color:'rgba(29,29,31,0.4)', letterSpacing:1 }}>COMPARADOR</div>
+                    <div style={{ fontSize: isMobile ? 13 : 14, fontWeight:500, color:'#1d1d1f', letterSpacing:-0.2 }}>macbuscar</div>
+                    {/* "COMPARADOR" subtitle eats ~14px of vertical and ~70px wide,
+                        too much in a 430px header that already crowds 4 controls.
+                        Hide on phone-class viewports; the wordmark alone is enough. */}
+                    {!isMobile && (
+                      <div style={{ fontSize:9, color:'rgba(29,29,31,0.4)', letterSpacing:1 }}>COMPARADOR</div>
+                    )}
                   </div>
                 </div>
-                <div style={{ display:'flex', gap:4 }}>
+                <div style={{ display:'flex', gap:4, flexShrink: 0 }}>
                   {['home', 'catalogo'].map(p => (
                     <button key={p} onClick={() => setPage(p)} style={{
                       background: page === p ? 'rgba(29,29,31,0.85)' : 'transparent',
                       color: page === p ? '#fff' : 'rgba(29,29,31,0.7)',
-                      border:'none', borderRadius:980, padding:'5px 14px',
-                      fontSize:12, fontWeight:500, cursor:'pointer', transition:'all .2s',
+                      border:'none', borderRadius:980,
+                      padding: isMobile ? '5px 10px' : '5px 14px',
+                      fontSize: isMobile ? 11 : 12,
+                      fontWeight:500, cursor:'pointer', transition:'all .2s',
+                      whiteSpace: 'nowrap',
                     }}>
                       {p === 'home' ? 'Inicio' : 'Catálogo'}
                     </button>
                   ))}
                 </div>
               </div>
-              <button onClick={() => setModalAnuncio(true)} style={{
-                display:'flex', alignItems:'center', gap:6,
-                background:'rgba(245,158,11,0.18)', border:'0.5px solid rgba(245,158,11,0.4)',
-                borderRadius:980, padding:'6px 14px', color:'#b45309', fontSize:12, fontWeight:500, cursor:'pointer',
-              }}>
-                <i className="ti ti-plus" aria-hidden="true" style={{ fontSize:14 }} /> Vender
+              <button
+                onClick={() => setModalAnuncio(true)}
+                aria-label="Vender"
+                title="Vender un producto"
+                style={{
+                  display:'flex', alignItems:'center', gap: isMobile ? 0 : 6,
+                  background:'rgba(245,158,11,0.18)', border:'0.5px solid rgba(245,158,11,0.4)',
+                  borderRadius:980,
+                  padding: isMobile ? '6px 9px' : '6px 14px',
+                  color:'#b45309',
+                  fontSize: isMobile ? 13 : 12,
+                  fontWeight:500, cursor:'pointer',
+                  flexShrink: 0,
+                }}>
+                <i className="ti ti-plus" aria-hidden="true" style={{ fontSize:14 }} />
+                {/* On phone the icon alone reads as "add/sell" — saves 50px
+                    of horizontal space and the title attribute keeps the
+                    intent discoverable for desktop hover and AT users. */}
+                {!isMobile && <span>Vender</span>}
               </button>
             </div>
           </div>

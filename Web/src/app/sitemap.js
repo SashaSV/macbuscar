@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
  
-const SITE_URL = 'https://macbuscar.vercel.app';
+const SITE_URL = 'https://macbuscar.es';
  
 export default async function sitemap() {
   const products = await prisma.product.findMany({

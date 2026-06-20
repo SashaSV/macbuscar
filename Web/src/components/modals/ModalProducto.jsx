@@ -18,6 +18,7 @@ import Dot from '../ui/Dot';
 import { TIENDAS } from '../shared/constants';
 import { getStoreBrand } from '../shared/storeBrand';
 import { colorEstado } from '../shared/utils';
+import { useIsMobile } from '../shared/useIsMobile';
 
 const TABS = ['Precios', 'Galería', 'Características', 'Reseñas', 'Historial', '2ª mano'];
 
@@ -212,6 +213,7 @@ const SECTION_LABELS = {
 };
 
 export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, onAnuncio, onScrapeOne }) {
+  const isMobile = useIsMobile();
   const variants = prod.variants || [];
 
   // Build best price map per variant: variantId → { storeId: {price,url,updatedAt} }
@@ -532,9 +534,13 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
   }, [prod?.id]);
 
   const tabStyle = a => ({
-    flex: 1,
-    padding: '16px 0',
-    fontSize: 15,
+    // On mobile the tabs scroll horizontally and shouldn't stretch —
+    // each tab gets its natural width so the active underline matches
+    // the label, and the whole row becomes a snap-scroll strip rather
+    // than a cramped equal-width grid that crops every label.
+    flex: isMobile ? '0 0 auto' : 1,
+    padding: isMobile ? '12px 14px' : '16px 0',
+    fontSize: isMobile ? 13 : 15,
     fontWeight: a ? 600 : 400,
     background: 'none',
     border: 'none',
@@ -552,45 +558,76 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
       position: 'fixed', inset: 0,
       background: 'rgba(0,0,0,0.35)',
       backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-      zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 16, animation: 'fadeIn .2s ease',
+      zIndex: 200, display: 'flex',
+      // On mobile the modal is full-bleed and pinned to the bottom-aligned
+      // safe area, so the overlay flexbox shouldn't add side padding (would
+      // make the sheet narrower than the viewport).
+      alignItems: isMobile ? 'flex-end' : 'center',
+      justifyContent: 'center',
+      padding: isMobile ? 0 : 16,
+      animation: 'fadeIn .2s ease',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
         background: 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
         border: '0.5px solid rgba(255,255,255,0.8)',
-        borderRadius: 22,
-        width: '100%', maxWidth: 1140, maxHeight: '94vh',
+        // Mobile: full-screen sheet (top-rounded only). Desktop: floating card.
+        borderRadius: isMobile ? '18px 18px 0 0' : 22,
+        width: '100%',
+        maxWidth: isMobile ? '100%' : 1140,
+        // dvh on mobile so the sheet hugs the dynamic viewport (no jumping
+        // when the iOS Safari toolbar shows/hides).
+        height: isMobile ? '100dvh' : undefined,
+        maxHeight: isMobile ? '100dvh' : '94vh',
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
       }}>
         {/* Header */}
-        <div style={{ padding: '22px 28px 0', borderBottom: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.4px' }}>{prod.nombre}</div>
+        <div style={{
+          padding: isMobile ? '14px 16px 0' : '22px 28px 0',
+          borderBottom: '1px solid rgba(0,0,0,0.06)',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isMobile ? 10 : 16, gap: 10 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: isMobile ? 17 : 20,
+                fontWeight: 600, color: '#1d1d1f', letterSpacing: '-0.4px',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{prod.nombre}</div>
               {prod.rating > 0 && (
                 <div style={{ fontSize: 12, color: '#f5a623', marginTop: 4 }}>
                   {'★'.repeat(Math.round(prod.rating))} <span style={{ color: 'rgba(29,29,31,0.4)' }}>{prod.rating}</span>
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: isMobile ? 6 : 8, alignItems: 'center', flexShrink: 0 }}>
               {minP && (
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.4)' }}>mejor precio</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#34a853', fontFamily: 'ui-monospace,monospace', fontVariantNumeric: 'tabular-nums' }}>{Math.round(minP).toLocaleString('es-ES')} €</div>
+                  <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: '#34a853', fontFamily: 'ui-monospace,monospace', fontVariantNumeric: 'tabular-nums' }}>{Math.round(minP).toLocaleString('es-ES')} €</div>
                 </div>
               )}
-              <button onClick={onCerrar} style={{
-                background: 'rgba(0,0,0,0.06)', border: 'none',
-                width: 32, height: 32, borderRadius: '50%',
-                cursor: 'pointer', fontSize: 16, color: '#1d1d1f',
-              }}>×</button>
+              <button
+                onClick={onCerrar}
+                aria-label="Cerrar"
+                style={{
+                  background: 'rgba(0,0,0,0.06)', border: 'none',
+                  // Bump to Apple-HIG min tap target (44px) on phones so the
+                  // close button is actually thumbable without zooming.
+                  width: isMobile ? 38 : 32,
+                  height: isMobile ? 38 : 32,
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  fontSize: isMobile ? 20 : 16,
+                  color: '#1d1d1f',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>×</button>
             </div>
           </div>
-          <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', gap: isMobile ? 0 : 0 }}>
             {TABS.map(t => (
               <button key={t} onClick={() => setTab(t)} style={tabStyle(tab === t)}>
                 {t}{t === '2ª mano' && prod.listings?.length > 0 ? ` (${prod.listings.length})` : ''}
@@ -600,16 +637,21 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
         </div>
 
         {/* Body */}
-        <div style={{ overflowY: 'auto', padding: '22px 28px 28px', color: '#1d1d1f' }}>
+        <div style={{
+          overflowY: 'auto',
+          padding: isMobile ? '16px 16px 24px' : '22px 28px 28px',
+          color: '#1d1d1f',
+          WebkitOverflowScrolling: 'touch',
+        }}>
 
           {tab === 'Precios' && (
             <>
-              {/* Top row: Photo (left) + Filters (right) */}
+              {/* Top row: Photo (left) + Filters (right). Stacks on mobile. */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 24,
-                marginBottom: 24,
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: isMobile ? 16 : 24,
+                marginBottom: isMobile ? 18 : 24,
                 alignItems: 'start',
               }}>
                 {/* LEFT: Variant photo */}
@@ -634,7 +676,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       justifyContent: 'center',
                       background: 'rgba(0,0,0,0.02)',
                       borderRadius: 16,
-                      height: 320,
+                      height: isMobile ? 200 : 320,
                       overflow: 'hidden',
                       position: 'relative',
                     }}>
@@ -909,9 +951,11 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
               {/* Bar chart */}
               {minP && <BarraPrecios precios={pP} statuses={pS} />}
 
-              {/* Store cards */}
+              {/* Store cards. 2-col on desktop, single column on mobile so
+                  store names + monthly-financing line + price all fit without
+                  truncating (was cropping 'MediaMarkt' -> 'MediaMar' at 430px). */}
               {minP ? (
-                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                   {TIENDAS.filter(t => pP[t.id]?.price > 0).map(t => {
                     const es = t.id === bestStoreId;
                     const st = pS[t.id];

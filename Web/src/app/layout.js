@@ -1,24 +1,24 @@
-const SITE_URL = 'https://macbuscar.vercel.app';
-const SITE_NAME = 'Manzana.es';
-const TITLE = 'Manzana.es — Comparador de precios Apple en España';
+const SITE_URL = 'https://macbuscar.es';
+const SITE_NAME = 'macbuscar';
+const TITLE = 'macbuscar — Comparador de precios Apple en España';
 const DESCRIPTION = 'Encuentra el mejor precio en iPhone, MacBook, iPad, Apple Watch y AirPods. Comparamos 8 tiendas españolas: Apple Store, MediaMarkt, PcComponentes, Fnac, Amazon, El Corte Inglés, Worten y iStore. Actualizado en tiempo real.';
 
 import CookieConsent from '@/components/legal/CookieConsent';
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: TITLE, template: '%s | Manzana.es' },
+  title: { default: TITLE, template: '%s | macbuscar' },
   description: DESCRIPTION,
   keywords: ['comparador precios apple', 'iPhone barato España', 'MacBook oferta', 'iPad precio', 'Apple Watch comparador', 'AirPods barato', 'mejor precio Apple', 'descuento iPhone', 'segunda mano Apple'],
-  authors: [{ name: 'Manzana.es' }],
-  creator: 'Manzana.es',
-  publisher: 'Manzana.es',
+  authors: [{ name: 'macbuscar' }],
+  creator: 'macbuscar',
+  publisher: 'macbuscar',
   formatDetection: { email: false, address: false, telephone: false },
   alternates: { canonical: SITE_URL, languages: { 'es-ES': SITE_URL } },
   openGraph: {
     title: TITLE, description: DESCRIPTION, url: SITE_URL, siteName: SITE_NAME,
     locale: 'es_ES', type: 'website',
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Manzana.es - Comparador Apple España' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'macbuscar - Comparador Apple España' }],
   },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: ['/og-image.png'] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 } },
