@@ -39,7 +39,7 @@ import time
 # same way it does when running scrapers individually with -m.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stores import ktuin, mediamarkt, worten, amazon
+from stores import ktuin, mediamarkt, worten, amazon, pccomponentes
 
 
 # Ordered list of stores. K-tuin first because it's the most stable and
@@ -47,11 +47,16 @@ from stores import ktuin, mediamarkt, worten, amazon
 # bug, we'd rather catch it on K-tuin than waste a slow Amazon run. Amazon
 # last because its DataDome/Akamai cousin is the most likely to captcha
 # under load.
+# PcComponentes lives between K-tuin and MediaMarkt: it's Apple-Premium-
+# Reseller-clean (smoke test gave 20/21 matches first try) but Akamai-
+# fronted like MediaMarkt, so the position lets a fresh session warm up
+# on K-tuin before the Akamai stack gets hit twice in a row.
 STORES = [
-    ('ktuin',      ktuin),
-    ('worten',     worten),
-    ('mediamarkt', mediamarkt),
-    ('amazon',     amazon),
+    ('ktuin',         ktuin),
+    ('pccomponentes', pccomponentes),
+    ('worten',        worten),
+    ('mediamarkt',    mediamarkt),
+    ('amazon',        amazon),
 ]
 
 
