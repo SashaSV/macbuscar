@@ -68,27 +68,71 @@ def build_search_url(product_name, cat):
 # ════════════════════════════════════════════════════════════════════════════
 
 def is_captcha(html):
-    """Detect Akamai bot challenges + generic CDN block pages."""
+    """Detect Akamai bot challenges + Cloudflare 'Just a moment...' interstitials.
+
+    PcComponentes' production pages ship a Cloudflare protection script
+    (/cdn-cgi/challenge-platform/scripts/jsd/main.js) inline in every
+    legitimate response — it's the standard CF runtime that drops cookies
+    for future challenge gating, not the challenge itself. Matching just
+    'challenge-platform' as a substring therefore false-positives on every
+    real result page (956 KB + correct title + full HTML — yet flagged).
+
+    Distinguish a real CF interstitial from the always-present script by
+    requiring at least one of:
+      - Very small payload (< 50 KB — a stalled-out challenge body)
+      - The 'Just a moment...' / 'Attention required' title text
+      - The challenge form / verification banner ('cf_chl_opt', 'cf-error-code')
+    The bare script-tag URL alone is not enough.
+    """
     if not html:
         return ('empty-html', '')
     low = html.lower()
-    strong_markers = (
+
+    # Akamai block pages stay simple keyword matches — those wordings don't
+    # appear on normal product pages.
+    akamai_markers = (
         'akamai-error',
-        'reference&#32;&#35;',     # Akamai block page often has "Reference #..."
+        'reference&#32;&#35;',
         'akam_error',
         'access denied',
-        'cf-browser-verification',
-        'checking your browser before accessing',
-        'challenge-platform',
-        'enable javascript and cookies to continue',
+        'access to this page has been denied',
         'request blocked',
         'error 1015',
     )
-    for m in strong_markers:
+    for m in akamai_markers:
         if m in low:
             idx = low.find(m)
             snippet = html[max(0, idx - 60):idx + len(m) + 60]
             return (m, snippet)
+
+    # Cloudflare "Just a moment" interstitial: short payload + telltale title
+    # or a CF challenge form. The plain 'challenge-platform' marker is shared
+    # with the always-present CF runtime, so we don't match on it alone.
+    cf_strong = (
+        'just a moment...',
+        'checking your browser before accessing',
+        'cf_chl_opt',
+        'cf-error-code',
+        'cf-browser-verification',
+        'enable javascript and cookies to continue',
+    )
+    for m in cf_strong:
+        if m in low:
+            idx = low.find(m)
+            snippet = html[max(0, idx - 60):idx + len(m) + 60]
+            return (m, snippet)
+
+    # Tiny-payload heuristic: a real challenge body is usually under 50 KB
+    # and contains the challenge-platform reference. If a page is suspiciously
+    # short AND mentions challenge-platform AND lacks a normal pccomponentes
+    # search title — it's a challenge.
+    if (len(html) < 50_000
+            and 'challenge-platform' in low
+            and 'buscar' not in low
+            and 'pccomponentes' in low):
+        idx = low.find('challenge-platform')
+        return ('challenge-platform-short', html[max(0, idx - 60):idx + 100])
+
     return (None, '')
 
 

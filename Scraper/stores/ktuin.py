@@ -82,8 +82,15 @@ SUBFAMILY_URLS = {
     'iPad mini':             '/comprar-un-ipad/nuevo-ipad-mini',
     'iPad':                  '/comprar-un-ipad/ipad-11',
     # Watch
+    # Both numbered and generic keys, because matching.subfamily_info now
+    # extracts a generation digit from product.nombre (e.g. "Apple Watch
+    # Ultra 3") to disambiguate Ultra/SE generations on stores that mix
+    # them in search results. K-tuin's landing pages are already specific
+    # to the current generation, so both keys map to the same URL.
+    'Apple Watch Ultra 3':   '/comprar-un-watch/apple-watch-ultra-3',
     'Apple Watch Ultra':     '/comprar-un-watch/apple-watch-ultra-3',
     'Apple Watch Series 11': '/comprar-un-watch/apple-watch-series-11',
+    'Apple Watch SE 3':      '/comprar-un-watch/apple-watch-se',
     'Apple Watch SE':        '/comprar-un-watch/apple-watch-se',
     # AirPods
     'AirPods Max 2':         '/music/airpods-max',
