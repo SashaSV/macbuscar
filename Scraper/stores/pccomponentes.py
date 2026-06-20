@@ -39,7 +39,9 @@ from . import matching
 from . import runner
 
 
-STORE_ID    = 'pccomponentes'
+STORE_ID    = 'pccomp'                  # matches the seed-time Store.id; the longer
+                                        # 'pccomponentes' was an accidental duplicate that
+                                        # has been migrated back to 'pccomp' in DB.
 STORE_LABEL = '🟣 PcComponentes scraper'
 HOST        = 'https://www.pccomponentes.com'
 # Akamai-fronted — match the MediaMarkt pacing rather than the tighter
