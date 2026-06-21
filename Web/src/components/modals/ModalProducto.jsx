@@ -235,6 +235,13 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
             updatedAt: pr.updatedAt,
             storeLogo: pr.storeLogo,
             storeName: pr.storeName,
+            // Apple authorization tier for the trust badge in store cards.
+            // Comes from Store.appleAuthLevel via the API. Carrying it here
+            // (instead of falling back to the top-level precios map) keeps
+            // the badge in sync with the currently-selected variant when
+            // a user picks a different storage/color — some variants might
+            // have prices at stores others don't.
+            storeAppleAuthLevel: pr.storeAppleAuthLevel,
             // Financing (may be null — only shown when monthlyPrice is set)
             monthlyPrice:      pr.monthlyPrice,
             monthlyMonths:     pr.monthlyMonths,
@@ -330,6 +337,13 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     return init;
   });
   const [tab, setTab] = useState('Precios');
+
+  // Which store card the pointer is currently over. Drives the hover-lift /
+  // shadow / reveal-arrow effect on the Precios-tab store cards. We track
+  // a single string (storeId) at the parent level rather than wiring each
+  // card to its own useState so the hover state isn't lost when the IIFE
+  // that renders the cards re-runs on variant change.
+  const [hoveredStoreId, setHoveredStoreId] = useState(null);
 
   // Build available options per filter dimension. We ALWAYS show the full
   // global value set for each dimension (so positions don't shift as the
@@ -949,8 +963,21 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                 })()}
               </div>
 
-              {/* Bar chart */}
-              {minP && <BarraPrecios precios={pP} statuses={pS} />}
+              {/* Bar chart — functional ladder: each bar is a clickable
+                  link to the same product page as the store card below,
+                  hover state is shared with the cards via hoveredStoreId
+                  so pointing at a bar lifts the matching card (and vice
+                  versa), and on hover each row shows '−NN%' vs Apple's
+                  MSRP — the user's real reference number for value. */}
+              {minP && (
+                <BarraPrecios
+                  precios={pP}
+                  statuses={pS}
+                  hoveredStoreId={hoveredStoreId}
+                  onHover={setHoveredStoreId}
+                  appleMsrp={selectedVariant?.msrp}
+                />
+              )}
 
               {/* Store cards — split into TWO zones for anchor-price
                   psychology. Zone 1 = Apple Store as the "Precio Oficial"
@@ -983,8 +1010,12 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                     // Store name colour is brand even on the winner card,
                     // so the retailer's identity is never fully hidden.
                     const brand = getStoreBrand(t.id);
+                    const isHovered = hoveredStoreId === t.id;
                     return (
-                      <a key={t.id} href={productUrl} target="_blank" rel="noreferrer" style={{
+                      <a key={t.id} href={productUrl} target="_blank" rel="noreferrer"
+                        onMouseEnter={() => setHoveredStoreId(t.id)}
+                        onMouseLeave={() => setHoveredStoreId(null)}
+                        style={{
                         // Three-zone layout: [logo] [info stack] [price]
                         // align-items:center vertically centres each zone, so cards
                         // with and without financing share the same vertical rhythm.
@@ -992,6 +1023,21 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         background: es ? 'rgba(52,168,83,0.08)' : brand.tint,
                         border: `1px solid ${es ? 'rgba(52,168,83,0.4)' : brand.border}`,
                         borderRadius: 12, textDecoration: 'none',
+                        // Hover treatment — subtle lift + drop shadow + a
+                        // reveal-arrow next to the price (see Zone 3 below).
+                        // We intentionally DON'T retint the background or
+                        // change borderColor on hover anymore: mixing the
+                        // `border` shorthand and a separate `borderColor`
+                        // override in the same inline-style object lets the
+                        // browser fall back to the default (black) border
+                        // when the override resolves before the shorthand.
+                        // Keeping the static brand border + adding shadow
+                        // gives the lift its weight without that risk.
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+                        boxShadow: isHovered
+                          ? (es ? '0 8px 24px rgba(52,168,83,0.18)' : '0 8px 24px rgba(0,0,0,0.10)')
+                          : 'none',
                       }}>
                         {isImg ? (
                           <span style={{
@@ -1069,7 +1115,12 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                           {updStr && <div style={{ fontSize: 9, color: 'rgba(29,29,31,0.35)', marginTop: 1 }}>actualizado {updStr}</div>}
                         </div>
 
-                        {/* ZONE 3 — price (with trophy inline on best card) */}
+                        {/* ZONE 3 — price (with trophy inline on best card) +
+                            a hover-reveal arrow that slides in from the right
+                            to telegraph the link behaviour. We render the arrow
+                            unconditionally and animate its width/opacity so the
+                            mount doesn't jump the layout when the user enters
+                            the card. */}
                         <span style={{
                           fontSize: 20,
                           fontWeight: 700,
@@ -1080,9 +1131,26 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                           flexShrink: 0,
                           textAlign: 'right',
                           whiteSpace: 'nowrap',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: isHovered ? 6 : 0,
+                          transition: 'gap 0.2s ease',
                         }}>
                           {es && <span style={{ fontSize: 14, marginRight: 4 }}>🏆</span>}
                           {Math.round(price).toLocaleString('es-ES')} €
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              fontSize: 16,
+                              color: es ? '#34a853' : 'rgba(29,29,31,0.55)',
+                              opacity: isHovered ? 1 : 0,
+                              maxWidth: isHovered ? 18 : 0,
+                              overflow: 'hidden',
+                              transform: isHovered ? 'translateX(0)' : 'translateX(-6px)',
+                              transition: 'opacity 0.2s ease, max-width 0.2s ease, transform 0.2s ease',
+                              display: 'inline-block',
+                            }}
+                          >→</span>
                         </span>
                       </a>
                     );
