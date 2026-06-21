@@ -236,8 +236,8 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
         {badges.length > 0 && (
           <div style={{
             position: 'absolute',
-            top: 14,
-            left: -14,
+            top: 10,
+            left: 0,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
@@ -259,8 +259,15 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
                 color = b.pct > 25 ? '#dc2626'
                        : b.pct > 10 ? '#f5a623'
                        : '#34a853';
-                emoji = '💰';
-                label = `−${b.amount.toLocaleString('es-ES')} € (${b.pct}%)`;
+                // Heat indicator: more fire = bigger drop. >20% earns a
+                // double flame, >15% a single one, smaller drops stay
+                // clean. Threshold ladder per spec; appended after the
+                // numeric so the eye still lands on the % first.
+                const flames = b.pct > 20 ? ' 🔥🔥'
+                             : b.pct > 15 ? ' 🔥'
+                             : '';
+                emoji = null;                                  // no money-bag icon
+                label = `−${b.amount.toLocaleString('es-ES')} € (${b.pct}%)${flames}`;
                 useTabular = true;
               } else {
                 const def = TAG_BADGES[b.name] || { color: '#86868b', emoji: '' };
@@ -268,6 +275,12 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
                 emoji = def.emoji;
                 label = b.name;
               }
+              // 'A plazos' and discount share the same rounded-rectangle
+              // shape (radius 8) per spec so the two derived chips read as
+              // a matched pair, while editorial Product.tag badges keep
+              // their pill silhouette to stay visually distinct from the
+              // derived stack underneath.
+              const isDerivedPair = b.kind === 'discount' || b.name === 'A plazos';
               return (
                 <div
                   key={b.kind === 'discount' ? `discount-${i}` : b.name}
@@ -279,8 +292,10 @@ export default function TarjetaProducto({ prod, tiendas, abrir, precios, scrapeS
                     WebkitBackdropFilter: 'blur(10px) saturate(160%)',
                     fontSize: 10,
                     fontWeight: 600,
-                    padding: '3.5px 9px 3.5px 7px',
-                    borderRadius: 980,
+                    // Roomier padding so '−337 € (28%) 🔥🔥' breathes
+                    // and isn't squeezed against the rounded edge.
+                    padding: isDerivedPair ? '5px 10px' : '3.5px 9px 3.5px 7px',
+                    borderRadius: isDerivedPair ? 8 : 980,
                     letterSpacing: '0.2px',
                     display: 'inline-flex',
                     alignItems: 'center',
