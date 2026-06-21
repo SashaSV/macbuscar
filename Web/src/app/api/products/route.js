@@ -125,6 +125,10 @@ export async function GET(request) {
           storeId: pr.storeId,
           storeName: pr.store?.nombre,
           storeLogo: pr.store?.logo,
+          // Apple authorization tier for the trust badge in the modal.
+          // null when the store isn't on Apple's authorized list; the
+          // UI just omits the badge in that case.
+          storeAppleAuthLevel: pr.store?.appleAuthLevel || null,
           price: pr.price,
           oldPrice: pr.oldPrice,
           url: pr.url || pr.store?.url || null,
@@ -207,7 +211,9 @@ export async function GET(request) {
       const allListings = variantsOut.flatMap(v => v.listings);
 
       // Build backward-compatible precios map: { storeId: { price, url, updatedAt } }
-      // Takes the MINIMUM price per store across all variants
+      // Takes the MINIMUM price per store across all variants.
+      // We also carry storeAppleAuthLevel forward so the modal can render
+      // the trust badge from the precios object without an extra lookup.
       const precios = {};
       for (const v of variantsOut) {
         for (const pr of v.prices) {
@@ -219,6 +225,7 @@ export async function GET(request) {
               url: pr.url,
               updatedAt: pr.updatedAt,
               variantId: v.id,
+              storeAppleAuthLevel: pr.storeAppleAuthLevel,
             };
           }
         }

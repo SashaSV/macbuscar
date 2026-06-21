@@ -147,6 +147,28 @@ model Store {
   rating      Float?
   reviewCount Int?
 
+  // Apple authorization tier — drives the trust badge shown next to the
+  // store name in the Precios tab. Higher tier = stronger "genuine Apple
+  // product, full warranty" cue for the buyer. Source of truth is Apple's
+  // own retailer locator at https://locate.apple.com.
+  //   "official"   → Apple themselves (apple.com). Card lives in Zone 1
+  //                  as the anchor; no badge needed (Apple == Apple).
+  //   "premium"    → Apple Premium Reseller. The top reseller tier: physical
+  //                  Apple-style stores, full warranty / AppleCare, dedicated
+  //                  Genius-style support. K-tuin, PcComponentes, iStore,
+  //                  Rossellimac in Spain.
+  //   "authorized" → Authorized Reseller. Standard tier: genuine SKUs, full
+  //                  Apple warranty applies, but no Premium store experience.
+  //                  MediaMarkt, El Corte Inglés, Fnac in Spain.
+  //   "mixed"      → Marketplace where SOME SKUs are authorized and others
+  //                  aren't (Amazon: "Vendido por Amazon" SKUs are
+  //                  authorized; third-party seller listings are not).
+  //                  UI surfaces a softer "Verifica vendedor" cue.
+  //   null         → Not on Apple's authorized list. Worten in Spain ships
+  //                  genuine product but isn't formally authorized; we just
+  //                  omit the badge rather than shaming them.
+  appleAuthLevel  String?
+
   createdAt   DateTime @default(now())
 
   prices       Price[]

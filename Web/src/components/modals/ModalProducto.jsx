@@ -14,6 +14,7 @@ import BarraPrecios from '../ui/BarraPrecios';
 import HistorialChart from '../ui/HistorialChart';
 import Resenas from '../ui/Resenas';
 import BankBadge from '../ui/BankBadge';
+import AppleAuthBadge from '../ui/AppleAuthBadge';
 import Dot from '../ui/Dot';
 import { TIENDAS } from '../shared/constants';
 import { getStoreBrand } from '../shared/storeBrand';
@@ -1019,7 +1020,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                           <span style={{ fontSize: 20, flexShrink: 0 }}>{logoSrc || t.logo}</span>
                         )}
                         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {/* Zone 2 row 1: store name + status dot */}
+                          {/* Zone 2 row 1: store name + Apple-auth trust badge + status dot */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                             <span style={{
                               fontSize: 12,
@@ -1030,6 +1031,11 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
                             }}>{storeNom}</span>
+                            {/* Trust signal: Apple Premium / Authorized /
+                                Verifica chip. Component returns null for
+                                'official' (Apple == Apple) and for stores
+                                not on Apple's authorized list. */}
+                            <AppleAuthBadge level={pP[t.id].storeAppleAuthLevel} />
                             <Dot status={st} />
                           </div>
                           {pP[t.id].monthlyPrice > 0 && (() => {
