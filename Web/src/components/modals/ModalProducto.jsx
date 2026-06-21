@@ -951,12 +951,19 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
               {/* Bar chart */}
               {minP && <BarraPrecios precios={pP} statuses={pS} />}
 
-              {/* Store cards. 2-col on desktop, single column on mobile so
-                  store names + monthly-financing line + price all fit without
-                  truncating (was cropping 'MediaMarkt' -> 'MediaMar' at 430px). */}
-              {minP ? (
-                <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
-                  {TIENDAS.filter(t => pP[t.id]?.price > 0).map(t => {
+              {/* Store cards — split into TWO zones for anchor-price
+                  psychology. Zone 1 = Apple Store as the "Precio Oficial"
+                  anchor, surfaced in a small mini-block above the list so
+                  the user normalizes it as the baseline (their mental
+                  "MSRP"). Zone 2 = "Dónde comprar más barato", every other
+                  retailer sorted cheapest-first — comparing against the
+                  anchor above produces the "I'm saving X € vs Apple"
+                  dopamine hit. If Apple has no price for this variant,
+                  Zone 1 is dropped and Zone 2 stands on its own without
+                  the semantic split. Mobile keeps single-column so names
+                  + financing line + price all fit without truncating. */}
+              {minP ? (() => {
+                const renderStoreCard = (t) => {
                     const es = t.id === bestStoreId;
                     const st = pS[t.id];
                     const price = pP[t.id].price;
@@ -1073,9 +1080,49 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         </span>
                       </a>
                     );
-                  })}
-                </div>
-              ) : (
+                };
+                // Apple = the anchor; everyone else sorts cheapest-first.
+                // Pre-filter to "has a price" so the visual position is
+                // dictated by actual price, not by the order TIENDAS
+                // declares stores in constants.
+                const appleT = TIENDAS.find(t => t.id === 'apple');
+                const hasApple = appleT && pP['apple']?.price > 0;
+                const others = TIENDAS
+                  .filter(t => t.id !== 'apple' && pP[t.id]?.price > 0)
+                  .sort((a, b) => pP[a.id].price - pP[b.id].price);
+                // Shared uppercase mini-label so both zone headers read
+                // as the same visual system rather than ad-hoc text.
+                const zoneLabelStyle = {
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: 'rgba(29,29,31,0.55)',
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase',
+                  marginBottom: 6,
+                };
+                return (
+                  <>
+                    {hasApple && (
+                      <div style={{ marginTop: 14 }}>
+                        <div style={zoneLabelStyle}>Precio Oficial Apple Store</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+                          {renderStoreCard(appleT)}
+                        </div>
+                      </div>
+                    )}
+                    {others.length > 0 && (
+                      <div style={{ marginTop: hasApple ? 18 : 14 }}>
+                        {/* Heading only when there's an anchor to compare
+                            against — without Apple this list stands alone. */}
+                        {hasApple && <div style={zoneLabelStyle}>Dónde comprar más barato</div>}
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
+                          {others.map(renderStoreCard)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })() : (
                 <div style={{ marginTop: 16, padding: '36px 0', textAlign: 'center', color: 'rgba(29,29,31,0.4)' }}>
                   <div style={{ fontSize: 30, marginBottom: 8 }}>🔍</div>
                   <div style={{ fontSize: 13 }}>Sin precios para esta configuración</div>
