@@ -2,11 +2,13 @@
 """
 K-tuin.com scraper — variant-driven, prices only.
 
-K-tuin is an Apple Authorized Reseller in Spain. Pure Apple catalog, smaller
-site, generally easier to scrape than mainstream electronics retailers.
+K-tuin is an Apple Authorized Premium Reseller in Spain. Pure Apple catalog,
+smaller site, generally easier to scrape than mainstream electronics retailers.
 
-In the DB this store has id 'istore' (kept for historical reasons — the seed
-file calls it "iStore (K-tuin)"). The module is named ktuin.py for clarity.
+DB convention: Store.id = 'ktuin'. The legacy seed file used to call this
+row 'istore' (because of an early naming mix-up between iStore and K-tuin);
+that row was migrated to 'ktuin' to match the module name and eliminate
+the confusing alias — see migration-rename-istore-to-ktuin.sql.
 
 Generic logic (scoring, sub-family routing, JSON-LD parsing, DB writes,
 the main loop, the Selenium driver) lives in stores/matching.py and
@@ -39,7 +41,11 @@ from . import matching
 from . import runner
 
 
-STORE_ID    = 'istore'                  # matches DB Store.id from seed
+STORE_ID    = 'ktuin'                   # aligned with module name and the
+                                        # renamed Store row in DB. Previously
+                                        # 'istore' as a legacy alias — see
+                                        # migration-rename-istore-to-ktuin.sql
+                                        # for the one-off row migration.
 STORE_LABEL = '🍏 K-tuin scraper'
 HOST        = 'https://www.k-tuin.com'
 PAGE_DELAY  = (3.5, 7.0)

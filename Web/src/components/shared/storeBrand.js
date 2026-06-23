@@ -16,7 +16,7 @@
  * fall through to NEUTRAL so the UI never breaks on a fresh seed.
  *
  * Notes on each colour:
- *   - istore (K-tuin): K-tuin's mark is a teal/green "K"; we use teal.
+ *   - ktuin: K-tuin's mark is a teal/green "K"; we use teal.
  *   - mediamarkt: bright red — clipped a step darker so the text reads.
  *   - pccomp / worten / amazon: orange shades — each tuned to a distinct
  *     hue so the three orange-family stores don't blur together.
@@ -27,7 +27,7 @@
  *     the resellers.
  */
 export const STORE_BRAND = {
-  istore:     { tint: 'rgba(0, 168, 150, 0.07)', text: '#008C7D', border: 'rgba(0, 168, 150, 0.22)' },
+  ktuin:      { tint: 'rgba(0, 168, 150, 0.07)', text: '#008C7D', border: 'rgba(0, 168, 150, 0.22)' },
   mediamarkt: { tint: 'rgba(218, 33, 40, 0.06)', text: '#B91C1C', border: 'rgba(218, 33, 40, 0.22)' },
   pccomp:     { tint: 'rgba(255, 105, 0, 0.07)', text: '#C2410C', border: 'rgba(255, 105, 0, 0.22)' },
   fnac:       { tint: 'rgba(255, 204, 0, 0.13)', text: '#A47700', border: 'rgba(255, 204, 0, 0.35)' },
