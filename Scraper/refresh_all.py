@@ -39,7 +39,7 @@ import time
 # same way it does when running scrapers individually with -m.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte
+from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte  # noqa: F401
 
 
 # Ordered list of stores. K-tuin first because it's the most stable and
@@ -47,16 +47,22 @@ from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte
 # bug, we'd rather catch it on K-tuin than waste a slow Amazon run. Amazon
 # last because its DataDome/Akamai cousin is the most likely to captcha
 # under load.
-# PcComponentes and El Corte Inglés sit together right after K-tuin: both
-# are Apple Authorized Resellers with clean Apple-only catalogs (PcC: 20/21
-# first try, ECI: 84/347 baseline), and both fronted by Akamai. Pairing
-# them lets a single warmed-up Akamai session hit both back-to-back before
-# Worten (Cloudflare) breaks the streak. MediaMarkt closes out the Akamai
-# tier; Amazon's DataDome rate-limits hardest so it always goes last.
+# PcComponentes sits right after K-tuin: Apple-Premium-Reseller-clean
+# (20/21 first try) but Akamai-fronted, so position lets a fresh session
+# warm up on K-tuin before the Akamai stack gets hit twice in a row.
+#
+# El Corte Inglés NOT in the nightly list: its Akamai config blocks all
+# datacenter IPs at the network layer (verified 24 Jun 2026 — bare curl
+# from VPS returns HTTP/2 403 from AkamaiGHost before any Selenium runs).
+# ECI is wired up and importable so it joins the rotation as soon as
+# either (a) we add a residential proxy, or (b) we run nightly from a
+# residential IP. Until then it lives on a separate local Windows Task
+# Scheduler job (elcorte-refresh.bat) that runs from a home IP and
+# writes to the same shared Neon DB. The import stays to keep the
+# module loadable and to flag a clear path for re-enabling.
 STORES = [
     ('ktuin',         ktuin),
     ('pccomponentes', pccomponentes),
-    ('elcorte',       elcorte),
     ('worten',        worten),
     ('mediamarkt',    mediamarkt),
     ('amazon',        amazon),
