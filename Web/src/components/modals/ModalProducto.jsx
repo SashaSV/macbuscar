@@ -246,6 +246,11 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
             monthlyPrice:      pr.monthlyPrice,
             monthlyMonths:     pr.monthlyMonths,
             financingProvider: pr.financingProvider,
+            // True when monthlyPrice was synthesized from STORE_FINANCING_
+            // DEFAULTS instead of scraped per-SKU. UI shows a “≈” cue
+            // and a tooltip so the user can tell estimated terms from
+            // terms the store actually quoted on the product page.
+            financingComputed: pr.financingComputed,
           };
         }
       }

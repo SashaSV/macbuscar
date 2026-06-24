@@ -3,6 +3,7 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveCustomCover } from '@/lib/customCover';
+import { computeMonthlyFallback } from '@/components/shared/storeFinancing';
 
 const safeParse = (s, fallback) => {
   if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
@@ -120,29 +121,58 @@ export async function GET(request) {
         cover: v.cover,
         hover: v.hover,
         msrp: v.msrp,
-        prices: v.prices.map(pr => ({
-          id: pr.id,
-          storeId: pr.storeId,
-          storeName: pr.store?.nombre,
-          storeLogo: pr.store?.logo,
-          // Apple authorization tier for the trust badge in the modal.
-          // null when the store isn't on Apple's authorized list; the
-          // UI just omits the badge in that case.
-          storeAppleAuthLevel: pr.store?.appleAuthLevel || null,
-          price: pr.price,
-          oldPrice: pr.oldPrice,
-          url: pr.url || pr.store?.url || null,
-          stock: pr.stock,
-          discountPct: pr.discountPct,
-          condition: pr.condition,
-          updatedAt: pr.updatedAt,
-          // Financing (Spain market — monthly installments). Any/all may
-          // be null if the store doesn't expose financing for this SKU.
-          monthlyPrice:      pr.monthlyPrice,
-          monthlyMonths:     pr.monthlyMonths,
-          financingProvider: pr.financingProvider,
-          monthlyApr:        pr.monthlyApr,
-        })),
+        prices: v.prices.map(pr => {
+          // Computed financing fallback when the scraper didn't extract
+          // monthly-installment data for this Price row. Most stores
+          // publish a standing "sin intereses" plan for Apple gear (see
+          // STORE_FINANCING_DEFAULTS) but the per-SKU monthly only
+          // surfaces in our DB if the scraper looked for it explicitly.
+          // computeMonthlyFallback returns null when the price is below
+          // the store's financing minimum or the store has no default
+          // registered, so we never inject phantom terms.
+          let monthlyPrice      = pr.monthlyPrice;
+          let monthlyMonths     = pr.monthlyMonths;
+          let financingProvider = pr.financingProvider;
+          let monthlyApr        = pr.monthlyApr;
+          let financingComputed = false;
+          if (monthlyPrice == null) {
+            const fb = computeMonthlyFallback(pr.price, pr.storeId);
+            if (fb) {
+              monthlyPrice      = fb.monthlyPrice;
+              monthlyMonths     = fb.monthlyMonths;
+              financingProvider = fb.financingProvider;
+              monthlyApr        = fb.monthlyApr;
+              financingComputed = true;
+            }
+          }
+          return {
+            id: pr.id,
+            storeId: pr.storeId,
+            storeName: pr.store?.nombre,
+            storeLogo: pr.store?.logo,
+            // Apple authorization tier for the trust badge in the modal.
+            // null when the store isn't on Apple's authorized list; the
+            // UI just omits the badge in that case.
+            storeAppleAuthLevel: pr.store?.appleAuthLevel || null,
+            price: pr.price,
+            oldPrice: pr.oldPrice,
+            url: pr.url || pr.store?.url || null,
+            stock: pr.stock,
+            discountPct: pr.discountPct,
+            condition: pr.condition,
+            updatedAt: pr.updatedAt,
+            // Financing (Spain market — monthly installments). Any/all
+            // may be null if the store doesn't expose financing AND no
+            // STORE_FINANCING_DEFAULTS entry applies. financingComputed
+            // = true marks the line as a synthesized estimate so the UI
+            // can show a "≈" cue and a clarifying tooltip.
+            monthlyPrice,
+            monthlyMonths,
+            financingProvider,
+            monthlyApr,
+            financingComputed,
+          };
+        }),
         // Per-store price-change log. Powers the Historial tab: the chart
         // builds a per-store timeline from these rows (plus current Price
         // as the "now" snapshot) and reports the daily min across stores

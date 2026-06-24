@@ -26,14 +26,27 @@
 // loosely mimics each bank's identity (CaixaBank's star, Cetelem's dot,
 // MediaMarkt's diamond, etc).
 const BANK_STYLES = {
-  'CaixaBank':       { bg: 'rgba(2, 85, 156, 0.10)',   text: '#02559C', symbol: '★' },
-  'Cetelem':         { bg: 'rgba(0, 168, 89, 0.12)',   text: '#008941', symbol: '●' },
-  'Worten Crédito':  { bg: 'rgba(247, 82, 0, 0.12)',   text: '#D44600', symbol: '●' },
-  'MediaMarkt VISA': { bg: 'rgba(214, 0, 0, 0.10)',    text: '#B30000', symbol: '◆' },
-  'Amazon Financing':{ bg: 'rgba(255, 153, 0, 0.14)',  text: '#B85B00', symbol: '◆' },
-  'Cofidis':         { bg: 'rgba(102, 51, 153, 0.10)', text: '#663399', symbol: '◆' },
-  'Younited':        { bg: 'rgba(35, 47, 62, 0.10)',   text: '#1F2A37', symbol: '●' },
-  'Aplazame':        { bg: 'rgba(255, 90, 95, 0.10)',  text: '#C7314F', symbol: '●' },
+  'CaixaBank':                  { bg: 'rgba(2, 85, 156, 0.10)',    text: '#02559C', symbol: '★' },
+  'Cetelem':                    { bg: 'rgba(0, 168, 89, 0.12)',    text: '#008941', symbol: '●' },
+  'Worten Crédito':             { bg: 'rgba(247, 82, 0, 0.12)',    text: '#D44600', symbol: '●' },
+  'MediaMarkt VISA':            { bg: 'rgba(214, 0, 0, 0.10)',     text: '#B30000', symbol: '◆' },
+  'Amazon Financing':           { bg: 'rgba(255, 153, 0, 0.14)',   text: '#B85B00', symbol: '◆' },
+  'Cofidis':                    { bg: 'rgba(102, 51, 153, 0.10)',  text: '#663399', symbol: '◆' },
+  'Younited':                   { bg: 'rgba(35, 47, 62, 0.10)',    text: '#1F2A37', symbol: '●' },
+  'Aplazame':                   { bg: 'rgba(255, 90, 95, 0.10)',   text: '#C7314F', symbol: '●' },
+  // Klarna — brand pink (#FFA8CD) on near-black text. Subtle tint
+  // keeps the chip readable while still cueing Klarna's signature
+  // colour. Worten's "Paga en 3 con Klarna" promo.
+  'Klarna':                     { bg: 'rgba(255, 168, 205, 0.22)', text: '#A8005C', symbol: '●' },
+  // Openbank Pay — Santander-red identity (#EC0000) but Openbank's
+  // own brand uses a slightly cooler magenta/red. Pay is Amazon ES's
+  // 6-cuota 0% partner.
+  'Openbank Pay':               { bg: 'rgba(236, 0, 0, 0.10)',     text: '#C30000', symbol: '◆' },
+  // Financiera El Corte Inglés — ECI's in-house Apple 0% plan. Match
+  // the same muted grey ECI uses in their own UI for finance lines.
+  'Financiera El Corte Inglés': { bg: 'rgba(29, 29, 31, 0.06)',    text: '#1d1d1f', symbol: '◆' },
+  // Oney — Fnac's standing 0% partner.
+  'Oney':                       { bg: 'rgba(45, 95, 155, 0.10)',   text: '#1F4B7C', symbol: '●' },
 };
 const NEUTRAL = { bg: 'rgba(0, 0, 0, 0.06)', text: '#1d1d1f', symbol: '●' };
 
