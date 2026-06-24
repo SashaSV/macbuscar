@@ -156,6 +156,16 @@ def parse_price(text):
             s = s.replace(',', '')                     # English
     elif ',' in s:
         s = s.replace(',', '.')
+    elif '.' in s:
+        # No comma, only dot(s). Disambiguate Spanish thousands
+        # separator ("1.439" = 1439) from English decimal ("1.5" = 1.5):
+        # if every group AFTER the first dot is exactly 3 digits, it's
+        # thousands. Triggered by El Corte Inglés PLP cards which omit
+        # cents ("Precio de venta 1.439 €"); harmless for Amazon/Worten
+        # which always include cents and therefore always have a comma.
+        parts = s.split('.')
+        if len(parts) > 1 and all(len(p) == 3 and p.isdigit() for p in parts[1:]):
+            s = s.replace('.', '')
     try:
         return float(s)
     except (ValueError, TypeError):

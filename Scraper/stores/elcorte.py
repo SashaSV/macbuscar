@@ -201,20 +201,32 @@ def _find_price_in_article(article):
         elif price is None:
             price = candidate
 
-    # Backup: regex sweep of the article text. Catches the case where
-    # the digits and the € are in non-adjacent spans that defeat the
-    # element-walk above. We pick the smallest sensible price, which
-    # for an Apple SKU is always the current selling price (any
-    # struck-out PVP / financing-per-month is higher per unit).
+    # Backup: labelled-pattern sweep of the article text. ECI’s PLP
+    # cards advertise THREE numbers in the same subtree:
+    #   "Precio de venta 1.279 €"   ← current selling price
+    #   "Precio original 1.319 €"  ← strikethrough (oldprice)
+    #   "Hasta 1.130 € entregando tu iPhone 11 o posterior"
+    #                              ← trade-in offer, NOT a price
+    # A naive "smallest € amount" sweep picks the trade-in number, which
+    # is wrong. Label the regex to the Spanish wording instead. The
+    # element walk above misses these because each label+price lives in
+    # a single <span> whose text is "Precio de venta 1.279 €" — too
+    # noisy for matching.parse_price() to handle directly.
     if price is None:
         text_blob = article.get_text(separator=' ', strip=True)
-        # Pattern: digit-grouped EUR amount, optional decimals, with €
-        # or 'euros' suffix. Spanish formatting: 1.479,00 €.
-        for m in re.finditer(r'([\d.,]{3,12})\s*(?:€|euros?)', text_blob, re.I):
-            cand = matching.parse_price(m.group(0))
+        m_sell = re.search(r'Precio\s+de\s+venta\s+([\d.,]+)\s*€',
+                           text_blob, re.I)
+        if m_sell:
+            cand = matching.parse_price(m_sell.group(1))
             if cand and 50 <= cand <= 10000:
-                if price is None or cand < price:
-                    price = cand
+                price = cand
+        if oldprice is None:
+            m_orig = re.search(r'Precio\s+original\s+([\d.,]+)\s*€',
+                               text_blob, re.I)
+            if m_orig:
+                cand = matching.parse_price(m_orig.group(1))
+                if cand and 50 <= cand <= 10000:
+                    oldprice = cand
 
     return price, oldprice
 
@@ -228,28 +240,6 @@ def parse_search_results(html):
     /electronica/ product link is in the DOM, so by the time this
     function sees the page, the cards are real.
     """
-    # Temporary diagnostic: dump the per-call situation so we can see
-    # whether the runner-fed HTML matches what our standalone test got.
-    # Remove this block once the runner path is confirmed working.
-    try:
-        _has_electronica = '/electronica/' in html
-        _has_euro        = '€' in html
-        _has_preview     = 'product_preview' in html
-        _li_count        = html.count('products_list-item')
-        print(f'      [parse-debug] html_len={len(html)} '
-              f'/electronica/={_has_electronica} €={_has_euro} '
-              f'product_preview={_has_preview} li={_li_count}')
-        # Also count what bs4 actually sees so we can tell
-        # parser-shadowing apart from "genuinely missing".
-        _tmp = BeautifulSoup(html, 'html.parser')
-        _via_select  = len(_tmp.select('article.product_preview'))
-        _via_findall = len([e for e in _tmp.find_all('article')
-                            if 'product_preview' in (e.get('class') or [])])
-        print(f'      [parse-debug] bs4 select={_via_select} '
-              f'find_all-with-class={_via_findall}')
-    except Exception as _e:
-        print(f'      [parse-debug] error: {type(_e).__name__}: {_e}')
-
     soup = BeautifulSoup(html, 'html.parser')
 
     # Primary: JSON-LD (cheap, but ECI rarely ships it on PLP)
@@ -287,17 +277,12 @@ def parse_search_results(html):
 
     out = []
     seen = set()
-    # Per-card rejection counters — temporary, surfaces which gate
-    # drops cards on the 12 -> 0 path.
-    _rej = {'no_link': 0, 'no_sku': 0, 'dup_sku': 0, 'no_name': 0,
-            'accessory': 0, 'non_apple': 0, 'no_price': 0}
     for card in cards:
         # Real-product gate: must have an /electronica/ href. Inline
         # banner <li>s either lack the link or point to a campaign URL.
         link_el = (card.select_one('a[href^="/electronica/"]') or
                    card.select_one('a[href*="/electronica/"]'))
         if not link_el:
-            _rej['no_link'] += 1
             continue
         href = link_el.get('href') or ''
         if href.startswith('/'):
@@ -322,11 +307,7 @@ def parse_search_results(html):
                 sku = m.group(1)
         if not sku:
             sku = matching.slug_from_url(href)
-        if not sku:
-            _rej['no_sku'] += 1
-            continue
-        if sku in seen:
-            _rej['dup_sku'] += 1
+        if not sku or sku in seen:
             continue
 
         # Name: aria-label on the <article> is the canonical title ECI
@@ -353,18 +334,35 @@ def parse_search_results(html):
             if m:
                 name = m.group(1).replace('-', ' ').strip()
         if not name:
-            _rej['no_name'] += 1
             continue
+
+        # Spec back-fill from URL slug. ECI's PLP titles routinely omit
+        # tokens that the scorer needs: iPad Air/Pro/mini titles show
+        # only year + chip (no memory), base iPhone titles show only
+        # model + color (no memory). The full spec is always in the
+        # slug, with TWO formatting conventions verified live:
+        #   iPhone: .../-256gb-plata-movil-libre-... (number+unit fused)
+        #   iPad  : .../-gris-espacial-128-gb/      (number-unit hyphenated)
+        # The optional hyphen between digits and gb/tb in the regex covers
+        # both. We also tolerate '/' as a trailing delimiter so the iPad
+        # case (slug ends right after the size) still matches.
+        # Inject only what's missing so we don't double-count tokens
+        # the title already carries (Pro Max titles include memory).
+        slug_lower = href.lower()
+        if not re.search(r'\d{1,4}\s*(?:GB|TB)\b', name, re.I):
+            m_mem = re.search(r'-(\d{1,4})-?(gb|tb)(?:[-/]|$)', slug_lower)
+            if m_mem:
+                name += f' {m_mem.group(1)}{m_mem.group(2).upper()}'
+        if 'cellular' in slug_lower and 'cellular' not in name.lower():
+            name += ' Cellular'
+
         if matching.is_accessory_listing(name):
-            _rej['accessory'] += 1
             continue
         if is_non_apple_listing(name):
-            _rej['non_apple'] += 1
             continue
 
         price, oldprice = _find_price_in_article(card)
         if not price:
-            _rej['no_price'] += 1
             continue
         if oldprice and oldprice <= price:
             oldprice = None
@@ -377,12 +375,6 @@ def parse_search_results(html):
             'url': href,
         })
         seen.add(sku)
-
-    if cards and not out:
-        print(f'      [parse-debug] {len(cards)} cards in, 0 out. Rejections: {_rej}')
-        # Dump first card so we can see the actual shape we're failing on.
-        first = str(cards[0])[:1500].replace('\n', '\n      ')
-        print(f'      [parse-debug] first card (1500 chars):\n      {first}')
 
     return out
 
