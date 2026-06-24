@@ -8,6 +8,28 @@ they come up.
 
 ## 🚀 Next up (high-value, well-scoped)
 
+### Re-enable El Corte Inglés on VPS nightly
+*Currently runs on local Windows Task Scheduler because VPS IP is
+in ECI's Akamai datacenter blocklist (HTTP/2 403 from bare curl).
+To move back to VPS:*
+- [ ] Option A: residential proxy (Bright Data / Smartproxy /
+      Oxylabs). $5-15/mo. Add proxy config to `runner.make_driver()`,
+      put `('elcorte', elcorte)` back into `STORES` in
+      `refresh_all.py`. See `SCRAPERS.md` → Anti-bot CDN cheat sheet.
+- [ ] Option B: residential VPS / home-server runner.
+- [ ] If accepted as local-only forever: nothing to do, current
+      Task Scheduler setup already writes to shared Neon DB.
+
+### AirPods coverage on El Corte Inglés
+*ECI matched only 4 AirPods variants (vs 29 iphone, 18 ipad).
+AirPods PLP cards likely have different price-label structure than
+the `Precio de venta` pattern we hooked. Also, AirPods variants
+differentiate on ANC (with/without) and generation rather than
+memory, so the memory-back-fill patch is useless here.*
+- [ ] Inspect 1-2 ECI AirPods cards via `--inspect "AirPods 4"`
+- [ ] Decide whether ANC variant matching needs its own back-fill
+      from slug (slug tokens: `con-cancelacion-activa-ruido` etc.)
+
 ### Financiación / monthly installments
 *From session 2026-06-07.* All Spanish stores show monthly-installment
 pricing + financing provider, and this is a real comparison axis for
@@ -133,8 +155,14 @@ Keeps the site's prices fresh without re-running the full match logic.
 
 ## 🏬 More stores
 
-- [ ] **PcComponentes** scraper (`pccomp` in seed) — large electronics, has Apple section
-- [ ] **El Corte Inglés** scraper (`elcorte` in seed) — major Spanish department store
+- [x] **PcComponentes** scraper — in production, runs in nightly
+      refresh on the VPS. ~20/21 on smoke test. See `SCRAPERS.md`.
+- [x] **El Corte Inglés** scraper — in production, 84/347 baseline
+      with 51 strikethrough discounts. **Runs on local Windows Task
+      Scheduler 04:00**, not VPS — ECI Akamai blocks all datacenter
+      IPs at the network layer. Awin MID 13075 approved 2026-06-24.
+      See `SCRAPERS.md` → El Corte Inglés for slug-injection +
+      labelled-price quirks.
 - [ ] **Fnac** retry with `undetected-chromedriver`
       - File `Scraper/stores/fnac.py` exists, blocked by DataDome
       - `pip install undetected-chromedriver`, rewrite `make_driver()`
@@ -227,6 +255,14 @@ Keeps the site's prices fresh without re-running the full match logic.
 
 ## ✅ Recently completed
 
+- [x] **El Corte Inglés scraper** (session 2026-06-24) — 84/347 baseline,
+      51 with strikethrough discount. Three core fixes: parse_price
+      Spanish-thousands heuristic, labelled `Precio de venta` patterns
+      to skip trade-in offers, memory back-fill from URL slug for
+      iPad/base-iPhone families. Runs on local Windows Task Scheduler
+      (ECI Akamai blocks datacenter IPs). Awin MID 13075 approved.
+- [x] **PcComponentes scraper** — Apple Premium Reseller, Akamai-fronted
+      but VPS-friendly so far. Slots between K-tuin and Worten in nightly.
 - [x] Apple catalog scraper (apple.es) — source of truth
 - [x] Amazon.es scraper — 252/347 (73%), ASIN dedup, color translation
 - [x] Worten scraper — Constructor.io data-cnstrc-* attributes, EAN-based SKU
