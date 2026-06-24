@@ -11,24 +11,66 @@ they come up.
 ### Re-enable El Corte Inglés on VPS nightly
 *Currently runs on local Windows Task Scheduler because VPS IP is
 in ECI's Akamai datacenter blocklist (HTTP/2 403 from bare curl).
-To move back to VPS:*
-- [ ] Option A: residential proxy (Bright Data / Smartproxy /
-      Oxylabs). $5-15/mo. Add proxy config to `runner.make_driver()`,
-      put `('elcorte', elcorte)` back into `STORES` in
-      `refresh_all.py`. See `SCRAPERS.md` → Anti-bot CDN cheat sheet.
-- [ ] Option B: residential VPS / home-server runner.
-- [ ] If accepted as local-only forever: nothing to do, current
-      Task Scheduler setup already writes to shared Neon DB.
+Not blocking anything — ECI prices land in shared Neon DB from
+local cron, frontend doesn't care which runner produced them.
+Unpark after first affiliate revenue.*
+
+**Decision: defer until first revenue.** Domain not earning yet,
+so even $5 is premature optimization. Local cron is free and works.
+
+**Plan when re-enabling** (researched 2026-06-24, ~30 min total):
+
+Our traffic budget for ECI from VPS:
+- 27 search pages × ~550KB HTML ≈ 15 MB per run
+- × 30 nightly runs = ~450 MB / month
+- + retries buffer ≈ **~550 MB / month** (well under 1 GB)
+
+Top 3 residential-proxy options for our tiny volume:
+- [ ] **Webshare** — free tier 1 GB / month residential. £0 risk,
+      try first. Caveat: free pools often more burned on Akamai.
+      webshare.io
+- [ ] **DataImpulse** — $1/GB PAYG, traffic doesn't expire. $5 min
+      purchase = 5 GB = ~9 months. 90M IPs, 195 countries, geo to
+      city level. 99.5% success rate. Most likely final pick.
+      dataimpulse.com
+- [ ] **IPRoyal** — $7/GB at entry, $1.75/GB only at bulk. Solid
+      reputation but pricier for our volume. iproyal.com
+
+**Selenium integration** (15-20 min when we do it):
+- [ ] Patch `runner.make_driver()` to accept `PROXY_URL` env var
+- [ ] Auth (user:pass) needs Chrome extension manifest — Chrome
+      CLI `--proxy-server` only accepts IP:PORT, not user:pass.
+      Boilerplate snippet is well-documented; ~20 lines.
+- [ ] Set `PROXY_URL` env in `run-refresh.sh` on VPS only —
+      local runs stay direct (no point paying proxy bandwidth
+      from a residential IP that already works).
+- [ ] Put `('elcorte', elcorte)` back into `STORES` in
+      `refresh_all.py` and remove the comment block about ECI
+      being excluded.
+- [ ] Decommission Windows Task Scheduler `macbuscar-elcorte`
+      task once VPS verified stable for a week.
 
 ### AirPods coverage on El Corte Inglés
 *ECI matched only 4 AirPods variants (vs 29 iphone, 18 ipad).
-AirPods PLP cards likely have different price-label structure than
-the `Precio de venta` pattern we hooked. Also, AirPods variants
-differentiate on ANC (with/without) and generation rather than
-memory, so the memory-back-fill patch is useless here.*
-- [ ] Inspect 1-2 ECI AirPods cards via `--inspect "AirPods 4"`
-- [ ] Decide whether ANC variant matching needs its own back-fill
-      from slug (slug tokens: `con-cancelacion-activa-ruido` etc.)
+Investigated 2026-06-24: this is the **real ECI ceiling**, not a
+scraper bug. Verified via search inspect and EAN cross-reference:*
+- AirPods 4 no-ANC — matched (149 €)
+- AirPods 4 con ANC — matched (199 €)
+- AirPods Pro 3 — matched (249 €)
+- AirPods Max 2 Blanco Estrella — matched (579 €, EAN-verified
+  via Fnac FR/ES + ECI product page)
+- AirPods Max 2 Azul/Púpura/Medianoche/Naranja — ECI just doesn't
+  stock these colors, same pattern as iPad 2TB variants.
+
+One minor risk: ECI's Vue template uses a default-color aria-label
+on some Max 2 cards (saw Medianoche in aria-label, Blanco Estrella
+in URL slug). Next refresh might mark our Blanco Estrella row as
+miss until aria-label sync catches up. Not blocking; the
+`nextCheckAt` lifecycle gives a grace period.
+- [ ] If we ever want full AirPods Max coverage: switch ECI parser
+      to derive color from URL slug instead of aria-label, OR add
+      slug-based override (riskier — might double-count tokens in
+      stores where aria-label and slug are consistent).
 
 ### Financiación / monthly installments
 *From session 2026-06-07.* All Spanish stores show monthly-installment
