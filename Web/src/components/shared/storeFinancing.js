@@ -24,10 +24,15 @@ export const STORE_FINANCING_DEFAULTS = {
     { provider: 'CaixaBank', months: 24, minAmount: 49 },
   ],
 
-  // Amazon ES — Openbank Pay 6 cuotas, 0% TAE. Min purchase ≈60 €
-  // (Openbank's standing threshold for the no-interest promo).
+  // Amazon ES — Openbank Pay, 0% TAE. Two standing tiers:
+  //   * ≥6 00 € : 6 cuotas (Apple gear typically lands here)
+  //   * 60-599 € : 4 cuotas ("Paga en 4")
+  // computeMonthlyFallback walks longest first, so the 6mo plan
+  // applies whenever price clears 600 € and the 4mo plan handles
+  // everything from accessories up to the cap.
   amazon: [
-    { provider: 'Openbank Pay', months: 6, minAmount: 60 },
+    { provider: 'Openbank Pay', months: 6, minAmount: 600 },
+    { provider: 'Openbank Pay', months: 4, minAmount: 60  },
   ],
 
   // K-tuin — Cetelem 24mo standing offer. Scraper already extracts
