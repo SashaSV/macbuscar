@@ -579,12 +579,12 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
       background: 'rgba(0,0,0,0.35)',
       backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       zIndex: 200, display: 'flex',
-      // On mobile the modal is full-bleed and pinned to the bottom-aligned
-      // safe area, so the overlay flexbox shouldn't add side padding (would
-      // make the sheet narrower than the viewport).
-      alignItems: isMobile ? 'flex-end' : 'center',
+      // Full-screen modal on every viewport. Mobile keeps the bottom-
+      // aligned sheet feel via top-rounded corners; desktop is flush
+      // edge-to-edge so the split layout has maximum real estate.
+      alignItems: isMobile ? 'flex-end' : 'stretch',
       justifyContent: 'center',
-      padding: isMobile ? 0 : 16,
+      padding: 0,
       animation: 'fadeIn .2s ease',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
@@ -592,14 +592,14 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
         backdropFilter: 'blur(40px) saturate(180%)',
         WebkitBackdropFilter: 'blur(40px) saturate(180%)',
         border: '0.5px solid rgba(255,255,255,0.8)',
-        // Mobile: full-screen sheet (top-rounded only). Desktop: floating card.
-        borderRadius: isMobile ? '18px 18px 0 0' : 22,
+        // Mobile keeps top-rounded sheet; desktop edge-to-edge.
+        borderRadius: isMobile ? '18px 18px 0 0' : 0,
         width: '100%',
-        maxWidth: isMobile ? '100%' : 1140,
-        // dvh on mobile so the sheet hugs the dynamic viewport (no jumping
-        // when the iOS Safari toolbar shows/hides).
-        height: isMobile ? '100dvh' : undefined,
-        maxHeight: isMobile ? '100dvh' : '94vh',
+        maxWidth: '100%',
+        // dvh on both so the sheet hugs the dynamic viewport (no jumping
+        // when iOS Safari toolbars or desktop browser chrome resizes).
+        height: '100dvh',
+        maxHeight: '100dvh',
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
       }}>
@@ -658,20 +658,59 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
 
         {/* Body */}
         <div style={{
-          overflowY: 'auto',
-          padding: isMobile ? '16px 16px 24px' : '22px 28px 28px',
+          // Precios on desktop runs its own 2-column split (filters
+          // left, retailers right) with independent scroll panels —
+          // body has to be overflow:hidden so children own the scroll
+          // and the layout doesn't double-scroll. Every other tab is
+          // a single long document and uses the body's own scroll
+          // with the original padding. Mobile is single-flow on
+          // every tab so it always uses the body scroll.
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: isMobile ? 'auto' : (tab === 'Precios' ? 'hidden' : 'auto'),
+          overflowX: 'hidden',
+          padding: isMobile
+            ? '16px 16px 24px'
+            : (tab === 'Precios' ? 0 : '22px 28px 28px'),
+          minHeight: 0,
           color: '#1d1d1f',
           WebkitOverflowScrolling: 'touch',
         }}>
 
           {tab === 'Precios' && (
-            <>
-              {/* Top row: Photo (left) + Filters (right). Stacks on mobile. */}
+            <div style={{
+              // Desktop: 2-column split (filters left, retailers right)
+              // so the user can scroll retailers without losing track of
+              // which configuration they're pricing. Mobile keeps the
+              // simple vertical flow — not enough horizontal room for a
+              // split, and the natural thumb-scroll feel matters more.
+              flex: 1,
+              display: isMobile ? 'block' : 'grid',
+              gridTemplateColumns: isMobile ? undefined : 'minmax(420px, 480px) 1fr',
+              overflow: isMobile ? 'visible' : 'hidden',
+              minHeight: 0,
+              margin: isMobile ? 0 : '-22px -28px 0',
+            }}>
+              {/* LEFT column on desktop (filters panel) / top block on
+                  mobile. Photo, filter chips, selected-variant header,
+                  ahorro badge, comparison bar — everything the user
+                  needs to KEEP in sight while comparing retailers. */}
+              <div style={{
+                overflowY: isMobile ? 'visible' : 'auto',
+                padding: isMobile ? 0 : '24px 28px 24px 44px',
+                minHeight: 0,
+                borderRight: isMobile ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                WebkitOverflowScrolling: 'touch',
+              }}>
+              {/* Photo + filters block. Stack vertically both viewports
+                  now that filters live inside the fixed left panel —
+                  side-by-side would crush the filter chip rows. */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: isMobile ? 16 : 24,
-                marginBottom: isMobile ? 18 : 24,
+                gridTemplateColumns: '1fr',
+                gap: 16,
+                marginBottom: isMobile ? 18 : 20,
                 alignItems: 'start',
               }}>
                 {/* LEFT: Variant photo */}
@@ -983,6 +1022,18 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   appleMsrp={selectedVariant?.msrp}
                 />
               )}
+              </div>{/* /LEFT column */}
+
+              {/* RIGHT column (desktop) / bottom block (mobile):
+                  retailer cards. Independently scrollable on desktop
+                  so a long retailer list never pushes the filters
+                  off-screen. */}
+              <div style={{
+                overflowY: isMobile ? 'visible' : 'auto',
+                padding: isMobile ? '18px 0 0' : '24px 44px 24px 28px',
+                minHeight: 0,
+                WebkitOverflowScrolling: 'touch',
+              }}>
 
               {/* Store cards — split into TWO zones for anchor-price
                   psychology. Zone 1 = Apple Store as the "Precio Oficial"
@@ -1194,6 +1245,24 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         {/* Heading only when there's an anchor to compare
                             against — without Apple this list stands alone. */}
                         {hasApple && <div style={zoneLabelStyle}>Dónde comprar más barato</div>}
+                        {/* Stale-pricing disclaimer. Scraper-sourced retailer
+                            prices may diverge from the live store page when
+                            stock changes or the seller adjusts mid-day; this
+                            sets the user's expectation in advance so an
+                            occasional mismatch reads as honest, not buggy.
+                            Apple Store zone above doesn't get the same line
+                            — it's the MSRP anchor and only re-prices when
+                            Apple itself does, which is rare. */}
+                        <div style={{
+                          fontSize: 10,
+                          color: 'rgba(29,29,31,0.45)',
+                          lineHeight: 1.5,
+                          marginTop: hasApple ? -2 : 0,
+                          marginBottom: 10,
+                          maxWidth: 640,
+                        }}>
+                          Los precios se actualizan una vez al día. Pueden variar si el producto se agota o si el vendedor ajusta el precio en su tienda.
+                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                           {others.map(renderStoreCard)}
                         </div>
@@ -1210,7 +1279,8 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   )}
                 </div>
               )}
-            </>
+              </div>{/* /RIGHT column */}
+            </div>
           )}
 
           {tab === 'Galería' && (
