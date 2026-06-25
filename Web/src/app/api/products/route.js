@@ -3,7 +3,7 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveCustomCover } from '@/lib/customCover';
-import { computeMonthlyFallback } from '@/components/shared/storeFinancing';
+import { computeMonthlyFallback, STORE_FINANCING_DEFAULTS } from '@/components/shared/storeFinancing';
 
 const safeParse = (s, fallback) => {
   if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
@@ -130,19 +130,44 @@ export async function GET(request) {
           // computeMonthlyFallback returns null when the price is below
           // the store's financing minimum or the store has no default
           // registered, so we never inject phantom terms.
-          let monthlyPrice      = pr.monthlyPrice;
-          let monthlyMonths     = pr.monthlyMonths;
-          let financingProvider = pr.financingProvider;
-          let monthlyApr        = pr.monthlyApr;
-          let financingComputed = false;
+          let monthlyPrice       = pr.monthlyPrice;
+          let monthlyMonths      = pr.monthlyMonths;
+          // financingProviders is the new shape: an ARRAY of bank chips
+          // to render. Most ES retailers offer the same installment
+          // terms through several partners (Amazon: Openbank + Cofidis,
+          // K-tuin: Cetelem + Aplazame, PcC: 4 providers …) and the UI
+          // shows them all. When a scraper parsed a single provider
+          // off a product page we wrap it in a length-1 array so the
+          // renderer can map without branching.
+          let financingProviders = pr.financingProvider
+            ? [pr.financingProvider]
+            : null;
+          let monthlyApr         = pr.monthlyApr;
+          let financingComputed  = false;
           if (monthlyPrice == null) {
             const fb = computeMonthlyFallback(pr.price, pr.storeId);
             if (fb) {
-              monthlyPrice      = fb.monthlyPrice;
-              monthlyMonths     = fb.monthlyMonths;
-              financingProvider = fb.financingProvider;
-              monthlyApr        = fb.monthlyApr;
-              financingComputed = true;
+              monthlyPrice       = fb.monthlyPrice;
+              monthlyMonths      = fb.monthlyMonths;
+              financingProviders = fb.financingProviders;
+              monthlyApr         = fb.monthlyApr;
+              financingComputed  = true;
+            }
+          } else {
+            // Scraper parsed the monthly directly (point-in-time correct)
+            // but only saw the one provider that the store's widget
+            // happened to display. Enrich the providers list from
+            // STORE_FINANCING_DEFAULTS when the same store advertises
+            // multiple partners at checkout for that term — the UI then
+            // shows every chip the user will actually see at the store.
+            // We match by term (months) so a 24mo scrape gets the 24mo
+            // providers list and not, say, the 3mo Klarna entry.
+            const defaults = STORE_FINANCING_DEFAULTS[pr.storeId];
+            if (defaults && monthlyMonths) {
+              const plan = defaults.find(p => p.months === monthlyMonths);
+              if (plan && plan.providers.length > (financingProviders?.length || 0)) {
+                financingProviders = plan.providers;
+              }
             }
           }
           return {
@@ -163,12 +188,13 @@ export async function GET(request) {
             updatedAt: pr.updatedAt,
             // Financing (Spain market — monthly installments). Any/all
             // may be null if the store doesn't expose financing AND no
-            // STORE_FINANCING_DEFAULTS entry applies. financingComputed
-            // = true marks the line as a synthesized estimate so the UI
-            // can show a "≈" cue and a clarifying tooltip.
+            // STORE_FINANCING_DEFAULTS entry applies.
             monthlyPrice,
             monthlyMonths,
-            financingProvider,
+            financingProviders,
+            // Single-provider field kept for any callers that haven't
+            // been migrated to the array yet — holds the first chip.
+            financingProvider: financingProviders?.[0] || null,
             monthlyApr,
             financingComputed,
           };

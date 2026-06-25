@@ -245,11 +245,14 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
             // Financing (may be null — only shown when monthlyPrice is set)
             monthlyPrice:      pr.monthlyPrice,
             monthlyMonths:     pr.monthlyMonths,
-            financingProvider: pr.financingProvider,
+            // Array of bank chips to render in the financing line.
+            // Falls back to wrapping the single-provider field for any
+            // legacy code paths that haven't started populating the
+            // array form yet (scraper rows in particular).
+            financingProviders: pr.financingProviders
+              || (pr.financingProvider ? [pr.financingProvider] : null),
             // True when monthlyPrice was synthesized from STORE_FINANCING_
-            // DEFAULTS instead of scraped per-SKU. UI shows a “≈” cue
-            // and a tooltip so the user can tell estimated terms from
-            // terms the store actually quoted on the product page.
+            // DEFAULTS instead of scraped per-SKU.
             financingComputed: pr.financingComputed,
           };
         }
@@ -1146,8 +1149,8 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                             // store didn't expose it. Provider suffix dropped
                             // when null (rare).
                             const m = pP[t.id].monthlyPrice;
-                            const months = pP[t.id].monthlyMonths;
-                            const prov   = pP[t.id].financingProvider;
+                            const months    = pP[t.id].monthlyMonths;
+                            const providers = pP[t.id].financingProviders || [];
                             const fmt    = m.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                             let label = `desde ${fmt} €/mes`;
                             if (months) label += ` ×${months}`;
@@ -1164,7 +1167,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                                 flexWrap: 'wrap',
                               }}>
                                 <span>{label}</span>
-                                {prov && <BankBadge provider={prov} />}
+                                {providers.map(prov => <BankBadge key={prov} provider={prov} />)}
                               </div>
                             );
                           })()}

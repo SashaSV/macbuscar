@@ -47,6 +47,13 @@ const BANK_STYLES = {
   'Financiera El Corte Inglés': { bg: 'rgba(29, 29, 31, 0.06)',    text: '#1d1d1f', symbol: '◆' },
   // Oney — Fnac's standing 0% partner.
   'Oney':                       { bg: 'rgba(45, 95, 155, 0.10)',   text: '#1F4B7C', symbol: '●' },
+  // Tarjeta Worten Mastercard — issued through Santander Consumer /
+  // Oney back-end. Use Worten's coral-orange brand colour so the chip
+  // reads as Worten-branded rather than just "a generic Mastercard".
+  'Tarjeta Worten':             { bg: 'rgba(247, 82, 0, 0.10)',    text: '#D44600', symbol: '◆' },
+  // Sequra — BNPL platform used by PcComponentes and many other ES
+  // retailers. Brand colour is deep teal.
+  'Sequra':                     { bg: 'rgba(0, 138, 138, 0.12)',   text: '#006666', symbol: '●' },
 };
 const NEUTRAL = { bg: 'rgba(0, 0, 0, 0.06)', text: '#1d1d1f', symbol: '●' };
 
