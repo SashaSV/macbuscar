@@ -15,10 +15,12 @@ import HistorialChart from '../ui/HistorialChart';
 import Resenas from '../ui/Resenas';
 import BankBadge from '../ui/BankBadge';
 import AppleAuthBadge from '../ui/AppleAuthBadge';
+import ListingCard from '../ui/ListingCard';
 import Dot from '../ui/Dot';
 import { TIENDAS } from '../shared/constants';
 import { getStoreBrand } from '../shared/storeBrand';
 import { colorEstado } from '../shared/utils';
+import { isStaleListing, listingAgeDays } from '../shared/listingLifecycle';
 import { useIsMobile } from '../shared/useIsMobile';
 
 const TABS = ['Precios', 'Galería', 'Características', 'Reseñas', 'Historial', '2ª mano'];
@@ -352,6 +354,12 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
   // card to its own useState so the hover state isn't lost when the IIFE
   // that renders the cards re-runs on variant change.
   const [hoveredStoreId, setHoveredStoreId] = useState(null);
+
+  // 2ª-mano zone filter on the Precios tab. Default false → only
+  // listings whose variant matches what the user is currently pricing
+  // are shown. Flip to true with the inline toggle in the zone heading
+  // to see every active listing for this product family.
+  const [showAllListings, setShowAllListings] = useState(false);
 
   // Build available options per filter dimension. We ALWAYS show the full
   // global value set for each dimension (so positions don't shift as the
@@ -1242,16 +1250,54 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                     }}
                   >
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      width: 36, height: 24, flexShrink: 0, fontSize: 18,
-                    }}>📷</span>
+                    {/* Thumbnail of the first listing photo when
+                        available. Falls back to a small camera
+                        emoji on tinted square so cards with and
+                        without photos stay the same height. */}
+                    {a.fotos?.[0] ? (
+                      <img
+                        src={a.fotos[0]}
+                        alt=""
+                        style={{
+                          width: 40, height: 40, objectFit: 'cover',
+                          borderRadius: 8,
+                          border: '1px solid rgba(245,158,11,0.25)',
+                          flexShrink: 0,
+                        }}
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 40, height: 40, flexShrink: 0, fontSize: 18,
+                        background: 'rgba(245,158,11,0.08)', borderRadius: 8,
+                        color: '#b45309',
+                      }}>📷</span>
+                    )}
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                         <span style={{
                           fontSize: 12, color: '#b45309', fontWeight: 600,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{a.vendedor || 'Particular'}</span>
+                        {/* SKU traits from the listing's variant —
+                            "256GB · Negro · 6.1\""—  so the buyer sees
+                            at a glance whether the ad matches their
+                            current Precios selection. We only show
+                            dimensions the variant actually has; an
+                            AirPods listing won't print "undefined". */}
+                        {a.variant && (() => {
+                          const v = a.variant;
+                          const parts = [v.memory, v.ram, v.cpu, v.display, v.screen, v.bandSize, v.connectivity, v.color].filter(Boolean);
+                          if (!parts.length) return null;
+                          return (
+                            <span style={{
+                              fontSize: 10, color: 'rgba(29,29,31,0.50)',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              flexShrink: 1, minWidth: 0,
+                            }}>· {parts.join(' · ')}</span>
+                          );
+                        })()}
                         {a.estado && (
                           <span style={{
                             background: colorEstado(a.estado) + '22',
@@ -1343,16 +1389,74 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         different kind of offer (not a store, not under
                         warranty), without losing the side-by-side context
                         that lets them compare against new prices. */}
-                    {prod.listings?.length > 0 && (
-                      <div style={{ marginTop: 18 }}>
-                        <div style={zoneLabelStyle}>
-                          De segunda mano · {prod.listings.length} {prod.listings.length === 1 ? 'anuncio' : 'anuncios'}
+                    {prod.listings?.length > 0 && (() => {
+                      // Listings whose variant matches what the user is
+                      // currently pricing. We compare on variantId — set
+                      // at sale time by ModalAnuncio and never null on
+                      // active listings, so this is a clean match.
+                      const matching = selectedVariant
+                        ? prod.listings.filter(l => l.variantId === selectedVariant.id)
+                        : [];
+                      const visible = showAllListings ? prod.listings : matching;
+                      const otherCount = prod.listings.length - matching.length;
+                      // Suppress the whole zone when the variant has no
+                      // matching listings AND the user hasn't opted in to
+                      // seeing every config — the alternative is an empty
+                      // zone label with nothing under it, which reads as
+                      // a broken UI.
+                      if (!visible.length && !otherCount) return null;
+                      const headingCount = visible.length;
+                      return (
+                        <div style={{ marginTop: 18 }}>
+                          <div style={{ ...zoneLabelStyle, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                            <span>
+                              De segunda mano · {headingCount} {headingCount === 1 ? 'anuncio' : 'anuncios'}
+                            </span>
+                            {/* Toggle visible only when there ARE listings
+                                for other configurations of this product —
+                                otherwise there's nothing to "expand to" and
+                                the chip would just look broken. */}
+                            {otherCount > 0 && (
+                              <button
+                                onClick={() => setShowAllListings(s => !s)}
+                                style={{
+                                  background: showAllListings ? 'rgba(245,158,11,0.20)' : 'rgba(255,255,255,0.6)',
+                                  border: `1px solid ${showAllListings ? 'rgba(245,158,11,0.5)' : 'rgba(0,0,0,0.1)'}`,
+                                  borderRadius: 980,
+                                  padding: '3px 10px',
+                                  fontSize: 9.5,
+                                  fontWeight: 600,
+                                  color: showAllListings ? '#b45309' : 'rgba(29,29,31,0.65)',
+                                  letterSpacing: 0.4,
+                                  textTransform: 'uppercase',
+                                  cursor: 'pointer',
+                                  transition: 'all .15s',
+                                }}
+                              >
+                                {showAllListings
+                                  ? `Solo mi configuración (${matching.length})`
+                                  : `Ver todos (+${otherCount})`}
+                              </button>
+                            )}
+                          </div>
+                          {visible.length > 0 ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
+                              {visible.map(renderListingCard)}
+                            </div>
+                          ) : (
+                            <div style={{
+                              fontSize: 11, color: 'rgba(29,29,31,0.45)',
+                              padding: '10px 14px',
+                              background: 'rgba(245,158,11,0.05)',
+                              border: '1px dashed rgba(245,158,11,0.25)',
+                              borderRadius: 12,
+                            }}>
+                              Sin anuncios para esta configuración. Hay {otherCount} en otras configuraciones.
+                            </div>
+                          )}
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
-                          {prod.listings.map(renderListingCard)}
-                        </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </>
                 );
               })() : (
@@ -1541,31 +1645,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   <div style={{ fontSize: 30 }}>📭</div>
                   <div style={{ marginTop: 8 }}>Sin anuncios</div>
                 </div>
-              ) : prod.listings.map(a => (
-                <div key={a.id} style={{
-                  background: 'rgba(0,0,0,0.02)',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: 12, padding: '13px 15px', marginBottom: 9,
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: '#f5a623', fontFamily: 'ui-monospace,monospace' }}>{a.precio}€</span>
-                    <span style={{ background: colorEstado(a.estado) + '22', color: colorEstado(a.estado), fontSize: 11, fontWeight: 600, padding: '2px 10px', borderRadius: 20 }}>{a.estado}</span>
-                  </div>
-                  {a.fotos?.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 8, overflowX: 'auto' }}>
-                      {a.fotos.map((src, i) => (
-                        <img key={i} src={src} alt="" style={{ width: 70, height: 70, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', flexShrink: 0 }} onError={e => e.target.style.display = 'none'} />
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 12, color: 'rgba(29,29,31,0.7)', lineHeight: 1.5, marginBottom: 7 }}>{a.descripcion}</div>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'rgba(29,29,31,0.4)' }}>
-                    <span>📍 {a.ciudad}</span>
-                    <span>👤 {a.vendedor}</span>
-                    <span>📅 {new Date(a.createdAt).toLocaleDateString('es-ES')}</span>
-                  </div>
-                </div>
-              ))}
+              ) : prod.listings.map(a => <ListingCard key={a.id} a={a} />)}
             </>
           )}
         </div>

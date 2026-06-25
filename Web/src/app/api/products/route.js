@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveCustomCover } from '@/lib/customCover';
 import { computeMonthlyFallback, STORE_FINANCING_DEFAULTS } from '@/components/shared/storeFinancing';
+import { listingHideThreshold } from '@/components/shared/listingLifecycle';
 
 const safeParse = (s, fallback) => {
   if (Array.isArray(s) || (typeof s === 'object' && s !== null)) return s;
@@ -80,7 +81,19 @@ export async function GET(request) {
               where: { date: { gte: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
               orderBy: { date: 'asc' },
             },
-            listings: { where: { active: true }, orderBy: { createdAt: 'desc' } },
+            listings: {
+              where: {
+                active: true,
+                // TTL filter: 30 days. See listingLifecycle.js for the
+                // reasoning — we don't have a personal area where the
+                // seller can mark sold / renew, so the feed auto-prunes
+                // ads older than a month rather than leaving the page
+                // cluttered with offers that are probably no longer
+                // available at the original price.
+                createdAt: { gte: listingHideThreshold() },
+              },
+              orderBy: { createdAt: 'desc' },
+            },
           },
         },
       },
@@ -221,6 +234,20 @@ export async function GET(request) {
           descripcion: l.descripcion,
           fotos: safeParse(l.fotos, []),
           createdAt: l.createdAt,
+          // Embed the variant's SKU traits so the 2ª-mano cards (both
+          // the compact Precios mini-card and the full 2ª mano card)
+          // can render the same chip set the buyer filters on, and so
+          // the Precios tab can match listings to the currently-selected
+          // variant on variantId. We pull from `v` directly because
+          // Prisma already loaded the variant as the listing's parent
+          // in this query — no extra round-trip needed.
+          variant: {
+            id: v.id, nombre: v.nombre,
+            memory: v.memory, ram: v.ram, cpu: v.cpu,
+            color: v.color, colorHex: v.colorHex,
+            display: v.display, screen: v.screen,
+            bandSize: v.bandSize, connectivity: v.connectivity,
+          },
         })),
       }));
 

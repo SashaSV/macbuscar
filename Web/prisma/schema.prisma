@@ -355,6 +355,21 @@ model Listing {
   active      Boolean  @default(true)
   views       Int      @default(0)
 
+  // ── Contact (added 2026-06-25) ───────────────────────────────────
+  // telefono is the seller's phone, captured at listing time. It is
+  // NEVER returned by the public listings/products endpoints — the UI
+  // calls POST /api/listings/[id]/phone-view to reveal it, which
+  // returns the number AND bumps phoneViews. Keeping it private at
+  // rest stops scrapers from sweeping numbers out of the public JSON
+  // and lets us track real buyer intent instead of card impressions.
+  //
+  // phoneViews counts how many distinct users have clicked "show
+  // phone". It's the conversion metric we surface on the card
+  // ("X interesados") because phone reveal == real intent to contact,
+  // whereas card impressions count idle scrolling.
+  telefono    String?
+  phoneViews  Int      @default(0)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

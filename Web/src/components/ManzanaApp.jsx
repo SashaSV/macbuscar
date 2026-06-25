@@ -282,7 +282,14 @@ export default function ManzanaApp() {
           <ModalProducto
             prod={selProd} precios={precios} scrapeStatus={scrapeStatus}
             onCerrar={() => setSelProd(null)}
-            onAnuncio={() => { setSelProd(null); setModalAnuncio(selProd.id); }}
+            // Open the listing form ON TOP of the product modal
+            // (ModalAnuncio z-index 300 > ModalProducto 200), so when
+            // the user posts a listing and we close ModalAnuncio,
+            // they land back on the product they were browsing with
+            // the new listing already injected into the 2ª mano zone.
+            // Closing ModalProducto here would dump them back on the
+            // homepage instead, losing context.
+            onAnuncio={() => setModalAnuncio(selProd.id)}
             onScrapeOne={triggerScrape}
           />
         )}

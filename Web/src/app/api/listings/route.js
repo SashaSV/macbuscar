@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { saveMultipleFiles } from '@/lib/upload';
+import { listingHideThreshold } from '@/components/shared/listingLifecycle';
 
 // In the schema, Listing is linked ONLY to ProductVariant.
 // The product is reached through variant -> product.
@@ -24,6 +25,10 @@ export async function GET(request) {
     const listings = await prisma.listing.findMany({
       where: {
         active: true,
+        // TTL filter: 30 days — see listingLifecycle.js. Without a
+        // personal area where the seller can mark sold / renew, we
+        // auto-prune ads older than a month so the feed stays useful.
+        createdAt: { gte: listingHideThreshold() },
         // filter by product through the variant relation
         ...(productId ? { variant: { productId: parseInt(productId) } } : {}),
       },
@@ -32,7 +37,7 @@ export async function GET(request) {
     });
 
     return NextResponse.json(
-      listings.map(l => ({
+      listings.map(({ telefono, ...l }) => ({
         ...l,
         fotos: JSON.parse(l.fotos),
         // expose product at top level for backwards compatibility with the UI
@@ -56,6 +61,12 @@ export async function POST(request) {
     const ciudad    = formData.get('ciudad');
     const vendedor  = formData.get('vendedor');
     const descripcion = formData.get('descripcion') || '';
+    // Optional phone. We strip whitespace but otherwise store as-is
+    // (no validation/normalisation): sellers in Spain post numbers in
+    // wildly different formats and an over-eager validator would just
+    // reject legitimate listings. Empty -> stored as NULL.
+    const telefonoRaw = formData.get('telefono');
+    const telefono = telefonoRaw ? String(telefonoRaw).trim() : null;
 
     // variantId is required — Listing is tied to a specific SKU (variant)
     if (!variantId || !precio || !estado || !ciudad || !vendedor) {
@@ -94,13 +105,20 @@ export async function POST(request) {
         ciudad,
         vendedor,
         descripcion,
+        telefono: telefono || null,
         fotos: JSON.stringify(allFotos),
       },
       include: VARIANT_INCLUDE,
     });
 
+    // Strip telefono from the response so the seller's own POST
+    // response doesn't leak the number into any logs or analytics
+    // tooling that snapshots API payloads. The seller knows what they
+    // typed; nobody else needs to see it in plain JSON.
+    const { telefono: _drop, ...safeListing } = listing;
+
     return NextResponse.json(
-      { ...listing, fotos: allFotos, product: listing.variant?.product || null },
+      { ...safeListing, fotos: allFotos, product: safeListing.variant?.product || null },
       { status: 201 }
     );
   } catch (err) {
