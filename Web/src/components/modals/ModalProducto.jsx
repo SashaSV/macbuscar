@@ -1214,6 +1214,70 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       </a>
                     );
                 };
+                // Compact card for a 2ª-mano listing. Same three-zone
+                // layout as the retailer card (logo, info stack, price)
+                // but tinted in the amber palette the 2ª mano tab uses,
+                // and clicking the card jumps to that tab so the user
+                // can see the full ad (photos, full description, etc).
+                const renderListingCard = (a) => (
+                  <a
+                    key={`listing-${a.id}`}
+                    href="#2da-mano"
+                    onClick={(e) => { e.preventDefault(); setTab('2ª mano'); }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(245,158,11,0.18)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                      background: 'rgba(245,158,11,0.06)',
+                      border: '1px dashed rgba(245,158,11,0.35)',
+                      borderRadius: 12,
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                    }}
+                  >
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 36, height: 24, flexShrink: 0, fontSize: 18,
+                    }}>📷</span>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span style={{
+                          fontSize: 12, color: '#b45309', fontWeight: 600,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{a.vendedor || 'Particular'}</span>
+                        {a.estado && (
+                          <span style={{
+                            background: colorEstado(a.estado) + '22',
+                            color: colorEstado(a.estado),
+                            fontSize: 9, fontWeight: 700,
+                            padding: '1px 7px', borderRadius: 12,
+                            textTransform: 'uppercase', letterSpacing: 0.3,
+                            flexShrink: 0,
+                          }}>{a.estado}</span>
+                        )}
+                      </div>
+                      <div style={{
+                        fontSize: 10, color: 'rgba(29,29,31,0.45)',
+                        display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                      }}>
+                        {a.ciudad && <span>📍 {a.ciudad}</span>}
+                        <span>{new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 20, fontWeight: 700, color: '#f5a623',
+                      fontFamily: 'ui-monospace,monospace', fontVariantNumeric: 'tabular-nums',
+                      letterSpacing: '-0.5px', flexShrink: 0,
+                    }}>{Math.round(a.precio).toLocaleString('es-ES')} €</span>
+                  </a>
+                );
                 // Apple = the anchor; everyone else sorts cheapest-first.
                 // Pre-filter to "has a price" so the visual position is
                 // dictated by actual price, not by the order TIENDAS
@@ -1268,6 +1332,24 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                           {others.map(renderStoreCard)}
+                        </div>
+                      </div>
+                    )}
+                    {/* ZONE 3 — "De segunda mano". Compact cards for any
+                        Listing rows attached to this Product. Click jumps
+                        to the 2ª mano tab for the full ad detail. Dashed
+                        amber border separates this peer-to-peer zone from
+                        the retailer zones above so the user reads it as a
+                        different kind of offer (not a store, not under
+                        warranty), without losing the side-by-side context
+                        that lets them compare against new prices. */}
+                    {prod.listings?.length > 0 && (
+                      <div style={{ marginTop: 18 }}>
+                        <div style={zoneLabelStyle}>
+                          De segunda mano · {prod.listings.length} {prod.listings.length === 1 ? 'anuncio' : 'anuncios'}
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
+                          {prod.listings.map(renderListingCard)}
                         </div>
                       </div>
                     )}
