@@ -205,10 +205,62 @@ Keeps the site's prices fresh without re-running the full match logic.
       IPs at the network layer. Awin MID 13075 approved 2026-06-24.
       See `SCRAPERS.md` → El Corte Inglés for slug-injection +
       labelled-price quirks.
-- [ ] **Fnac** retry with `undetected-chromedriver`
-      - File `Scraper/stores/fnac.py` exists, blocked by DataDome
-      - `pip install undetected-chromedriver`, rewrite `make_driver()`
-      - All other logic is ready — only the driver layer changes
+- [x] **Fnac** retry with `undetected-chromedriver` (session 2026-06-26)
+      — 114/345 baseline; **AirPods 8/8** (best coverage of any store,
+      includes all 5 Max 2 colours where ECI only stocks 1).
+      `_detect_chrome_major()` reads the Chrome major off the
+      Windows registry / `--version` to pin uc's chromedriver and
+      survive mid-channel upgrades. DOM selectors `.Article-item /
+      .Article-title / .Article-price`; JSON-LD absent on search
+      results. airpods-pro regex relaxed to handle Fnac's
+      `'AirPods Pro (3.ª generación)'` parenthesised form.
+      Parked off VPS rotation — DataDome still serves short-stub
+      interstitial to IONOS datacenter IP even with uc on. Local
+      Task Scheduler `macbuscar-fnac` runs at 04:30 (30 min after
+      ECI's 04:00) and feeds the same Neon DB.
+- [ ] **Rossellimac** (Apple Premium Reseller) — **fastest win** of the
+      bunch. Store row already in the DB with `appleAuthLevel='premium'`
+      and the logo file ships in `Web/public/logo/rossellimac.png`. Only
+      the scraper is missing.
+      - `rossellimac.es`, Akamai-fronted but in the same tier that
+        PcComponentes happens to flip on, so VPS should run it cleanly
+      - 1-2 h: clone the PcC pattern (also Premium Reseller, similar
+        Apple-focused PDP shape with `[itemprop="price"]` exposed)
+      - Coverage projection: ~K-tuin level (~80%) since both are pure
+        Apple specialists with full catalog
+
+- [ ] **Backmarket** (Refurbished) — **new pricing axis**, highest
+      conversion impact of any new store because refurbished pricing
+      typically lands -30..-40% from MSRP and Spanish buyers actively
+      search for it.
+      - `backmarket.es`, Awin affiliate programme (apply alongside the
+        existing Awin MIDs)
+      - Different data shape from new-only stores: condition matters
+        (Excelente / Muy bueno / Correcto), warranty length 12-24 mo,
+        per-seller pricing variability
+      - Schema impact: existing `Price.condition` field covers grade,
+        may want `Price.warrantyMonths` or fold into JSON techs
+      - 3-4 h scraper + ~1 h UI work to surface refurbished prices
+        alongside (not mixed with) new — dashed amber border like the
+        2ª-mano zone keeps the comparison honest
+
+- [ ] **Goldenmac** (Apple Premium Reseller) — large physical-store
+      chain across Spain with online catalogue.
+      - `goldenmac.es`, Premium Reseller status (verify via Apple's
+        reseller-locator API before assigning the badge)
+      - 2-3 h: standard reseller PDP pattern, expect Apple-focused
+        coverage similar to K-tuin / Rossellimac
+      - Brand differentiator: physical stores in major cities, so
+        "recoger en tienda" cue could surface in the card later
+
+- [ ] **MacNificos** (Apple Authorized Reseller) — smaller than
+      Goldenmac but still nationally relevant; rounds out the
+      authorised-reseller tier.
+      - `macnificos.com`, Authorized (not Premium) per Apple's locator
+      - 2-3 h, same template as Goldenmac
+      - Lower priority than the three above; tackle once the others
+        are in nightly rotation and stable
+
 - [ ] **Lollypop (used / refurbished items)** — populates the "2ª mano" tab
       that already exists in `ModalProducto.jsx`. Different data shape than
       new-only stores:
