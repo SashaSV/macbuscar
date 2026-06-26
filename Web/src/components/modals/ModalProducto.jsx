@@ -1298,6 +1298,24 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                             }}>· {parts.join(' · ')}</span>
                           );
                         })()}
+                        {/* Stale-listing warning (21+ days old). Same
+                            threshold as the full 2ª-mano card, so the
+                            buyer gets a consistent cue whether they
+                            spotted the ad on Precios or in the dedicated
+                            tab. */}
+                        {isStaleListing(a.createdAt) && (
+                          <span
+                            title={`Publicado hace ${listingAgeDays(a.createdAt)} días. Verifica disponibilidad con el vendedor.`}
+                            style={{
+                              background: 'rgba(245,158,11,0.20)',
+                              color: '#b45309',
+                              fontSize: 9, fontWeight: 700,
+                              padding: '1px 7px', borderRadius: 12,
+                              textTransform: 'uppercase', letterSpacing: 0.3,
+                              flexShrink: 0, cursor: 'help',
+                            }}
+                          >⚠ Antiguo</span>
+                        )}
                         {a.estado && (
                           <span style={{
                             background: colorEstado(a.estado) + '22',
