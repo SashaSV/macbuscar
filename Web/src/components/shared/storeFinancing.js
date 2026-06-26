@@ -75,11 +75,16 @@ export const STORE_FINANCING_DEFAULTS = {
   //   * Oney Fácil Pay — 3/4/6 cuotas via any card, min 90 €, cap 2500 €
   //   * Tarjeta Worten Mastercard — 3 mo standard 0% (longer during
   //     promos); issued through Santander Consumer / Oney back-end
-  // We surface the longest tier the price clears (6mo via Oney +
-  // Tarjeta Worten) above 90 €, and the 3mo Klarna+Oney+Tarjeta combo
-  // for smaller carts.
+  //
+  // All three chips render at every tier even though their individual
+  // term ceilings differ — same pattern PcComponentes uses, and it
+  // matches what the seller's checkout actually shows ("financia con
+  // Klarna / Oney / Tarjeta Worten" appears as a unified row). The
+  // displayed term reflects the longest plan that applies to the
+  // price; the chips identify the available providers for the buyer
+  // to choose from at checkout.
   worten: [
-    { providers: ['Oney', 'Tarjeta Worten'], months: 6, minAmount: 90 },
+    { providers: ['Oney', 'Tarjeta Worten', 'Klarna'], months: 6, minAmount: 90 },
     { providers: ['Klarna', 'Oney', 'Tarjeta Worten'], months: 3, minAmount: 35 },
   ],
 

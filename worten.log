@@ -3412,3 +3412,455 @@ from disconnec
      iphone     48
      mac        16
      watch      28
+
+🟢 Worten scraper (worten)
+   Loaded 21 Products from DB
+
+[1/21] iPhone 17                       (iphone, 10 variants)
+   🔎 "iPhone 17"  (10 variants)  →  https://www.worten.es/search?query=iPhone+17+Apple
+      📋 43 candidate results
+         ✅ [  34] 6.3" · 256GB · Azul Neblina            → iPhone 17 APPLE (6.3'' - 256 GB - Azul neblina)         | 868.90€ | s=100 | 8600280
+         ✅ [  35] 6.3" · 256GB · Lavanda                 → iPhone 17 APPLE (6.3'' - 256 GB - Lavanda)              | 861.99€ | s=100 | 8600331
+         ✅ [  36] 6.3" · 256GB · Negro                   → iPhone 17 APPLE (6.3'' - 256 GB - Negro)                | 861.99€ | s=100 | 8600278
+         ✅ [  37] 6.3" · 256GB · Blanco                  → iPhone 17 APPLE (6.3'' - 256 GB - Blanco)               | 854.52€ | s=100 | 8600279
+         ✅ [  38] 6.3" · 512GB · Blanco                  → iPhone 17 APPLE (6.3'' - 512 GB - Blanco)               | 1203.39€ | s=100 | 8600334
+         ✅ [  39] 6.3" · 512GB · Negro                   → iPhone 17 APPLE (6.3'' - 512 GB - Negro)                | 1203.39€ | s=100 | 8600333
+         ✅ [  40] 6.3" · 256GB · Verde Salvia            → iPhone 17 APPLE (6.3'' - 256 GB - Verde salvia)         | 949.14€ | s=100 | 8600332
+         ✅ [  41] 6.3" · 512GB · Lavanda                 → iPhone 17 APPLE (6.3'' - 512 GB - Lavanda)              | 1199.98€ | s=100 | 8600337
+         ✅ [  42] 6.3" · 512GB · Verde Salvia            → iPhone 17 APPLE (6.3'' - 512 GB - Verde salvia)         | 1344.35€ | s=100 | 8600339
+         ✅ [  43] 6.3" · 512GB · Azul Neblina            → iPhone 17 APPLE (6.3'' - 512 GB - Azul neblina)         | 1203.39€ | s=100 | 8600336
+
+[2/21] Mac Studio                      (mac, 2 variants)
+   🔎 "Mac Studio"  (2 variants)  →  https://www.worten.es/search?query=Mac+Studio+Apple
+      📋 36 candidate results
+         ✅ [ 149] M3 Ultra · 28-core CPU · 60-core GPU · → Mac Studio APPLE Plata (13.6'' - Apple M3 Ultra 28-Core | 4849.00€ | s=100 | 8388517
+         ✅ [ 150] M4 Max · 14-core CPU · 32-core GPU · 3 → Mac Studio APPLE Pata(Apple M4 Max 14-Core - RAM: 36 GB | 2329.00€ | s=100 | 8388543
+
+[3/21] AirPods 4                       (airpods, 2 variants)
+   🔎 "AirPods"  (2 variants)  →  https://www.worten.es/search?query=AirPods+Apple
+      📋 28 candidate results
+         ✅ [ 341] Sin Cancelación Activa Ruido           → Airpods 4 APPLE (In Ear - Micrófono - Active Noise Canc | 199.99€ | s=50 | 8155132
+         ⚠️  [ 342] Cancelación Activa Ruido — no match
+
+[4/21] iPad mini                       (ipad, 24 variants)
+   🔎 "iPad mini"  (24 variants)  →  https://www.worten.es/search?query=iPad+mini+Apple
+      📋 22 candidate results
+         ✅ [ 299] 512GB · Gris Espacial · Wi-Fi + Cellul → iPad Mini APPLE 2024 (8.3'' - 512 GB - Wi-Fi + Cellular | 1211.99€ | s=115 | 8183004
+         ✅ [ 300] 128GB · Gris Espacial · Wi-Fi + Cellul → iPad Mini APPLE 2024 (8.3'' - 128 GB - Wi-Fi + Cellular | 793.44€ | s=115 | 8182990
+         ✅ [ 301] 256GB · Gris Espacial · Wi-Fi + Cellul → iPad Mini APPLE 2024 (8.3'' - 256 GB - Wi-Fi + Cellular | 762.68€ | s=115 | 8182995
+         ✅ [ 302] 512GB · Blanco Estrella · Wi-Fi + Cell → iPad Mini APPLE 2024 (8.3'' - 512 GB - Wi-Fi + Cellular | 1150.00€ | s=115 | 8183006
+         ✅ [ 303] 128GB · Blanco Estrella · Wi-Fi + Cell → iPad Mini APPLE 2024 (8.3'' - 128 GB - Wi-Fi + Cellular | 792.55€ | s=115 | 8182992
+         ✅ [ 304] 256GB · Blanco Estrella · Wi-Fi + Cell → iPad Mini APPLE 2024 (8.3'' - 256 GB - Wi-Fi + Cellular | 936.62€ | s=115 | 8182997
+         ✅ [ 306] 128GB · Azul · Wi-Fi + Cellular        → iPad Mini APPLE 2024 (8.3'' - 128 GB - Wi-Fi + Cellular | 780.64€ | s=115 | 8182991
+         ✅ [ 307] 256GB · Azul · Wi-Fi + Cellular        → iPad Mini APPLE 2024 (8.3'' - 256 GB - Wi-Fi + Cellular | 920.99€ | s=115 | 8182996
+         ✅ [ 263] 128GB · Azul                           → iPad Mini APPLE 2024 (8.3'' - 128 GB - Wi-Fi - Azul)    | 535.16€ | s=100 | 8182981
+         ✅ [ 264] 256GB · Azul                           → iPad Mini APPLE 2024 (8.3'' - 256 GB - Wi-Fi - Azul)    | 609.77€ | s=100 | 8182987
+         ✅ [ 265] 512GB · Azul                           → iPad Mini APPLE 2024 (8.3'' - 512 GB - Wi-Fi - Azul)    | 1018.89€ | s=100 | 8183000
+         ✅ [ 290] 128GB · Blanco Estrella                → iPad Mini APPLE 2024 (8.3'' - A17 Pro - 128 GB - Wi-Fi  | 786.86€ | s=100 | 8182983
+         ✅ [ 291] 256GB · Blanco Estrella                → iPad Mini APPLE 2024 (8.3'' - 256 GB - Wi-Fi - Blanco E | 710.65€ | s=100 | 8182988
+         ✅ [ 292] 512GB · Blanco Estrella                → iPad Mini APPLE 2024 (8.3'' - 512 GB - Wi-Fi - Blanco E | 1213.52€ | s=100 | 8183001
+         ✅ [ 293] 512GB · Gris Espacial                  → iPad Mini APPLE 2024 (8.3'' - 512 GB - Wi-Fi - Gris Esp | 975.46€ | s=100 | 8182999
+         ✅ [ 294] 128GB · Gris Espacial                  → iPad Mini APPLE 2024 (8.3'' - A17 Pro - 128 GB - Wi-Fi  | 535.16€ | s=100 | 8182980
+         ✅ [ 295] 256GB · Gris Espacial                  → iPad Mini APPLE 2024 (8.3'' - A17 Pro - 256 GB - Wi-Fi  | 710.65€ | s=100 | 8182986
+         ⤵  [ 305] 512GB · Azul · Wi-Fi + Cellular — lost dedup (SKU 8183000 claimed by higher-scoring variant)
+         ⚠️  [ 287] 128GB · Púrpura — no match
+         ⚠️  [ 288] 256GB · Púrpura — no match
+         ⚠️  [ 289] 512GB · Púrpura — no match
+         ⚠️  [ 296] 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 297] 128GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 298] 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 305] 512GB · Azul · Wi-Fi + Cellular — no match
+
+[5/21] iPhone 17e                      (iphone, 6 variants)
+   🔎 "iPhone 17e"  (6 variants)  →  https://www.worten.es/search?query=iPhone+17e+Apple
+      📋 25 candidate results
+         ✅ [  44] 6.1" · 512GB · Negro                   →  iPhone 17e APPLE (6.1'' - 512 GB - Negro)              | 1062.70€ | s=100 | 8782297
+         ✅ [  45] 6.1" · 256GB · Blanco                  →  iPhone 17e APPLE (6.1'' - 256 GB - Blanco)             | 690.19€ | s=100 | 8782295
+         ✅ [  46] 6.1" · 256GB · Rosa Palo               →  iPhone 17e APPLE (6.1'' - 256 GB - Rosa Palo)          | 705.00€ | s=100 | 8782296
+         ✅ [  47] 6.1" · 512GB · Rosa Palo               →  iPhone 17e APPLE (6.1'' - 512 GB - Rosa Palo)          | 1030.26€ | s=100 | 8782919
+         ✅ [  48] 6.1" · 256GB · Negro                   →  iPhone 17e APPLE (6.1'' - 256 GB - Negro)              | 718.24€ | s=100 | 8782294
+         ✅ [  49] 6.1" · 512GB · Blanco                  →  iPhone 17e APPLE (6.1'' - 512 GB - Blanco)             | 1062.70€ | s=100 | 8782918
+
+[6/21] iPad                            (ipad, 21 variants)
+   🔎 "iPad"  (21 variants)  →  https://www.worten.es/search?query=iPad+Apple
+      📋 48 candidate results
+         ✅ [ 275] 128GB · Amarillo · Wi-Fi + Cellular    → iPad APPLE (11'' - A16 - 128 GB - Wi -Fi + Cellular - A | 605.00€ | s=115 | 8388035
+         ✅ [ 278] 128GB · Azul · Wi-Fi + Cellular        → iPad APPLE (11'' - A16 - 128 GB - Wi -Fi + Cellular - A | 535.04€ | s=115 | 8388034
+         ✅ [ 279] 256GB · Azul · Wi-Fi + Cellular        →  iPad APPLE Air (13'' - 256 GB - Wi-Fi + Cellular - Azu | 1229.37€ | s=115 | 8783005
+         ✅ [ 280] 512GB · Azul · Wi-Fi + Cellular        →  iPad APPLE Air (13'' - 512 GB - Wi-Fi + Cellular - Azu | 1339.35€ | s=115 | 8783009
+         ✅ [ 282] 256GB · Rosa · Wi-Fi + Cellular        → iPad APPLE (11'' - 256 GB - Wi -Fi + Cellular - Rosa)   | 761.89€ | s=115 | 8388040
+         ✅ [ 285] 256GB · Plata · Wi-Fi + Cellular       → iPad APPLE (11'' - A16 - 256 GB - Wi -Fi + Cellular - P | 663.00€ | s=115 | 8388037
+         ✅ [ 266] 128GB · Plata                          → iPad APPLE (11'' - A16 - 128 GB - Wi-Fi - Plata)        | 345.00€ | s=100 | 8387693
+         ✅ [ 269] 128GB · Rosa                           → iPad APPLE (11'' - A16 - 128 GB - Wi-Fi - Rosa)         | 345.00€ | s=100 | 8388024
+         ✅ [ 272] 128GB · Amarillo                       → iPad APPLE (11'' - A16 - 128 GB - Wi-Fi - Amarillo)     | 345.00€ | s=100 | 8388023
+         ⤵  [ 267] 256GB · Plata — lost dedup (SKU 8388037 claimed by higher-scoring variant)
+         ⤵  [ 270] 256GB · Rosa — lost dedup (SKU 8388040 claimed by higher-scoring variant)
+         ⤵  [ 281] 128GB · Rosa · Wi-Fi + Cellular — lost dedup (SKU 8388024 claimed by higher-scoring variant)
+         ⤵  [ 284] 128GB · Plata · Wi-Fi + Cellular — lost dedup (SKU 8387693 claimed by higher-scoring variant)
+         ⚠️  [ 268] 512GB · Plata — no match
+         ⚠️  [ 271] 512GB · Rosa — no match
+         ⚠️  [ 273] 256GB · Amarillo — no match
+         ⚠️  [ 274] 512GB · Amarillo — no match
+         ⚠️  [ 276] 256GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 277] 512GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 283] 512GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 286] 512GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 267] 256GB · Plata — no match
+         ⚠️  [ 270] 256GB · Rosa — no match
+         ⚠️  [ 281] 128GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 284] 128GB · Plata · Wi-Fi + Cellular — no match
+
+[7/21] iMac                            (mac, 19 variants)
+   🔎 "iMac"  (19 variants)  →  https://www.worten.es/search?query=iMac+Apple
+      📋 22 candidate results
+         ✅ [ 132] 24" · M4 · 8-core CPU · 8-core GPU · 1 → iMac APPLE Rosa (24'' - Apple M4 10-Core - RAM: 16 GB - | 1851.38€ | s=130 | 8198131
+         ⤵  [ 139] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Ro — lost dedup (SKU 8198131 claimed by higher-scoring variant)
+         ⚠️  [ 127] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — no match
+         ⚠️  [ 128] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Bl — no match
+         ⚠️  [ 129] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Si — no match
+         ⚠️  [ 130] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Silv — no match
+         ⚠️  [ 131] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Ve — no match
+         ⚠️  [ 133] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Si — no match
+         ⚠️  [ 134] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Blue — no match
+         ⚠️  [ 135] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Na — no match
+         ⚠️  [ 136] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Ro — no match
+         ⚠️  [ 137] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Si — no match
+         ⚠️  [ 138] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Ve — no match
+         ⚠️  [ 140] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Verd — no match
+         ⚠️  [ 141] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Ve — no match
+         ⚠️  [ 142] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Ro — no match
+         ⚠️  [ 143] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Na — no match
+         ⚠️  [ 144] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Si — no match
+         ⚠️  [ 145] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Bl — no match
+         ⚠️  [ 139] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Ro — no match
+
+[8/21] Mac mini                        (mac, 3 variants)
+   🔎 "Mac mini"  (3 variants)  →  https://www.worten.es/search?query=Mac+mini+Apple
+      📋 2 candidate results
+         ✅ [ 147] M4 · 10-core CPU · 10-core GPU · 16GB  → Mac mini APPLE (Apple M4 12-Core - RAM: 24 GB - 512 GB  | 3459.82€ | s=100 | 8197854
+         ⤵  [ 148] M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB — lost dedup (SKU 8197854 claimed by higher-scoring variant)
+         ⚠️  [ 146] M4 Pro · 12-core CPU · 16-core GPU · 24GB RAM · 512GB — no match
+         ⚠️  [ 148] M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB — no match
+
+[9/21] iPad Pro                        (ipad, 48 variants)
+   🔎 "iPad Pro 11"  (24 variants)  →  https://www.worten.es/search?query=iPad+Pro+11+Apple
+      📋 0 candidate results
+   🔎 "iPad Pro 13"  (24 variants)  →  https://www.worten.es/search?query=iPad+Pro+13+Apple
+      📋 22 candidate results
+         ✅ [ 187] 13" · 1TB · Negro Espacial · Nano-text →  iPad Pro APPLE (13'' - 1 TB - Wi-Fi + Cellular - Negro | 2928.88€ | s=115 | 8631930
+         ✅ [ 189] 13" · 1TB · Plata · Nano-texture · Wi- → iPad Pro APPLE (13'' - 1 TB - Wi-Fi + Cellular - Plata  | 2508.95€ | s=115 | 8048632
+         ✅ [ 190] 13" · 2TB · Plata · Nano-texture · Wi- → iPad Pro APPLE (13'' - 2 TB - Wi-Fi + Cellular - Plata  | 2912.37€ | s=115 | 8048634
+         ✅ [ 191] 13" · 512GB · Negro Espacial · Wi-Fi + →  iPad Pro APPLE (13'' - 512 GB - Wi-Fi + Cellular - Neg | 2374.77€ | s=115 | 8631928
+         ✅ [ 192] 13" · 256GB · Negro Espacial · Wi-Fi + → iPad Pro APPLE (13'' - 256 GB - Wi-Fi + Cellular - Negr | 1867.53€ | s=115 | 8631926
+         ⤵  [ 193] 13" · 1TB · Negro Espacial · Wi-Fi + Cellular — lost dedup (SKU 8631930 claimed by higher-scoring variant)
+         ✅ [ 195] 13" · 256GB · Plata · Wi-Fi + Cellular →  iPad Pro APPLE (13'' - 256 GB - Wi-Fi + Cellular - Pla | 2166.37€ | s=115 | 8631927
+         ✅ [ 196] 13" · 512GB · Plata · Wi-Fi + Cellular → iPad Pro APPLE (13'' - 512 GB - Wi-Fi + Cellular - Plat | 1994.38€ | s=115 | 8048630
+         ⤵  [ 197] 13" · 1TB · Plata · Wi-Fi + Cellular — lost dedup (SKU 8048632 claimed by higher-scoring variant)
+         ⤵  [ 198] 13" · 2TB · Plata · Wi-Fi + Cellular — lost dedup (SKU 8048634 claimed by higher-scoring variant)
+         ✅ [ 175] 13" · 1TB · Plata · Nano-texture       →  iPad Pro APPLE (13'' - 1 TB - Wi-Fi - Plata - Vidrio E | 2279.78€ | s=100 | 8631907
+         ✅ [ 176] 13" · 2TB · Plata · Nano-texture       → iPad Pro APPLE (13'' - 2 TB - Wi-Fi - Plata -Vidrio Est | 3779.90€ | s=100 | MRKEAN-0195949247361
+         ✅ [ 177] 13" · 1TB · Negro Espacial · Nano-text →  iPad Pro APPLE (13'' - 1 TB - Wi-Fi - Negro Espacial - | 3005.30€ | s=100 | 8631908
+         ✅ [ 178] 13" · 2TB · Negro Espacial · Nano-text →  iPad Pro APPLE (13'' - 2 TB - Wi-Fi - Negro Espacial - | 3343.75€ | s=100 | 8631910
+         ✅ [ 179] 13" · 256GB · Plata                    → iPad Pro APPLE (13'' - M5 - 256 GB - Wi-Fi - Plata - Vi | 1386.93€ | s=100 | 8631903
+         ✅ [ 180] 13" · 512GB · Plata                    →  iPad Pro APPLE (13'' - M5 - 512 GB - Wi-Fi - Plata - V | 1625.42€ | s=100 | 8631905
+         ⤵  [ 181] 13" · 1TB · Plata — lost dedup (SKU 8631907 claimed by higher-scoring variant)
+         ⤵  [ 182] 13" · 2TB · Plata — lost dedup (SKU MRKEAN-0195949247361 claimed by higher-scoring variant)
+         ✅ [ 183] 13" · 256GB · Negro Espacial           → iPad Pro APPLE (13'' - M5 - 256 GB - Wi-Fi - Negro Espa | 1549.48€ | s=100 | 8631902
+         ⤵  [ 184] 13" · 1TB · Negro Espacial — lost dedup (SKU 8631908 claimed by higher-scoring variant)
+         ✅ [ 185] 13" · 512GB · Negro Espacial           → iPad Pro APPLE (13'' - M5 - 512 GB - Wi-Fi - Negro Espa | 1623.37€ | s=100 | 8631904
+         ⤵  [ 186] 13" · 2TB · Negro Espacial — lost dedup (SKU 8631910 claimed by higher-scoring variant)
+         ⤵  [ 188] 13" · 2TB · Negro Espacial · Nano-texture · Wi-Fi + Cellular — lost dedup (SKU 8631910 claimed by higher-scoring variant)
+         ⤵  [ 194] 13" · 2TB · Negro Espacial · Wi-Fi + Cellular — lost dedup (SKU 8631910 claimed by higher-scoring variant)
+         ⚠️  [ 193] 13" · 1TB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 197] 13" · 1TB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 198] 13" · 2TB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 181] 13" · 1TB · Plata — no match
+         ⚠️  [ 182] 13" · 2TB · Plata — no match
+         ⚠️  [ 184] 13" · 1TB · Negro Espacial — no match
+         ⚠️  [ 186] 13" · 2TB · Negro Espacial — no match
+         ⚠️  [ 188] 13" · 2TB · Negro Espacial · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 194] 13" · 2TB · Negro Espacial · Wi-Fi + Cellular — no match
+
+[10/21] MacBook Neo                     (mac, 8 variants)
+   🔎 "MacBook Neo"  (8 variants)  →  https://www.worten.es/search?query=MacBook+Neo+Apple
+      📋 8 candidate results
+         ✅ [ 119] 512GB · Índigo                         →  MacBook Neo APPLE Índigo (13'' - Apple A18 Pro 6-Core  | 813.36€ | s=100 | 8785488
+         ✅ [ 120] 512GB · Rosa Nube                      →  MacBook Neo APPLE Rosa nube (13'' - Apple A18 Pro 6-Co | 813.36€ | s=100 | 8785490
+         ✅ [ 121] 256GB · Rosa Nube                      →  MacBook Neo APPLE Rosa nube (13'' - Apple A18 Pro 6-Co | 732.10€ | s=100 | 8785489
+         ✅ [ 123] 256GB · Cítrico                        →  MacBook Neo APPLE Cítrico (13'' - Apple A18 Pro 6-Core | 711.32€ | s=100 | 8785485
+         ✅ [ 124] 512GB · Cítrico                        →  MacBook Neo APPLE Cítrico (13'' - Apple A18 Pro 6-Core | 813.36€ | s=100 | 8785486
+         ✅ [ 126] 256GB · Índigo                         →  MacBook Neo APPLE Índigo (13'' - Apple A18 Pro 6-Core  | 649.00€ | s=100 | 8785487
+         ⚠️  [ 122] 512GB · Silver — no match
+         ⚠️  [ 125] 256GB · Silver — no match
+
+[11/21] iPad Air                        (ipad, 64 variants)
+   🔎 "iPad Air 11"  (32 variants)  →  https://www.worten.es/search?query=iPad+Air+11+Apple
+      📋 14 candidate results
+         ✅ [ 216] 11" · 1TB · Azul · Wi-Fi + Cellular    → iPad Air APPLE (11'' - 1 TB - Wi-Fi + Cellular - Azul)  | 1586.47€ | s=115 | 8048568
+         ✅ [ 218] 11" · 256GB · Azul · Wi-Fi + Cellular  → iPad Air APPLE (11'' - 256 GB - Wi -Fi + Cellular - Azu | 829.51€ | s=115 | 8388066
+         ✅ [ 220] 11" · 128GB · Gris Espacial · Wi-Fi +  → iPad Air APPLE (11'' - 128 GB - Wi-Fi + Cellular - Gris | 909.31€ | s=115 | 8048555
+         ✅ [ 226] 11" · 256GB · Blanco Estrella · Wi-Fi  → iPad Air APPLE (11'' - 256 GB - Wi-Fi + Cellular - Blan | 841.39€ | s=115 | 8388067
+         ✅ [ 228] 11" · 1TB · Púrpura · Wi-Fi + Cellular → iPad Air APPLE (11'' - 1 TB - Wi-Fi + Cellular - Púrpur | 1586.47€ | s=115 | 8048570
+         ✅ [ 229] 11" · 128GB · Púrpura · Wi-Fi + Cellul → iPad Air APPLE (11'' - 128 GB - Wi -Fi + Cellular - Púr | 625.60€ | s=115 | 8388064
+         ✅ [ 201] 11" · 128GB · Gris Espacial            → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Gris Espacial)  | 525.35€ | s=100 | 8388045
+         ✅ [ 205] 11" · 128GB · Blanco Estrella          → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Blanco Estrella | 509.93€ | s=100 | 8388047
+         ✅ [ 209] 11" · 128GB · Púrpura                  → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Púrpura)        | 523.61€ | s=100 | 8388048
+         ✅ [ 213] 11" · 128GB · Azul                     → iPad Air APPLE (11'' - 128 GB - Wi-Fi - Azul)           | 509.93€ | s=100 | 8388046
+         ⤵  [ 206] 11" · 256GB · Blanco Estrella — lost dedup (SKU 8388067 claimed by higher-scoring variant)
+         ⤵  [ 208] 11" · 1TB · Púrpura — lost dedup (SKU 8048570 claimed by higher-scoring variant)
+         ⤵  [ 212] 11" · 1TB · Azul — lost dedup (SKU 8048568 claimed by higher-scoring variant)
+         ⤵  [ 214] 11" · 256GB · Azul — lost dedup (SKU 8388066 claimed by higher-scoring variant)
+         ⤵  [ 217] 11" · 128GB · Azul · Wi-Fi + Cellular — lost dedup (SKU 8388046 claimed by higher-scoring variant)
+         ⤵  [ 225] 11" · 128GB · Blanco Estrella · Wi-Fi + Cellular — lost dedup (SKU 8388047 claimed by higher-scoring variant)
+         ⚠️  [ 199] 11" · 512GB · Gris Espacial — no match
+         ⚠️  [ 200] 11" · 1TB · Gris Espacial — no match
+         ⚠️  [ 202] 11" · 256GB · Gris Espacial — no match
+         ⚠️  [ 203] 11" · 512GB · Blanco Estrella — no match
+         ⚠️  [ 204] 11" · 1TB · Blanco Estrella — no match
+         ⚠️  [ 207] 11" · 512GB · Púrpura — no match
+         ⚠️  [ 210] 11" · 256GB · Púrpura — no match
+         ⚠️  [ 211] 11" · 512GB · Azul — no match
+         ⚠️  [ 215] 11" · 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 219] 11" · 1TB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 221] 11" · 256GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 222] 11" · 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 223] 11" · 512GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 224] 11" · 1TB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 227] 11" · 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 230] 11" · 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 206] 11" · 256GB · Blanco Estrella — no match
+         ⚠️  [ 208] 11" · 1TB · Púrpura — no match
+         ⚠️  [ 212] 11" · 1TB · Azul — no match
+         ⚠️  [ 214] 11" · 256GB · Azul — no match
+         ⚠️  [ 217] 11" · 128GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 225] 11" · 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+   🔎 "iPad Air 13"  (32 variants)  →  https://www.worten.es/search?query=iPad+Air+13+Apple
+      📋 7 candidate results
+         ✅ [ 254] 13" · 256GB · Púrpura · Wi-Fi + Cellul → iPad Air APPLE (13'' - 256 GB - Wi -Fi + Cellular - Púr | 1140.33€ | s=115 | 8388084
+         ✅ [ 234] 13" · 256GB · Blanco Estrella          → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Blanco Estrella | 1070.77€ | s=100 | 8387926
+         ✅ [ 236] 13" · 256GB · Gris Espacial            → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Gris Espacial)  | 1007.00€ | s=100 | 8387924
+         ✅ [ 242] 13" · 256GB · Púrpura                  → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Púrpura)        | 885.83€ | s=100 | 8387927
+         ✅ [ 246] 13" · 256GB · Azul                     → iPad Air APPLE (13'' - 256 GB - Wi-Fi - Azul)           | 894.11€ | s=100 | 8387925
+         ✅ [ 262] 13" · 256GB · Gris Espacial · Wi-Fi +  → iPad Air APPLE (13'' - 256 GB - Wi -Fi + Cellular - Gri | 1234.33€ | s=100 | 8388081
+         ⤵  [ 250] 13" · 256GB · Azul · Wi-Fi + Cellular — lost dedup (SKU 8387925 claimed by higher-scoring variant)
+         ⤵  [ 258] 13" · 256GB · Blanco Estrella · Wi-Fi + Cellular — lost dedup (SKU 8387926 claimed by higher-scoring variant)
+         ⚠️  [ 231] 13" · 512GB · Blanco Estrella — no match
+         ⚠️  [ 232] 13" · 128GB · Blanco Estrella — no match
+         ⚠️  [ 233] 13" · 1TB · Blanco Estrella — no match
+         ⚠️  [ 235] 13" · 128GB · Gris Espacial — no match
+         ⚠️  [ 237] 13" · 1TB · Gris Espacial — no match
+         ⚠️  [ 238] 13" · 512GB · Gris Espacial — no match
+         ⚠️  [ 239] 13" · 1TB · Púrpura — no match
+         ⚠️  [ 240] 13" · 512GB · Púrpura — no match
+         ⚠️  [ 241] 13" · 128GB · Púrpura — no match
+         ⚠️  [ 243] 13" · 128GB · Azul — no match
+         ⚠️  [ 244] 13" · 512GB · Azul — no match
+         ⚠️  [ 245] 13" · 1TB · Azul — no match
+         ⚠️  [ 247] 13" · 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 248] 13" · 1TB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 249] 13" · 128GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 251] 13" · 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 252] 13" · 1TB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 253] 13" · 128GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 255] 13" · 512GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 256] 13" · 1TB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 257] 13" · 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 259] 13" · 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 260] 13" · 1TB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 261] 13" · 128GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 250] 13" · 256GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 258] 13" · 256GB · Blanco Estrella · Wi-Fi + Cellular — no match
+
+[12/21] AirPods Max 2                   (airpods, 5 variants)
+   🔎 "AirPods Max"  (5 variants)  →  https://www.worten.es/search?query=AirPods+Max+Apple
+      📋 13 candidate results
+         ✅ [ 343] Azul                                   → Acc. APPLE Airpods Max Azul APPLE                       | 619.35€ | s=50 | MRKEAN-0194253346005
+         ✅ [ 344] Púrpura                                → Auriculares Bluetooth APPLE Airpods Max 2 (Over Ear - M | 602.79€ | s=50 | 8832922
+         ✅ [ 347] Naranja                                → Auriculares Bluetooth APPLE AirPods Max (Over Ear - Mic | 573.99€ | s=50 | 8156150
+         ⚠️  [ 345] Medianoche — no match
+         ⚠️  [ 346] Blanco Estrella — no match
+
+[13/21] AirPods Pro 3                   (airpods, 1 variants)
+   🔎 "AirPods Pro 3"  (1 variants)  →  https://www.worten.es/search?query=AirPods+Pro+3+Apple
+      📋 1 candidate results
+      🔍 No matches in this group. First 3 candidates returned by Worten:
+           · Estación De Carga Inalámbrica 5 En 1 Para Iphone 14/13/12, Airpods Pro/3/2 Y Apple Watch/iwatch Con Soporte De Luz Y Des
+         ⚠️  [ 340] airpods-pro-3 — no match
+
+[14/21] MacBook Air                     (mac, 30 variants)
+   🔎 "MacBook Air 15"  (15 variants)  →  https://www.worten.es/search?query=MacBook+Air+15+Apple
+      📋 47 candidate results
+         ✅ [  91] 15" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Azul Cielo (15'' - Apple M5 10-Core  | 1749.00€ | s=130 | 8785261
+         ✅ [  95] 15" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Blanco Estrella (15'' - Apple M5 10- | 1782.88€ | s=130 | 8785255
+         ✅ [  99] 15" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Azul Cielo (15'' - Apple M5 10-Core  | 1499.00€ | s=130 | 8785260
+         ⤵  [ 100] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Blan — lost dedup (SKU 8785255 claimed by higher-scoring variant)
+         ✅ [ 104] 15" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Medianoche (15'' - Apple M5 10-Core  | 1558.30€ | s=130 | 8785257
+         ⤵  [ 105] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Az — lost dedup (SKU 8785260 claimed by higher-scoring variant)
+         ⤵  [ 107] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Azul — lost dedup (SKU 8785261 claimed by higher-scoring variant)
+         ✅ [ 113] 15" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Blanco Estrella (15'' - Apple M5 10- | 1527.74€ | s=130 | 8785254
+         ⤵  [ 115] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Me — lost dedup (SKU 8785257 claimed by higher-scoring variant)
+         ⤵  [ 117] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — lost dedup (SKU 8785254 claimed by higher-scoring variant)
+         ⚠️  [  89] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Silv — no match
+         ⚠️  [  92] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Si — no match
+         ⚠️  [  98] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — no match
+         ⚠️  [ 106] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Medi — no match
+         ⚠️  [ 110] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Medi — no match
+         ⚠️  [ 100] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Blan — no match
+         ⚠️  [ 105] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Az — no match
+         ⚠️  [ 107] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Azul — no match
+         ⚠️  [ 115] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Me — no match
+         ⚠️  [ 117] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — no match
+   🔎 "MacBook Air 13"  (15 variants)  →  https://www.worten.es/search?query=MacBook+Air+13+Apple
+      📋 16 candidate results
+         ✅ [  90] 13" · M5 · 10-core CPU · 8-core GPU ·  →  MacBook Air APPLE Azul Cielo (13'' - Apple M5 10-Core  | 1247.39€ | s=130 | 8785248
+         ✅ [  93] 13" · M5 · 10-core CPU · 8-core GPU ·  → MacBook Air APPLE Medianoche (13'' - Apple M5 10-Core - | 2394.51€ | s=130 | 8784652
+         ⤵  [  94] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Me — lost dedup (SKU 8784652 claimed by higher-scoring variant)
+         ⤵  [  97] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Az — lost dedup (SKU 8785248 claimed by higher-scoring variant)
+         ✅ [ 101] 13" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Blanco Estrella (13'' - Apple M5 10- | 1476.73€ | s=130 | 8785243
+         ✅ [ 108] 13" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Medianoche (13'' - Apple M5 10-Core  | 1765.61€ | s=130 | 8785247
+         ⤵  [ 109] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Medi — lost dedup (SKU 8785247 claimed by higher-scoring variant)
+         ✅ [ 112] 13" · M5 · 10-core CPU · 10-core GPU · →  MacBook Air APPLE Azul Cielo (13'' - Apple M5 10-Core  | 1696.48€ | s=130 | 8785250
+         ⤵  [ 114] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Azul — lost dedup (SKU 8785250 claimed by higher-scoring variant)
+         ⤵  [ 118] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Blan — lost dedup (SKU 8785243 claimed by higher-scoring variant)
+         ⚠️  [  96] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Silv — no match
+         ⚠️  [ 102] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — no match
+         ⚠️  [ 103] 13" · M5 · 10-core CPU · 8-core GPU · 16GB RAM · 512GB · Bla — no match
+         ⚠️  [ 111] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — no match
+         ⚠️  [ 116] 13" · M5 · 10-core CPU · 8-core GPU · 16GB RAM · 512GB · Sil — no match
+         ⚠️  [  94] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Me — no match
+         ⚠️  [  97] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Az — no match
+         ⚠️  [ 109] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Medi — no match
+         ⚠️  [ 114] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Azul — no match
+         ⚠️  [ 118] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Blan — no match
+
+[15/21] Apple Watch Ultra 3             (watch, 2 variants)
+   🔎 "Apple Watch Ultra"  (2 variants)  →  https://www.worten.es/search?query=Apple+Watch+Ultra+Apple
+      📋 44 candidate results
+         ✅ [ 308] 49mm · Natural                         →  APPLE Watch Ultra 3 GPS + Cellular 49 mm Titanio Natur | 859.99€ | s=80 | 8600450
+         ✅ [ 309] 49mm · Negro                           →  APPLE Watch Ultra 3 GPS + Cellular 49 mm Titanio Negro | 749.00€ | s=80 | 8600457
+
+[16/21] iPhone Air                      (iphone, 12 variants)
+   🔎 "iPhone Air"  (12 variants)  →  https://www.worten.es/search?query=iPhone+Air+Apple
+      📋 14 candidate results
+         ✅ [  27] 6.5" · 1TB · Blanco Nube               → Iphone Air 1tb Blanco Nube Blanco Apple                 | 1676.35€ | s=100 | MRKEAN-0195950624465
+         ✅ [  28] 6.5" · 256GB · Blanco Nube             → Iphone Air 256gb Blanco Nube Blanco Apple               | 1019.00€ | s=100 | MRKEAN-0195950622867
+         ✅ [  29] 6.5" · 256GB · Negro Espacial          → iPhone Air APPLE (6.5'' - 256 GB - Negro espacial)      | 939.40€ | s=100 | 8600373
+         ✅ [  33] 6.5" · 256GB · Azul Cielo              → Iphone Air 256gb Azul Cielo Ky Azul Apple               | 1019.00€ | s=100 | MRKEAN-0195950623192
+         ✅ [  26] 6.5" · 1TB · Negro Espacial            → Iphone Air 1tb Negro Pace Negro Apple                   | 1187.42€ | s=85 | MRKEAN-0195950624267
+         ⚠️  [  22] 6.5" · 512GB · Dorado Claro — no match
+         ⚠️  [  23] 6.5" · 512GB · Azul Cielo — no match
+         ⚠️  [  24] 6.5" · 512GB · Blanco Nube — no match
+         ⚠️  [  25] 6.5" · 1TB · Dorado Claro — no match
+         ⚠️  [  30] 6.5" · 256GB · Dorado Claro — no match
+         ⚠️  [  31] 6.5" · 512GB · Negro Espacial — no match
+         ⚠️  [  32] 6.5" · 1TB · Azul Cielo — no match
+
+[17/21] Apple Watch SE 3                (watch, 8 variants)
+   🔎 "Apple Watch SE"  (8 variants)  →  https://www.worten.es/search?query=Apple+Watch+SE+Apple
+      📋 42 candidate results
+         ✅ [ 333] 40mm · Aluminio · Medianoche · GPS + C →  APPLE Watch SE 3 GPS + Cellular 40 mm Medianoche Alumi | 351.40€ | s=95 | 8600384
+         ✅ [ 334] 44mm · Aluminio · Medianoche · GPS + C →  APPLE Watch SE 3 GPS + Cellular 44 mm Medianoche Alumi | 384.32€ | s=95 | 8600386
+         ✅ [ 335] 40mm · Aluminio · Blanco Estrella · GP →  APPLE Watch SE 3 GPS + Cellular 40 mm Blanco Estrella  | 347.33€ | s=95 | 8600382
+         ✅ [ 332] 40mm · Aluminio · Medianoche · GPS     →  APPLE Watch SE 3 GPS 40 mm Medianoche Aluminio con Cor | 257.83€ | s=80 | 8600286
+         ✅ [ 336] 40mm · Aluminio · Blanco Estrella · GP →  APPLE Watch SE 3 GPS 40 mm Blanco Estrella Aluminio co | 296.55€ | s=80 | 8600284
+         ✅ [ 337] 44mm · Aluminio · Medianoche · GPS     →  APPLE Watch SE 3 GPS 44 mm Medianoche Aluminio con Cor | 259.99€ | s=80 | 8600381
+         ✅ [ 339] 44mm · Aluminio · Blanco Estrella · GP →  APPLE Watch SE 3 GPS 44 mm Blanco Estrella Aluminio co | 259.99€ | s=80 | 8600289
+         ⤵  [ 338] 44mm · Aluminio · Blanco Estrella · GPS + Cellular — lost dedup (SKU 8600289 claimed by higher-scoring variant)
+         ⚠️  [ 338] 44mm · Aluminio · Blanco Estrella · GPS + Cellular — no match
+
+[18/21] MacBook Pro                     (mac, 24 variants)
+   🔎 "MacBook Pro 14"  (16 variants)  →  https://www.worten.es/search?query=MacBook+Pro+14+Apple
+      📋 40 candidate results
+      🔍 No matches in this group. First 3 candidates returned by Worten:
+           · MacBook Pro APPLE (14'' - Apple M5 10-Core - RAM: 24 GB - 1 TB SSD - GPU 10-Core)
+           ·  MacBook Pro APPLE Plata (14'' - Apple M5 Pro 15-Core - RAM: 24 GB - 1 TB SSD - GPU 16-Core)
+           · MacBook Pro APPLE Plata (14'' - Apple M5 10-Core - RAM: 16 GB - 1 TB SSD - GPU 10-Core)
+         ⚠️  [  65] 14" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  66] 14" · M5 · 10-core CPU · 10-core GPU · 32GB RAM · 1TB · Silv — no match
+         ⚠️  [  68] 14" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  69] 14" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — no match
+         ⚠️  [  70] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  71] 14" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Spac — no match
+         ⚠️  [  72] 14" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Silv — no match
+         ⚠️  [  75] 14" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+         ⚠️  [  76] 14" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+         ⚠️  [  77] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  78] 14" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Spac — no match
+         ⚠️  [  79] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  80] 14" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 2TB ·  — no match
+         ⚠️  [  83] 14" · M5 · 10-core CPU · 10-core GPU · 32GB RAM · 1TB · Spac — no match
+         ⚠️  [  84] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  86] 14" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Spac — no match
+   🔎 "MacBook Pro 16"  (8 variants)  →  https://www.worten.es/search?query=MacBook+Pro+16+Apple
+      📋 31 candidate results
+      🔍 No matches in this group. First 3 candidates returned by Worten:
+           · MacBook Pro 16 2019 APPLE MVVK2Y/A (16'', Intel Core i9, RAM: 16 GB, 1 TB SSD, AMD Radeon Pro 5500M)
+           · MacBook Pro APPLE Plateado (16'' - Apple M4 Max 14-Core - RAM: 36 GB - 1 TB SSD - GPU 32-Core)
+           ·  MacBook Pro APPLE Plata (16'' - Apple M5 Max 18-Core - RAM: 36 GB - 2 TB HDD - GPU 32-Core)
+         ⚠️  [  67] 16" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  73] 16" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+         ⚠️  [  74] 16" · M5 Max · 18-core CPU · 40-core GPU · 48GB RAM · 2TB ·  — no match
+         ⚠️  [  81] 16" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  82] 16" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 1TB ·  — no match
+         ⚠️  [  85] 16" · M5 Max · 18-core CPU · 40-core GPU · 48GB RAM · 2TB ·  — no match
+         ⚠️  [  87] 16" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+         ⚠️  [  88] 16" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 1TB ·  — no match
+
+[19/21] iPhone 17 Pro                   (iphone, 21 variants)
+   🔎 "iPhone 17 Pro Max"  (12 variants)  →  https://www.worten.es/search?query=iPhone+17+Pro+Max+Apple
+      📋 15 candidate results
+         ✅ [   2] 6.9" · 512GB · Naranja Cósmico         → iPhone 17 Pro Max APPLE (6.9'' - 512 GB - Naranja cósmi | 1709.78€ | s=100 | 8600364
+         ✅ [   3] 6.9" · 1TB · Plata                     → iPhone 17 Pro Max APPLE (6.9'' - 1 TB - Plata)          | 2163.41€ | s=100 | 8600366
+         ✅ [   4] 6.9" · 2TB · Plata                     → iPhone 17 Pro Max APPLE (6.9'' - 2 TB - Plata)          | 2739.04€ | s=100 | 8600370
+         ✅ [   5] 6.9" · 1TB · Naranja Cósmico           → iPhone 17 Pro Max APPLE (6.9'' - 1 TB - Naranja cósmico | 1966.27€ | s=100 | 8600367
+         ✅ [   7] 6.9" · 2TB · Naranja Cósmico           → iPhone 17 Pro Max APPLE (6.9'' - 2 TB - Naranja cósmico | 2440.48€ | s=100 | 8600371
+         ✅ [   9] 6.9" · 256GB · Plata                   → iPhone 17 Pro Max APPLE (6.9'' - 256 GB - Plata)        | 1445.00€ | s=100 | 8600349
+         ✅ [  11] 6.9" · 512GB · Plata                   → iPhone 17 Pro Max APPLE (6.9'' - 512 GB - Plata)        | 1769.99€ | s=100 | 8600363
+         ✅ [  12] 6.9" · 256GB · Naranja Cósmico         → iPhone 17 Pro Max APPLE (6.9'' - 256 GB - Naranja cósmi | 1414.00€ | s=100 | 8600361
+         ✅ [   1] 6.9" · 512GB · Azul Intenso            → iPhone 17 Pro Max APPLE (6.9'' - 512 GB - Azul oscuro)  | 1595.00€ | s=85 | 8600365
+         ✅ [   6] 6.9" · 1TB · Azul Intenso              → iPhone 17 Pro Max APPLE (6.9'' - 1 TB - Azul oscuro)    | 2163.41€ | s=85 | 8600369
+         ✅ [   8] 6.9" · 2TB · Azul Intenso              → iPhone 17 Pro Max APPLE (6.9'' - 2 TB - Azul oscuro)    | 2438.78€ | s=85 | 8600372
+         ✅ [  10] 6.9" · 256GB · Azul Intenso            → iPhone 17 Pro Max APPLE (6.9'' - 256 GB - Azul oscuro)  | 1414.00€ | s=85 | 8600362
+   🔎 "iPhone 17 Pro"  (9 variants)  →  https://www.worten.es/search?query=iPhone+17+Pro+Apple
+      📋 21 candidate results
+         ✅ [  21] 6.3" · 512GB · Plata                   → Iphone 17 Pro 512gb Plata Apple                         | 1718.32€ | s=100 | MRKEAN-0195950627848
+         ✅ [  17] 6.3" · 256GB · Naranja Cósmico         → Apple Iphone 17 Pro 5g 256gb Naranja Cómico             | 1263.00€ | s=85 | MRKEAN-0195950627442
+         ✅ [  20] 6.3" · 256GB · Azul Intenso            → iPhone 17 Pro APPLE (6.3'' - 256 GB - Azul oscuro)      | 1312.66€ | s=85 | 8600342
+         ⚠️  [  13] 6.3" · 1TB · Plata — no match
+         ⚠️  [  14] 6.3" · 1TB · Naranja Cósmico — no match
+         ⚠️  [  15] 6.3" · 512GB · Azul Intenso — no match
+         ⚠️  [  16] 6.3" · 1TB · Azul Intenso — no match
+         ⚠️  [  18] 6.3" · 256GB · Plata — no match
+         ⚠️  [  19] 6.3" · 512GB · Naranja Cósmico — no match
+
+[20/21] Apple Watch Series 11           (watch, 22 variants)
+   🔎 "Apple Watch Series 11"  (22 variants)  →  https://www.worten.es/search?query=Apple+Watch+Series+11+Apple
+      📋 0 candidate results
+
+[21/21] iPhone 16                       (iphone, 15 variants)
+   🔎 "iPhone 16 Plus"  (10 variants)  →  https://www.worten.es/search?query=iPhone+16+Plus+Apple
+      📋 28 candidate results
+         ✅ [  51] 6.7" · 256GB · Rosa                    → iPhone 16 Plus APPLE (6.7'' - 256 GB - Rosa)            | 965.00€ | s=100 | 8155740
+         ✅ [  52] 6.7" · 256GB · Verde Azulado           → iPhone 16 Plus APPLE (6.7'' - 256 GB - Verde Azulado)   | 965.00€ | s=100 | 8155742
+         ✅ [  53] 6.7" · 128GB · Blanco                  → iPhone 16 Plus APPLE (6.7'' - 128 GB - Blanco)          | 865.00€ | s=100 | 8155734
+         ✅ [  54] 6.7" · 128GB · Negro                   → iPhone 16 Plus APPLE (6.7'' - 128 GB - Negro)           | 865.00€ | s=100 | 8155733
+         ✅ [  55] 6.7" · 128GB · Verde Azulado           → Iphone 16 Plus Apple (recondicionado Como Novo 6.7 128  | 959.00€ | s=100 | MRKEAN-MP10681-OFD2PZ0W45JG2PA
+         ✅ [  56] 6.7" · 128GB · Azul Ultramar           → iPhone 16 Plus APPLE (6.7'' - 128 GB - Azul Ultramar)   | 1077.15€ | s=100 | 8155736
+         ✅ [  57] 6.7" · 128GB · Rosa                    → Iphone 16 Plus Apple (recondicionado Sinais De Uso 6.7  | 959.00€ | s=100 | MRKEAN-MP10681-A2MSNWO5LHTP2DL
+         ⤵  [  50] 6.7" · 256GB · Azul Ultramar — lost dedup (SKU 8155742 claimed by higher-scoring variant)
+         ⚠️  [  58] 6.7" · 256GB · Negro — no match
+         ⚠️  [  59] 6.7" · 256GB · Blanco — no match
+         ⚠️  [  50] 6.7" · 256GB · Azul Ultramar — no match
+   🔎 "iPhone 16"  (5 variants)  →  https://www.worten.es/search?query=iPhone+16+Apple
+      📋 0 candidate results
+
+📊 Summary:
+   Searches:   27
+   Matched:    133
+   No match:   163
+   By category:
+     airpods    4
+     ipad       57
+     iphone     43
+     mac        20
+     watch      9
