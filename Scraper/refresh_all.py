@@ -39,7 +39,7 @@ import time
 # same way it does when running scrapers individually with -m.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte  # noqa: F401
+from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte, fnac  # noqa: F401
 
 
 # Ordered list of stores. K-tuin first because it's the most stable and
@@ -60,6 +60,14 @@ from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte  # 
 # Scheduler job (elcorte-refresh.bat) that runs from a home IP and
 # writes to the same shared Neon DB. The import stays to keep the
 # module loadable and to flag a clear path for re-enabling.
+#
+# Fnac is parked for the same reason (verified 26 Jun 2026): even with
+# undetected-chromedriver doing the heavy lifting against DataDome,
+# Fnac's anti-bot still serves the short-stub interstitial to the
+# IONOS datacenter IP. Local Windows run goes through fine — same DC
+# fingerprint difference that PcComponentes happens to flip on.
+# fnac-refresh.bat runs from a home IP at 04:30 and feeds the same Neon
+# DB.
 STORES = [
     ('ktuin',         ktuin),
     ('pccomponentes', pccomponentes),
