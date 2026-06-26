@@ -36,10 +36,17 @@ if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
         pass
 
 from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+# undetected_chromedriver gives us a patched Chrome that defeats
+# DataDome and similar fingerprint-based bot detection — Fnac is
+# Cloudflare + DataDome, and standard selenium gets blocked at the
+# HTTP/2 handshake regardless of UA, language, or timing. We import
+# the package as `uc` and use uc.Chrome instead of webdriver.Chrome.
+# Plain selenium types (Options, By) are kept where we still rely on
+# them for selectors and DOM interaction.
+import undetected_chromedriver as uc
+from selenium import webdriver  # kept for type compat (driver.execute_cdp_cmd etc.)
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scanner.dbservice_postgres import get_connection
@@ -300,23 +307,34 @@ def parse_jsonld(soup):
     return out
 
 
-# Initial Fnac DOM selectors (guesses, refined via --inspect):
-#   <article class="Article-itemContainer">  ← Fnac's typical card
-#   <li class="Article-item">                ← list-view alternative
-#   Inside: a.Article-title, span.userPrice, span.Article-priceCurrent
-
+# Fnac DOM selectors (refined 2026-06-26 via --inspect against
+# fnac.es/SearchResult/ResultList.aspx?Search=AirPods+Apple):
+#
+# Cards live under generic <div>/<li> elements, not <article>, so the
+# tagless class selector `.Article-item` is the primary match. JSON-LD
+# is NOT exposed on the search-results page (script tag count = 0)
+# even though product pages do publish it, so the DOM fallback is
+# actually our PRIMARY path and parse_jsonld stays as a no-op safety
+# net for any future template change that brings it back.
+#
+# Title lives on `.Article-title` (also `a.Article-title` when the
+# whole title is the click target). Price is on `.Article-price`; the
+# marketplace variant `.Article-price--mp` belongs to 3rd-party sellers
+# and we deliberately skip it to keep this scraper Fnac-direct only.
 CARD_SELECTOR_STRATEGIES = (
-    'article.Article-itemContainer',
+    '.Article-item',                  # primary — actual Fnac search-result card
+    '[data-productname]',             # alternate when card is on the inner div
+    '.js-SearchResults .Article-item',
+    'article.Article-itemContainer',  # legacy guess kept as last-ditch fallback
     'li.Article-item',
     'article[data-testid*="product"]',
     'div[data-product]',
     '[itemtype$="schema.org/Product"]',
-    'li[class*="productList"]',
-    'article[class*="product"]',
 )
 
 NAME_SELECTORS = (
     'a.Article-title',
+    '.Article-title',
     '[itemprop="name"]',
     '[data-automation="productName"]',
     'h3 a', 'h2 a', 'h3', 'h2',
@@ -325,6 +343,7 @@ NAME_SELECTORS = (
 
 PRICE_SELECTORS_MAIN = (
     '[itemprop="price"]',
+    '.Article-price',                 # primary — confirmed via inspect
     '.userPrice',
     '.Article-priceCurrent',
     '[data-automation="price"]',
@@ -693,7 +712,14 @@ def subfamily_info(product, variant):
         m = re.search(r'pro\s+(\d+)', (product.get('nombre') or '').lower())
         if m:
             n = m.group(1)
-            return (f'AirPods Pro {n}', rf'\bairpods\s+pro\s+{n}\b')
+            # Match the generation number anywhere AFTER "pro" without
+            # requiring a literal space — Fnac writes the gen in
+            # parentheses with Spanish ordinal sup, e.g.
+            # "AirPods Pro (3.ª generación) con estuche\u2026". The original
+            # \bpro\s+3\b pattern missed those entirely. Other stores use
+            # the plain "Pro 3" form and still match because we accept
+            # any non-letter sequence between "pro" and the digit.
+            return (f'AirPods Pro {n}', rf'\bairpods\s+pro\b[^a-z\n]*\b{n}\b')
         return ('AirPods Pro', r'\bairpods\s+pro\b')
     if fam == 'airpods-max':
         m = re.search(r'max\s+(\d+)', (product.get('nombre') or '').lower())
@@ -960,20 +986,77 @@ def upsert_scraped_and_price(cur, variant_id, result, cat, score):
 #   Selenium
 # ════════════════════════════════════════════════════════════════════════════
 
+def _detect_chrome_major():
+    """Read the installed Chrome major version from the Windows registry.
+
+    uc.Chrome(version_main=None) lets the package auto-detect, but the
+    auto-detect path occasionally pulls the LATEST chromedriver instead
+    of the matching one when Chrome is mid-upgrade — we hit
+    'chromedriver only supports Chrome 150 / current 149.0.7827.156'.
+    Reading the version off the binary directly fixes that.
+    """
+    # Windows: HKLM Software\Google\Chrome\BLBeacon\version
+    try:
+        import winreg
+        for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+            for path in (r'Software\Google\Chrome\BLBeacon',
+                         r'Software\Wow6432Node\Google\Chrome\BLBeacon'):
+                try:
+                    key = winreg.OpenKey(hive, path)
+                    version, _ = winreg.QueryValueEx(key, 'version')
+                    winreg.CloseKey(key)
+                    return int(str(version).split('.')[0])
+                except OSError:
+                    continue
+    except ImportError:
+        pass
+    # Linux/macOS fall-back: ask the binary itself.
+    try:
+        import subprocess
+        for binary in ('google-chrome', 'chromium', 'chromium-browser'):
+            try:
+                out = subprocess.run([binary, '--version'],
+                                     capture_output=True, text=True, timeout=5)
+                if out.returncode == 0:
+                    m = re.search(r'(\d+)\.\d+', out.stdout)
+                    if m:
+                        return int(m.group(1))
+            except FileNotFoundError:
+                continue
+    except Exception:
+        pass
+    return None
+
+
 def make_driver():
-    opts = Options()
+    """Build a patched Chrome that defeats DataDome and friends.
+
+    undetected_chromedriver handles all the usual giveaways internally:
+      - patches navigator.webdriver to undefined
+      - strips Chrome automation extensions
+      - rewrites CDP runtime overrides Cloudflare looks for
+      - downloads its own version-matched chromedriver (no
+        webdriver-manager round-trip)
+
+    We pass `version_main` explicitly because uc's auto-detect was
+    pulling the LATEST chromedriver (150) against a Chrome that's still
+    on 149 — a mid-upgrade gap on the workstation. Reading the major
+    off the binary keeps us version-locked even when Google ships a
+    new stable channel mid-session.
+    """
+    opts = uc.ChromeOptions()
     opts.add_argument(f'--user-agent={USER_AGENT}')
-    opts.add_argument('--disable-blink-features=AutomationControlled')
-    opts.add_experimental_option('excludeSwitches', ['enable-automation'])
-    opts.add_experimental_option('useAutomationExtension', False)
-    opts.add_argument('--start-maximized')
     opts.add_argument('--lang=es-ES')
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=opts)
-    driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
-        'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'
-    })
-    return driver
+    opts.add_argument('--start-maximized')
+    if os.environ.get('CI') == 'true':
+        opts.add_argument('--headless=new')
+        opts.add_argument('--no-sandbox')
+        opts.add_argument('--disable-gpu')
+        opts.add_argument('--disable-dev-shm-usage')
+    chrome_major = _detect_chrome_major()
+    if chrome_major:
+        print(f'   🔧 Detected Chrome {chrome_major}; pinning chromedriver')
+    return uc.Chrome(options=opts, version_main=chrome_major)
 
 
 def warmup_driver(driver):
@@ -982,7 +1065,6 @@ def warmup_driver(driver):
         driver.get(HOST + '/')
         time.sleep(random.uniform(2.0, 4.0))
         try:
-            from selenium.webdriver.common.by import By
             for selector in ('button#didomi-notice-agree-button',
                              'button[data-testid="cookies-accept"]',
                              'button#onetrust-accept-btn-handler',
