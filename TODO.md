@@ -261,6 +261,23 @@ Keeps the site's prices fresh without re-running the full match logic.
       - Lower priority than the three above; tackle once the others
         are in nightly rotation and stable
 
+- [ ] **Carrefour ES** (Mixed marketplace) — large supermarket chain
+      with an electronics catalogue, sells Apple gear largely through
+      third-party marketplace sellers rather than as a direct Apple
+      reseller. Tag with `appleAuthLevel='mixed'` like Amazon and
+      surface the `Verifica vendedor` chip so buyers know to check
+      the seller on each listing.
+      - `carrefour.es`, expect Akamai (Spanish CDN default) —
+        run on VPS first, fall back to local cron only if blocked
+      - 2-3 h: standard PDP pattern, watch for marketplace badges
+        on each card so we know which listings are direct-Carrefour
+        vs third-party (those are noisier on price + stock)
+      - Awin status unknown; check before wiring up affiliate links
+      - Schema notes: Carrefour mixes own-stock and 3P like Amazon
+        does, so the existing `Price` shape already covers it — the
+        only nuance is the marketplace flag which we can fold into
+        `Price.condition` or a small `seller` JSON if it adds value
+
 - [ ] **Lollypop (used / refurbished items)** — populates the "2ª mano" tab
       that already exists in `ModalProducto.jsx`. Different data shape than
       new-only stores:
