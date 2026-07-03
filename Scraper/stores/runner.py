@@ -70,9 +70,30 @@ def _detect_chrome_major():
     Pinning version_main to the installed major fixes it: UC will
     download the matching driver, even if that's not the newest one.
 
-    Tries common Chrome binary names; returns int (149) on success, None
+    Tries Windows registry first (HKCU/HKLM BLBeacon\version), then
+    common Linux/macOS binary names. Returns int (149) on success, None
     on failure (caller falls back to UC's auto-detect, same as before).
     """
+    # ── Windows: read the BLBeacon version key Chrome maintains for the
+    #            auto-updater. Faster + more reliable than calling the
+    #            binary, and avoids needing to know where Chrome was
+    #            installed (Program Files vs Program Files (x86)).
+    try:
+        import winreg
+        for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+            for path in (r'Software\Google\Chrome\BLBeacon',
+                         r'Software\Wow6432Node\Google\Chrome\BLBeacon'):
+                try:
+                    key = winreg.OpenKey(hive, path)
+                    version, _ = winreg.QueryValueEx(key, 'version')
+                    winreg.CloseKey(key)
+                    return int(str(version).split('.')[0])
+                except OSError:
+                    continue
+    except ImportError:
+        pass  # not on Windows, fall through to binary probe
+
+    # ── Linux / macOS: ask the binary directly.
     for binary in ('google-chrome', 'google-chrome-stable',
                    'chromium-browser', 'chromium'):
         try:

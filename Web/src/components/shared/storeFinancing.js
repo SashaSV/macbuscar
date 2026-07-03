@@ -99,6 +99,14 @@ export const STORE_FINANCING_DEFAULTS = {
   fnac: [
     { providers: ['Oney'], months: 12, minAmount: 99 },
   ],
+
+  // Rossellimac — Apple Premium Reseller. Standing offer is 10mo at
+  // 0% TAE via Cetelem, with Aplazame and Klarna available as
+  // alternative partners at checkout. Min purchase 120 €. Verified
+  // 26 Jun 2026 on their financiacion page + PDP widgets.
+  rossellimac: [
+    { providers: ['Cetelem', 'Aplazame', 'Klarna'], months: 10, minAmount: 120 },
+  ],
 };
 
 /**

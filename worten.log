@@ -3864,3 +3864,111 @@ from disconnec
      iphone     43
      mac        20
      watch      9
+
+🟢 Worten scraper (worten)
+   Loaded 21 Products from DB
+
+[1/21] Mac Studio                      (mac, 2 variants)
+   🔎 "Mac Studio"  (2 variants)  →  https://www.worten.es/search?query=Mac+Studio+Apple
+      📋 36 candidate results
+         ✅ [ 149] M3 Ultra · 28-core CPU · 60-core GPU · → Mac Studio APPLE Plata (13.6'' - Apple M3 Ultra 28-Core | 4849.00€ | s=100 | 8388517
+         ✅ [ 150] M4 Max · 14-core CPU · 32-core GPU · 3 → Mac Studio APPLE Pata(Apple M4 Max 14-Core - RAM: 36 GB | 2329.00€ | s=100 | 8388543
+
+[2/21] iPad mini                       (ipad, 24 variants)
+   🔎 "iPad mini"  (24 variants)  →  https://www.worten.es/search?query=iPad+mini+Apple
+      📋 0 candidate results
+
+[3/21] Apple Watch Ultra 3             (watch, 2 variants)
+   🔎 "Apple Watch Ultra"  (2 variants)  →  https://www.worten.es/search?query=Apple+Watch+Ultra+Apple
+      📋 0 candidate results
+
+[4/21] MacBook Air                     (mac, 30 variants)
+   🔎 "MacBook Air 15"  (15 variants)  →  https://www.worten.es/search?query=MacBook+Air+15+Apple
+      📋 0 candidate results
+   🔎 "MacBook Air 13"  (15 variants)  →  https://www.worten.es/search?query=MacBook+Air+13+Apple
+      📋 0 candidate results
+
+[5/21] Mac mini                        (mac, 3 variants)
+   🔎 "Mac mini"  (3 variants)  →  https://www.worten.es/search?query=Mac+mini+Apple
+      📋 0 candidate results
+
+[6/21] AirPods Max 2                   (airpods, 5 variants)
+   🔎 "AirPods Max"  (5 variants)  →  https://www.worten.es/search?query=AirPods+Max+Apple
+      📋 0 candidate results
+
+[7/21] iPhone 17                       (iphone, 10 variants)
+   🔎 "iPhone 17"  (10 variants)  →  https://www.worten.es/search?query=iPhone+17+Apple
+      📋 0 candidate results
+
+[8/21] iPad Air                        (ipad, 64 variants)
+   🔎 "iPad Air 11"  (32 variants)  →  https://www.worten.es/search?query=iPad+Air+11+Apple
+      📋 0 candidate results
+   🔎 "iPad Air 13"  (32 variants)  →  https://www.worten.es/search?query=iPad+Air+13+Apple
+      📋 0 candidate results
+
+[9/21] Apple Watch SE 3                (watch, 8 variants)
+   🔎 "Apple Watch SE"  (8 variants)  →  https://www.worten.es/search?query=Apple+Watch+SE+Apple
+      📋 0 candidate results
+
+[10/21] iPhone 17e                      (iphone, 6 variants)
+   🔎 "iPhone 17e"  (6 variants)  →  https://www.worten.es/search?query=iPhone+17e+Apple
+      📋 0 candidate results
+
+[11/21] MacBook Neo                     (mac, 8 variants)
+   🔎 "MacBook Neo"  (8 variants)  →  https://www.worten.es/search?query=MacBook+Neo+Apple
+      📋 0 candidate results
+
+[12/21] AirPods 4                       (airpods, 2 variants)
+   🔎 "AirPods"  (2 variants)  →  https://www.worten.es/search?query=AirPods+Apple
+      📋 0 candidate results
+
+[13/21] iMac                            (mac, 19 variants)
+   🔎 "iMac"  (19 variants)  →  https://www.worten.es/search?query=iMac+Apple
+      📋 0 candidate results
+
+[14/21] iPhone Air                      (iphone, 12 variants)
+   🔎 "iPhone Air"  (12 variants)  →  https://www.worten.es/search?query=iPhone+Air+Apple
+      📋 0 candidate results
+
+[15/21] iPhone 16                       (iphone, 15 variants)
+   🔎 "iPhone 16 Plus"  (10 variants)  →  https://www.worten.es/search?query=iPhone+16+Plus+Apple
+      📋 0 candidate results
+   🔎 "iPhone 16"  (5 variants)  →  https://www.worten.es/search?query=iPhone+16+Apple
+      📋 0 candidate results
+
+[16/21] iPad                            (ipad, 21 variants)
+   🔎 "iPad"  (21 variants)  →  https://www.worten.es/search?query=iPad+Apple
+      📋 0 candidate results
+
+[17/21] MacBook Pro                     (mac, 24 variants)
+   🔎 "MacBook Pro 14"  (16 variants)  →  https://www.worten.es/search?query=MacBook+Pro+14+Apple
+      📋 0 candidate results
+   🔎 "MacBook Pro 16"  (8 variants)  →  https://www.worten.es/search?query=MacBook+Pro+16+Apple
+      📋 0 candidate results
+
+[18/21] AirPods Pro 3                   (airpods, 1 variants)
+   🔎 "AirPods Pro 3"  (1 variants)  →  https://www.worten.es/search?query=AirPods+Pro+3+Apple
+      📋 0 candidate results
+
+[19/21] iPhone 17 Pro                   (iphone, 21 variants)
+   🔎 "iPhone 17 Pro Max"  (12 variants)  →  https://www.worten.es/search?query=iPhone+17+Pro+Max+Apple
+      📋 0 candidate results
+   🔎 "iPhone 17 Pro"  (9 variants)  →  https://www.worten.es/search?query=iPhone+17+Pro+Apple
+      📋 0 candidate results
+
+[20/21] iPad Pro                        (ipad, 48 variants)
+   🔎 "iPad Pro 11"  (24 variants)  →  https://www.worten.es/search?query=iPad+Pro+11+Apple
+      📋 0 candidate results
+   🔎 "iPad Pro 13"  (24 variants)  →  https://www.worten.es/search?query=iPad+Pro+13+Apple
+      📋 0 candidate results
+
+[21/21] Apple Watch Series 11           (watch, 22 variants)
+   🔎 "Apple Watch Series 11"  (22 variants)  →  https://www.worten.es/search?query=Apple+Watch+Series+11+Apple
+      📋 0 candidate results
+
+📊 Summary:
+   Searches:   27
+   Matched:    2
+   No match:   0
+   By category:
+     mac        2

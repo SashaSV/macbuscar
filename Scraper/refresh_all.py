@@ -39,7 +39,7 @@ import time
 # same way it does when running scrapers individually with -m.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte, fnac  # noqa: F401
+from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte, fnac, rossellimac  # noqa: F401
 
 
 # Ordered list of stores. K-tuin first because it's the most stable and
@@ -71,6 +71,7 @@ from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte, fn
 STORES = [
     ('ktuin',         ktuin),
     ('pccomponentes', pccomponentes),
+    ('rossellimac',   rossellimac),
     ('worten',        worten),
     ('mediamarkt',    mediamarkt),
     ('amazon',        amazon),
