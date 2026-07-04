@@ -51,13 +51,19 @@ from . import runner
 STORE_ID    = 'rossellimac'
 STORE_LABEL = '🟠 Rossellimac scraper'
 HOST        = 'https://rossellimac.es'
-# Shopify is friendlier than the Akamai stack on average, but the
-# Cloudflare WAF in front of Rossellimac actually trips on bursty
-# requests — we hit cf_chl_opt on the third search in a row at
-# 3.5-6.5s pacing during the first smoke test. Bumping to the MMK/PcC
-# tier (~8-14s mean) keeps us comfortably under the per-IP scoring
-# threshold; the nightly is still well under an hour for ~27 searches.
-PAGE_DELAY  = (8.0, 14.0)
+# Cloudflare on rossellimac.es turned out sticky on the VPS IP even
+# with undetected-chromedriver — nightly cron hit cf_chl_opt on the
+# second search (04 Jul 2026 run: 2 matched, then AirPods Max 2
+# silently returned empty, then AirPods Pro 3 tripped 'just a
+# moment...' and the whole run stopped). VPS datacenter IPs
+# accumulate CF trust score more slowly than residential, so we
+# extend pacing well beyond the MMK/PcC tier: mean ~32s per search,
+# which puts a 27-query run at ~15 min for this store alone. Total
+# nightly still fits under an hour with room to spare.
+# If this still trips CF after a few consecutive nights, next lever
+# is refresh-by-URL (skip search pages entirely and re-fetch known
+# product URLs one-by-one) which is a much softer traffic pattern.
+PAGE_DELAY  = (25.0, 40.0)
 
 # Shopify's universal search endpoint. Catalog is Apple-only so the
 # bare query is enough — no brand filter, no facet wrangling.
