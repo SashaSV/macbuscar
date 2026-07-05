@@ -89,8 +89,29 @@ model ProductVariant {
   gpu         String?                           // "10-core GPU"
   gpuCores    String?                           // "10" | "20" | "32" | "40" — Mac GPU cores
   screen      String?                           // "Standard" | "Nano-texture" — Mac/iPad glass
+  // ── iMac stand type (added 2026-07-05). Two options at checkout:
+  //   "Inclinable" — stock tilt-only stand (default)
+  //   "VESA"      — no stand, VESA mount adapter for wall/arm
+  // Impacts price (~+50 € for VESA). Null on every non-iMac SKU.
+  soporte     String?
   connectivity String?                          // "Wi-Fi" | "Wi-Fi + Cellular"
   bandSize    String?                           // "45mm" | "49mm"
+  // ── Apple Watch band variation (added 2026-07-05). Apple sells the
+  // watch case + band as a bundled SKU, so the same case (e.g. Ultra 3
+  // 49mm Titanium Natural) exists with a dozen bands, each with its
+  // own part number and price (±200 € range for premium bands like
+  // Titanium Milanese Loop or Braided Solo Loop). Splitting on band
+  // gives us the parity with Apple's own configurator that the
+  // retailers use when they name their SKUs.
+  //   band       — style, e.g. "Alpine Loop" | "Trail Loop" |
+  //                "Ocean Band" | "Titanium Milanese Loop" |
+  //                "Sport Band" | "Braided Solo Loop"
+  //   bandColor  — colour of the band itself, distinct from the case
+  //                colour (e.g. Ultra with a Blue Alpine Loop has
+  //                color="Natural" for the case and bandColor="Blue")
+  // Both null on non-Watch SKUs.
+  band        String?
+  bandColor   String?
   fotos       Json     @default("[]")           // full variant gallery
   // Card images for this specific SKU (variant-page cards / color-picker etc.)
   cover       String?

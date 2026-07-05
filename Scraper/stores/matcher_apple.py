@@ -366,6 +366,9 @@ def upsert_variant(cur, product_id: int, sp: dict, variant_name: str) -> int:
         'cpuCores':     techs.get('cpu_cores') or None,
         'gpuCores':     techs.get('gpu_cores') or None,
         'screen':       techs.get('screen') or None,
+        'soporte':      techs.get('soporte') or None,
+        'band':         techs.get('band') or None,
+        'bandColor':    techs.get('band_color') or None,
         'connectivity': techs.get('connectivity') or None,
         'ean':          sp.get('ean') or None,
         'msrp':         float(sp.get('price') or 0) or None,
@@ -377,25 +380,29 @@ def upsert_variant(cur, product_id: int, sp: dict, variant_name: str) -> int:
             UPDATE "ProductVariant" SET
                 nombre = %s, memory = %s, ram = %s, color = %s, "colorHex" = %s,
                 display = %s, cpu = %s, "cpuCores" = %s, "gpuCores" = %s,
-                screen = %s, connectivity = %s, ean = %s, msrp = %s,
+                screen = %s, soporte = %s, band = %s, "bandColor" = %s,
+                connectivity = %s, ean = %s, msrp = %s,
                 "updatedAt" = NOW()
             WHERE id = %s
         """, (variant_name, fields['memory'], fields['ram'], fields['color'],
               fields['colorHex'], fields['display'], fields['cpu'],
               fields['cpuCores'], fields['gpuCores'], fields['screen'],
+              fields['soporte'], fields['band'], fields['bandColor'],
               fields['connectivity'], fields['ean'], fields['msrp'], vid))
         return vid
 
     cur.execute("""
         INSERT INTO "ProductVariant"
             ("productId", nombre, sku, memory, ram, color, "colorHex", display, cpu,
-             "cpuCores", "gpuCores", screen, connectivity, ean, msrp,
+             "cpuCores", "gpuCores", screen, soporte, band, "bandColor",
+             connectivity, ean, msrp,
              "createdAt", "updatedAt")
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
         RETURNING id
     """, (product_id, variant_name, sku, fields['memory'], fields['ram'],
           fields['color'], fields['colorHex'], fields['display'], fields['cpu'],
           fields['cpuCores'], fields['gpuCores'], fields['screen'],
+          fields['soporte'], fields['band'], fields['bandColor'],
           fields['connectivity'], fields['ean'], fields['msrp']))
     return cur.fetchone()[0]
 

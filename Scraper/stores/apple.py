@@ -667,9 +667,27 @@ def parse_variant_path(path):
         result['gpu_cores'] = gpu_m.group(1)
 
     # Screen type (Mac/iMac only).
-    # Use word boundary: 'nano' should ONLY match if part of nanotexturizado.
+    # iMac and MacBook Pro slugs both encode 'vidrio-estandar' vs
+    # 'vidrio-nanotexturizado'. Older parses only detected the nano
+    # variant and left standard as null, which then trained the retail
+    # matcher to treat 'no screen field' as "could be anything" and
+    # cross-matched standard/nano SKUs. Recording standard explicitly
+    # forces the matcher to only merge like-with-like.
     if re.search(r'nanotexturizado|nano-texturizado', slug):
         result['screen'] = 'Nano-texture'
+    elif re.search(r'vidrio-est[aá]ndar', slug):
+        result['screen'] = 'Standard'
+
+    # iMac stand type (Apple.es added 2025+): '-soporte' at slug tail
+    # is the default tilt-only stand; '-soporte-vesa' is the VESA mount
+    # option (no stand, +50 €). Only iMac has this; skip on other Mac
+    # slugs so we don't false-positive on 'con-soporte-inclinable'
+    # strings elsewhere.
+    if '/imac/' in slug or 'imac' in slug.lower()[:8]:
+        if re.search(r'-soporte-vesa\b', slug):
+            result['soporte'] = 'VESA'
+        elif re.search(r'-soporte\b', slug):
+            result['soporte'] = 'Inclinable'
 
     # ─── Color extraction: strip ALL technical noise, what's left is color.
     color = slug
@@ -986,6 +1004,7 @@ class AppleScraper:
                 'cpu_cores':    cpu_cores,
                 'gpu_cores':    gpu_cores,
                 'screen':       screen,
+                'soporte':      vi.get('soporte', ''),
                 'source':       'apple.com',
             }
 
