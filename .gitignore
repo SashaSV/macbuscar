@@ -1,12 +1,23 @@
 
-# Local scraper diagnostic logs
-Scraper/*.log
+# Log files anywhere in the repo. Two paths of concern:
+#   * Scraper/*.log — workstation smoke tests (amazon-quick.log,
+#     pccom-smoke.log, elcorte-full-dryrun.log, ...)
+#   * root-level *.log — VPS nightly cron output that git pull was
+#     accidentally staging (worten.log, elcorte.log spotted 05 Jul)
+# Broad wildcard rather than per-path so future stores don't need
+# a .gitignore update to keep their logs out.
+*.log
+
+# Scraper local diagnostic subdirectory (per-store daily logs from
+# the -refresh.bat scheduler entries).
 Scraper/logs/
 
 # Per-host scheduler scripts — carry a plaintext DATABASE_URL inline
 # because they live only on the workstation that owns the corresponding
-# Windows Task Scheduler entry. ECI and Fnac run here instead of the
-# VPS because their anti-bot stacks block IONOS datacenter IPs.
+# Windows Task Scheduler entry. ECI, Fnac, and Rossellimac run here
+# instead of the VPS because their anti-bot stacks block IONOS
+# datacenter IPs.
 Scraper/*-refresh.bat
 Scraper/elcorte-refresh.bat
 Scraper/fnac-refresh.bat
+Scraper/rossellimac-refresh.bat
