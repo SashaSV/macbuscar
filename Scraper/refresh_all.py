@@ -68,11 +68,17 @@ from stores import ktuin, mediamarkt, worten, amazon, pccomponentes, elcorte, fn
 # fingerprint difference that PcComponentes happens to flip on.
 # fnac-refresh.bat runs from a home IP at 04:30 and feeds the same Neon
 # DB.
+#
+# Rossellimac is parked too (verified 04-05 Jul 2026): two consecutive
+# nightly runs hit partial-captcha (2/8 then 38/64), and even with
+# PAGE_DELAY bumped to (25-40s) the CF WAF kept serving 'just a
+# moment...' interstitials to the IONOS IP. Same story as Fnac — local
+# residential IP accumulates CF trust score much faster and returns
+# full coverage, so rossellimac-refresh.bat runs at 03:00 local time
+# (before Worten 03:30, ECI 04:00, Fnac 04:30) on the workstation.
 STORES = [
     ('ktuin',         ktuin),
     ('pccomponentes', pccomponentes),
-    ('rossellimac',   rossellimac),
-    ('worten',        worten),
     ('mediamarkt',    mediamarkt),
     ('amazon',        amazon),
 ]

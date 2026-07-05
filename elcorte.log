@@ -2011,3 +2011,507 @@
      iphone     26
      mac        13
      watch      13
+
+🟢 El Corte Inglés scraper (elcorte)
+   Loaded 21 Products from DB
+   🔥 Warming up session...
+
+[1/21] AirPods 4                       (airpods, 2 variants)
+   🔎 "AirPods"  (2 variants)  →  https://www.elcorteingles.es/search/?s=AirPods+Apple
+      📋 7 candidate results
+         ✅ [ 342] Cancelación Activa Ruido               → Apple Airpods 4 con cancelación de ruido - Auriculares  | 169.00€ (was 199.00€) | s=65 | A52961954
+         ✅ [ 341] Sin Cancelación Activa Ruido           → Apple AirPods 4 - Auriculares inalámbricos Bluetooth y  | 129.00€ (was 149.00€) | s=50 | A52961952
+
+[2/21] AirPods Max 2                   (airpods, 5 variants)
+   🔎 "AirPods Max 2"  (5 variants)  →  https://www.elcorteingles.es/search/?s=AirPods+Max+2+Apple
+      📋 6 candidate results
+         ✅ [ 346] Blanco Estrella                        → Apple AirPods Max 2 Blanco estrella                     | 579.00€ | s=50 | A200452268
+         ⚠️  [ 343] Azul — no match
+         ⚠️  [ 344] Púrpura — no match
+         ⚠️  [ 345] Medianoche — no match
+         ⚠️  [ 347] Naranja — no match
+
+[3/21] AirPods Pro 3                   (airpods, 1 variants)
+   🔎 "AirPods Pro 3"  (1 variants)  →  https://www.elcorteingles.es/search/?s=AirPods+Pro+3+Apple
+      📋 5 candidate results
+         ✅ [ 340] airpods-pro-3                          → Auriculares de botón Apple AirPods Pro 3 Blanco         | 249.00€ | s=20 | A56790285
+
+[4/21] iPad                            (ipad, 21 variants)
+   🔎 "iPad"  (21 variants)  →  https://www.elcorteingles.es/search/?s=iPad+Apple
+      📋 10 candidate results
+         ✅ [ 278] 128GB · Azul · Wi-Fi + Cellular        → Apple iPad 11" (2025) A16, Wi-Fi + Cellular Azul 128GB  | 669.00€ | s=115 | A54871251
+         ⚠️  [ 266] 128GB · Plata — no match
+         ⚠️  [ 267] 256GB · Plata — no match
+         ⚠️  [ 268] 512GB · Plata — no match
+         ⚠️  [ 269] 128GB · Rosa — no match
+         ⚠️  [ 270] 256GB · Rosa — no match
+         ⚠️  [ 271] 512GB · Rosa — no match
+         ⚠️  [ 272] 128GB · Amarillo — no match
+         ⚠️  [ 273] 256GB · Amarillo — no match
+         ⚠️  [ 274] 512GB · Amarillo — no match
+         ⚠️  [ 275] 128GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 276] 256GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 277] 512GB · Amarillo · Wi-Fi + Cellular — no match
+         ⚠️  [ 279] 256GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 280] 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 281] 128GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 282] 256GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 283] 512GB · Rosa · Wi-Fi + Cellular — no match
+         ⚠️  [ 284] 128GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 285] 256GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 286] 512GB · Plata · Wi-Fi + Cellular — no match
+
+[5/21] iPad Air                        (ipad, 64 variants)
+   🔎 "iPad Air 11"  (32 variants)  →  https://www.elcorteingles.es/search/?s=iPad+Air+11+Apple
+      📋 9 candidate results
+         ✅ [ 220] 11" · 128GB · Gris Espacial · Wi-Fi +  → Apple iPad Air 11" (2025) M3, Wi-Fi + Cellular Gris esp | 759.00€ (was 819.00€) | s=135 | A54871589
+         ✅ [ 205] 11" · 128GB · Blanco Estrella          → Apple iPad Air 11" (2026), M4, Wi-Fi Blanco estrella 12 | 799.00€ | s=120 | A200387802
+         ✅ [ 211] 11" · 512GB · Azul                     → Apple iPad Air 11" (2025) M3, Wi-Fi Azul 512GB          | 969.00€ (was 1029.00€) | s=120 | A54871535
+         ⤵  [ 201] 11" · 128GB · Gris Espacial — lost dedup (SKU A54871589 claimed)
+         ⤵  [ 215] 11" · 512GB · Azul · Wi-Fi + Cellular — lost dedup (SKU A54871535 claimed)
+         ⤵  [ 225] 11" · 128GB · Blanco Estrella · Wi-Fi + Cellular — lost dedup (SKU A200387802 claimed)
+         ⚠️  [ 199] 11" · 512GB · Gris Espacial — no match
+         ⚠️  [ 200] 11" · 1TB · Gris Espacial — no match
+         ⚠️  [ 202] 11" · 256GB · Gris Espacial — no match
+         ⚠️  [ 203] 11" · 512GB · Blanco Estrella — no match
+         ⚠️  [ 204] 11" · 1TB · Blanco Estrella — no match
+         ⚠️  [ 206] 11" · 256GB · Blanco Estrella — no match
+         ⚠️  [ 207] 11" · 512GB · Púrpura — no match
+         ⚠️  [ 208] 11" · 1TB · Púrpura — no match
+         ⚠️  [ 209] 11" · 128GB · Púrpura — no match
+         ⚠️  [ 210] 11" · 256GB · Púrpura — no match
+         ⚠️  [ 212] 11" · 1TB · Azul — no match
+         ⚠️  [ 213] 11" · 128GB · Azul — no match
+         ⚠️  [ 214] 11" · 256GB · Azul — no match
+         ⚠️  [ 216] 11" · 1TB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 217] 11" · 128GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 218] 11" · 256GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 219] 11" · 1TB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 221] 11" · 256GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 222] 11" · 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 223] 11" · 512GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 224] 11" · 1TB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 226] 11" · 256GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 227] 11" · 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 228] 11" · 1TB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 229] 11" · 128GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 230] 11" · 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 201] 11" · 128GB · Gris Espacial — no match
+         ⚠️  [ 215] 11" · 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 225] 11" · 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+   🔎 "iPad Air 13"  (32 variants)  →  https://www.elcorteingles.es/search/?s=iPad+Air+13+Apple
+      📋 9 candidate results
+         ✅ [ 258] 13" · 256GB · Blanco Estrella · Wi-Fi  → Apple iPad Air 13" (2025) M3, Wi-Fi + Cellular Blanco e | 1099.00€ (was 1149.00€) | s=135 | A54871826
+         ✅ [ 261] 13" · 128GB · Gris Espacial · Wi-Fi +  → Apple iPad Air 13" (2026), M4, Wi-Fi + Cellular Gris es | 1169.00€ | s=135 | A200387805
+         ✅ [ 235] 13" · 128GB · Gris Espacial            → Apple iPad Air 13" (2026), M4, Wi-Fi Gris espacial 128G | 999.00€ | s=120 | A200387801
+         ✅ [ 236] 13" · 256GB · Gris Espacial            → Apple iPad Air 13" (2025) M3, Wi-Fi Gris espacial 256GB | 929.00€ (was 979.00€) | s=120 | A54871797
+         ⤵  [ 234] 13" · 256GB · Blanco Estrella — lost dedup (SKU A54871826 claimed)
+         ⤵  [ 262] 13" · 256GB · Gris Espacial · Wi-Fi + Cellular — lost dedup (SKU A54871797 claimed)
+         ⚠️  [ 231] 13" · 512GB · Blanco Estrella — no match
+         ⚠️  [ 232] 13" · 128GB · Blanco Estrella — no match
+         ⚠️  [ 233] 13" · 1TB · Blanco Estrella — no match
+         ⚠️  [ 237] 13" · 1TB · Gris Espacial — no match
+         ⚠️  [ 238] 13" · 512GB · Gris Espacial — no match
+         ⚠️  [ 239] 13" · 1TB · Púrpura — no match
+         ⚠️  [ 240] 13" · 512GB · Púrpura — no match
+         ⚠️  [ 241] 13" · 128GB · Púrpura — no match
+         ⚠️  [ 242] 13" · 256GB · Púrpura — no match
+         ⚠️  [ 243] 13" · 128GB · Azul — no match
+         ⚠️  [ 244] 13" · 512GB · Azul — no match
+         ⚠️  [ 245] 13" · 1TB · Azul — no match
+         ⚠️  [ 246] 13" · 256GB · Azul — no match
+         ⚠️  [ 247] 13" · 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 248] 13" · 1TB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 249] 13" · 128GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 250] 13" · 256GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 251] 13" · 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 252] 13" · 1TB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 253] 13" · 128GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 254] 13" · 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 255] 13" · 512GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 256] 13" · 1TB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 257] 13" · 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 259] 13" · 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 260] 13" · 1TB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 234] 13" · 256GB · Blanco Estrella — no match
+         ⚠️  [ 262] 13" · 256GB · Gris Espacial · Wi-Fi + Cellular — no match
+
+[6/21] iPad Pro                        (ipad, 48 variants)
+   🔎 "iPad Pro 11"  (24 variants)  →  https://www.elcorteingles.es/search/?s=iPad+Pro+11+Apple
+      📋 8 candidate results
+         ✅ [ 165] 11" · 1TB · Negro Espacial · Nano-text → Apple iPad Pro 11" (2025) M5, Wi-Fi + Cellular Negro es | 2279.00€ | s=135 | A57126077
+         ✅ [ 167] 11" · 256GB · Negro Espacial · Wi-Fi + → Apple iPad Pro 11" (2025) M5, Wi-Fi + Cellular Negro es | 1549.00€ | s=135 | A57126073
+         ⤵  [ 169] 11" · 1TB · Negro Espacial · Wi-Fi + Cellular — lost dedup (SKU A57126077 claimed)
+         ✅ [ 152] 11" · 256GB · Negro Espacial           → Apple iPad Pro 11" (2025) M5, Wi-Fi Negro espacial 256G | 1299.00€ | s=120 | A57126042
+         ✅ [ 154] 11" · 1TB · Negro Espacial             → Apple iPad Pro 11" (2025) M5, Wi-Fi Negro espacial vidr | 2029.00€ | s=120 | A57126056
+         ⤵  [ 162] 11" · 1TB · Negro Espacial · Nano-texture — lost dedup (SKU A57126056 claimed)
+         ⚠️  [ 151] 11" · 2TB · Negro Espacial — no match
+         ⚠️  [ 153] 11" · 512GB · Negro Espacial — no match
+         ⚠️  [ 155] 11" · 2TB · Plata — no match
+         ⚠️  [ 156] 11" · 512GB · Plata — no match
+         ⚠️  [ 157] 11" · 256GB · Plata — no match
+         ⚠️  [ 158] 11" · 1TB · Plata — no match
+         ⚠️  [ 159] 11" · 2TB · Plata · Nano-texture — no match
+         ⚠️  [ 160] 11" · 1TB · Plata · Nano-texture — no match
+         ⚠️  [ 161] 11" · 2TB · Negro Espacial · Nano-texture — no match
+         ⚠️  [ 163] 11" · 1TB · Plata · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 164] 11" · 2TB · Plata · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 166] 11" · 2TB · Negro Espacial · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 168] 11" · 512GB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 170] 11" · 2TB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 171] 11" · 256GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 172] 11" · 512GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 173] 11" · 1TB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 174] 11" · 2TB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 169] 11" · 1TB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 162] 11" · 1TB · Negro Espacial · Nano-texture — no match
+   🔎 "iPad Pro 13"  (24 variants)  →  https://www.elcorteingles.es/search/?s=iPad+Pro+13+Apple
+      📋 9 candidate results
+         ✅ [ 187] 13" · 1TB · Negro Espacial · Nano-text → Apple iPad Pro 13" (2025) M5, Wi-Fi + Cellular Negro es | 2629.00€ | s=135 | A57126126
+         ✅ [ 191] 13" · 512GB · Negro Espacial · Wi-Fi + → Apple iPad Pro 13" (2025) M5, Wi-Fi + Cellular Negro es | 2149.00€ | s=135 | A57126114
+         ⤵  [ 193] 13" · 1TB · Negro Espacial · Wi-Fi + Cellular — lost dedup (SKU A57126126 claimed)
+         ✅ [ 175] 13" · 1TB · Plata · Nano-texture       → Apple iPad Pro 13" (2024) M4, Wi-Fi Plata vidrio estánd | 2059.00€ (was 2279.00€) | s=120 | A51684103
+         ✅ [ 177] 13" · 1TB · Negro Espacial · Nano-text → Apple iPad Pro 13" (2025) M5, Wi-Fi Negro espacial vidr | 2379.00€ | s=120 | A57126105
+         ⤵  [ 181] 13" · 1TB · Plata — lost dedup (SKU A51684103 claimed)
+         ✅ [ 183] 13" · 256GB · Negro Espacial           → Apple iPad Pro 13" (2025) M5, Wi-Fi Negro espacial 256G | 1649.00€ | s=120 | A57126094
+         ⤵  [ 184] 13" · 1TB · Negro Espacial — lost dedup (SKU A57126105 claimed)
+         ⤵  [ 185] 13" · 512GB · Negro Espacial — lost dedup (SKU A57126114 claimed)
+         ⤵  [ 189] 13" · 1TB · Plata · Nano-texture · Wi-Fi + Cellular — lost dedup (SKU A51684103 claimed)
+         ⤵  [ 192] 13" · 256GB · Negro Espacial · Wi-Fi + Cellular — lost dedup (SKU A57126094 claimed)
+         ⤵  [ 197] 13" · 1TB · Plata · Wi-Fi + Cellular — lost dedup (SKU A51684103 claimed)
+         ⚠️  [ 176] 13" · 2TB · Plata · Nano-texture — no match
+         ⚠️  [ 178] 13" · 2TB · Negro Espacial · Nano-texture — no match
+         ⚠️  [ 179] 13" · 256GB · Plata — no match
+         ⚠️  [ 180] 13" · 512GB · Plata — no match
+         ⚠️  [ 182] 13" · 2TB · Plata — no match
+         ⚠️  [ 186] 13" · 2TB · Negro Espacial — no match
+         ⚠️  [ 188] 13" · 2TB · Negro Espacial · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 190] 13" · 2TB · Plata · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 194] 13" · 2TB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 195] 13" · 256GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 196] 13" · 512GB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 198] 13" · 2TB · Plata · Wi-Fi + Cellular — no match
+         ⚠️  [ 193] 13" · 1TB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 181] 13" · 1TB · Plata — no match
+         ⚠️  [ 184] 13" · 1TB · Negro Espacial — no match
+         ⚠️  [ 185] 13" · 512GB · Negro Espacial — no match
+         ⚠️  [ 189] 13" · 1TB · Plata · Nano-texture · Wi-Fi + Cellular — no match
+         ⚠️  [ 192] 13" · 256GB · Negro Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 197] 13" · 1TB · Plata · Wi-Fi + Cellular — no match
+
+[7/21] iPad mini                       (ipad, 24 variants)
+   🔎 "iPad mini"  (24 variants)  →  https://www.elcorteingles.es/search/?s=iPad+mini+Apple
+      📋 4 candidate results
+         ✅ [ 263] 128GB · Azul                           → Apple iPad Mini (2024) Wi-Fi (7ª Generación) Azul 128GB | 679.00€ | s=100 | A53371649
+         ⤵  [ 306] 128GB · Azul · Wi-Fi + Cellular — lost dedup (SKU A53371649 claimed)
+         ⚠️  [ 264] 256GB · Azul — no match
+         ⚠️  [ 265] 512GB · Azul — no match
+         ⚠️  [ 287] 128GB · Púrpura — no match
+         ⚠️  [ 288] 256GB · Púrpura — no match
+         ⚠️  [ 289] 512GB · Púrpura — no match
+         ⚠️  [ 290] 128GB · Blanco Estrella — no match
+         ⚠️  [ 291] 256GB · Blanco Estrella — no match
+         ⚠️  [ 292] 512GB · Blanco Estrella — no match
+         ⚠️  [ 293] 512GB · Gris Espacial — no match
+         ⚠️  [ 294] 128GB · Gris Espacial — no match
+         ⚠️  [ 295] 256GB · Gris Espacial — no match
+         ⚠️  [ 296] 512GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 297] 128GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 298] 256GB · Púrpura · Wi-Fi + Cellular — no match
+         ⚠️  [ 299] 512GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 300] 128GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 301] 256GB · Gris Espacial · Wi-Fi + Cellular — no match
+         ⚠️  [ 302] 512GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 303] 128GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 304] 256GB · Blanco Estrella · Wi-Fi + Cellular — no match
+         ⚠️  [ 305] 512GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 307] 256GB · Azul · Wi-Fi + Cellular — no match
+         ⚠️  [ 306] 128GB · Azul · Wi-Fi + Cellular — no match
+
+[8/21] iPhone 16                       (iphone, 15 variants)
+   🔎 "iPhone 16 Plus"  (10 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+16+Plus+Apple
+      📋 5 candidate results
+      🔍 No matches in this group. First 3 candidates:
+           · Apple iPhone 16 móvil libre Azul ultramar 128GB
+           · Apple iPhone 15 móvil libre Negro 128GB
+           · Apple iPhone 17 256GB Negro móvil libre Negro
+         ⚠️  [  50] 6.7" · 256GB · Azul Ultramar — no match
+         ⚠️  [  51] 6.7" · 256GB · Rosa — no match
+         ⚠️  [  52] 6.7" · 256GB · Verde Azulado — no match
+         ⚠️  [  53] 6.7" · 128GB · Blanco — no match
+         ⚠️  [  54] 6.7" · 128GB · Negro — no match
+         ⚠️  [  55] 6.7" · 128GB · Verde Azulado — no match
+         ⚠️  [  56] 6.7" · 128GB · Azul Ultramar — no match
+         ⚠️  [  57] 6.7" · 128GB · Rosa — no match
+         ⚠️  [  58] 6.7" · 256GB · Negro — no match
+         ⚠️  [  59] 6.7" · 256GB · Blanco — no match
+   🔎 "iPhone 16"  (5 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+16+Apple
+      📋 9 candidate results
+         ✅ [  64] 6.1" · 128GB · Azul Ultramar           → Apple iPhone 16 móvil libre Azul ultramar 128GB         | 829.00€ (was 859.00€) | s=100 | A52957672
+         ⚠️  [  60] 6.1" · 128GB · Blanco — no match
+         ⚠️  [  61] 6.1" · 128GB · Negro — no match
+         ⚠️  [  62] 6.1" · 128GB · Rosa — no match
+         ⚠️  [  63] 6.1" · 128GB · Verde Azulado — no match
+
+[9/21] iPhone 17                       (iphone, 10 variants)
+   🔎 "iPhone 17"  (10 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+17+Apple
+      📋 9 candidate results
+         ✅ [  34] 6.3" · 256GB · Azul Neblina            → Apple iPhone 17 256GB Azul neblina móvil libre Azul neb | 929.00€ (was 959.00€) | s=100 | A56790275
+         ✅ [  35] 6.3" · 256GB · Lavanda                 → Apple iPhone 17 256GB Lavanda móvil libre Lavanda       | 929.00€ (was 959.00€) | s=100 | A56790276
+         ✅ [  36] 6.3" · 256GB · Negro                   → Apple iPhone 17 256GB Negro móvil libre Negro           | 929.00€ (was 959.00€) | s=100 | A56790273
+         ✅ [  37] 6.3" · 256GB · Blanco                  → Apple iPhone 17 256GB Blanco móvil libre Blanco         | 929.00€ (was 959.00€) | s=100 | A56790274
+         ✅ [  40] 6.3" · 256GB · Verde Salvia            → Apple iPhone 17 256GB Verde salvia móvil libre Verde Sa | 929.00€ (was 959.00€) | s=100 | A56790277
+         ⚠️  [  38] 6.3" · 512GB · Blanco — no match
+         ⚠️  [  39] 6.3" · 512GB · Negro — no match
+         ⚠️  [  41] 6.3" · 512GB · Lavanda — no match
+         ⚠️  [  42] 6.3" · 512GB · Verde Salvia — no match
+         ⚠️  [  43] 6.3" · 512GB · Azul Neblina — no match
+
+[10/21] iPhone 17 Pro                   (iphone, 21 variants)
+   🔎 "iPhone 17 Pro Max"  (12 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+17+Pro+Max+Apple
+      📋 9 candidate results
+         ✅ [   2] 6.9" · 512GB · Naranja Cósmico         → Apple iPhone 17 Pro Max 512GB Naranja cósmico móvil lib | 1699.00€ | s=100 | A56790245
+         ✅ [   3] 6.9" · 1TB · Plata                     → Apple iPhone 17 Pro Max 1TB Plata móvil libre Plata     | 1969.00€ | s=100 | A56790247
+         ✅ [   9] 6.9" · 256GB · Plata                   → Apple iPhone 17 Pro Max 256GB Plata móvil libre Plata   | 1439.00€ | s=100 | A56790862
+         ✅ [  11] 6.9" · 512GB · Plata                   → Apple iPhone 17 Pro Max 512GB Plata móvil libre Plata   | 1679.00€ | s=100 | A56790244
+         ✅ [  12] 6.9" · 256GB · Naranja Cósmico         → Apple iPhone 17 Pro Max 256GB Naranja cósmico móvil lib | 1439.00€ | s=100 | A56790243
+         ✅ [   1] 6.9" · 512GB · Azul Intenso            → Apple iPhone 17 Pro Max 512GB Azul oscuro móvil libre A | 1692.00€ | s=85 | A56790246
+         ✅ [   6] 6.9" · 1TB · Azul Intenso              → Apple iPhone 17 Pro Max 1TB Azul oscuro móvil libre Azu | 1969.00€ | s=85 | A56790249
+         ✅ [  10] 6.9" · 256GB · Azul Intenso            → Apple iPhone 17 Pro Max 256GB Azul oscuro móvil libre A | 1439.00€ | s=85 | A56790282
+         ⚠️  [   4] 6.9" · 2TB · Plata — no match
+         ⚠️  [   5] 6.9" · 1TB · Naranja Cósmico — no match
+         ⚠️  [   7] 6.9" · 2TB · Naranja Cósmico — no match
+         ⚠️  [   8] 6.9" · 2TB · Azul Intenso — no match
+   🔎 "iPhone 17 Pro"  (9 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+17+Pro+Apple
+      📋 8 candidate results
+         ✅ [  17] 6.3" · 256GB · Naranja Cósmico         → Apple iPhone 17 Pro 256GB Naranja cósmico móvil libre N | 1289.00€ | s=100 | A56790254
+         ✅ [  18] 6.3" · 256GB · Plata                   → Apple iPhone 17 Pro 256GB Plata móvil libre Plata       | 1289.00€ | s=100 | A56790253
+         ✅ [  19] 6.3" · 512GB · Naranja Cósmico         → Apple iPhone 17 Pro 512GB Naranja cósmico móvil libre N | 1548.00€ | s=100 | A56790257
+         ✅ [  21] 6.3" · 512GB · Plata                   → Apple iPhone 17 Pro 512GB Plata móvil libre Plateado    | 1569.00€ | s=100 | A56790256
+         ✅ [  15] 6.3" · 512GB · Azul Intenso            → Apple iPhone 17 Pro 512GB Azul oscuro móvil libre Azul  | 1548.00€ | s=85 | A56790258
+         ✅ [  16] 6.3" · 1TB · Azul Intenso              → Apple iPhone 17 Pro 1TB Azul oscuro móvil libre Azul os | 1819.00€ | s=85 | A56790261
+         ✅ [  20] 6.3" · 256GB · Azul Intenso            → Apple iPhone 17 Pro 256GB Azul oscuro móvil libre Azul  | 1289.00€ | s=85 | A56790255
+         ⚠️  [  13] 6.3" · 1TB · Plata — no match
+         ⚠️  [  14] 6.3" · 1TB · Naranja Cósmico — no match
+
+[11/21] iPhone 17e                      (iphone, 6 variants)
+   🔎 "iPhone 17e"  (6 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+17e+Apple
+      📋 9 candidate results
+         ✅ [  45] 6.1" · 256GB · Blanco                  → Apple iPhone 17e 256 GB blanco móvil libre Blanco       | 709.00€ | s=100 | A200387712
+         ✅ [  46] 6.1" · 256GB · Rosa Palo               → Apple iPhone 17e 256 GB rosa palo móvil libre Rosa palo | 689.00€ | s=100 | A200387713
+         ✅ [  48] 6.1" · 256GB · Negro                   → Apple iPhone 17e 256 GB negro móvil libre Negro         | 689.00€ | s=100 | A200387711
+         ⚠️  [  44] 6.1" · 512GB · Negro — no match
+         ⚠️  [  47] 6.1" · 512GB · Rosa Palo — no match
+         ⚠️  [  49] 6.1" · 512GB · Blanco — no match
+
+[12/21] iPhone Air                      (iphone, 12 variants)
+   🔎 "iPhone Air"  (12 variants)  →  https://www.elcorteingles.es/search/?s=iPhone+Air+Apple
+      📋 9 candidate results
+         ✅ [  23] 6.5" · 512GB · Azul Cielo              → Apple iPhone Air 512GB Azul cielo móvil libre Azul Ciel | 1199.00€ (was 1469.00€) | s=100 | A56790268
+         ✅ [  26] 6.5" · 1TB · Negro Espacial            → Apple iPhone Air 1TB Negro espacial móvil libre Negro e | 1419.00€ (was 1719.00€) | s=100 | A56790269
+         ✅ [  28] 6.5" · 256GB · Blanco Nube             → Apple iPhone Air 256GB Blanco nube móvil libre Blanco N | 929.00€ (was 1219.00€) | s=100 | A56790263
+         ✅ [  29] 6.5" · 256GB · Negro Espacial          → Apple iPhone Air 256GB Negro espacial móvil libre Negro | 929.00€ (was 1219.00€) | s=100 | A56790262
+         ✅ [  30] 6.5" · 256GB · Dorado Claro            → Apple iPhone Air 256GB Dorado claro móvil libre Dorado  | 959.00€ (was 1219.00€) | s=100 | A56790264
+         ✅ [  31] 6.5" · 512GB · Negro Espacial          → Apple iPhone Air 512GB Negro espacial móvil libre Negro | 1199.00€ (was 1469.00€) | s=100 | A56790283
+         ✅ [  32] 6.5" · 1TB · Azul Cielo                → Apple iPhone Air 1TB Azul cielo móvil libre Azul Cielo  | 1419.00€ (was 1719.00€) | s=100 | A56790272
+         ✅ [  33] 6.5" · 256GB · Azul Cielo              → Apple iPhone Air 256GB Azul cielo móvil libre Azul Ciel | 929.00€ (was 1219.00€) | s=100 | A56790265
+         ⚠️  [  22] 6.5" · 512GB · Dorado Claro — no match
+         ⚠️  [  24] 6.5" · 512GB · Blanco Nube — no match
+         ⚠️  [  25] 6.5" · 1TB · Dorado Claro — no match
+         ⚠️  [  27] 6.5" · 1TB · Blanco Nube — no match
+
+[13/21] Mac Studio                      (mac, 2 variants)
+   🔎 "Mac Studio"  (2 variants)  →  https://www.elcorteingles.es/search/?s=Mac+Studio+Apple
+      📋 5 candidate results
+      🔍 No matches in this group. First 3 candidates:
+           · Monitor Apple Studio Display 27" Retina 5K vidrio estándar, soporte con ajuste de inclinación
+           · Monitor Apple Studio Display 27" Retina 5K, vidrio estándar, soporte con ajuste de inclinación y altura
+           · Monitor Apple Studio Display 27" Retina 5K vidrio nanotexturizado, soporte con ajuste de inclinacion
+         ⚠️  [ 149] M3 Ultra · 28-core CPU · 60-core GPU · 96GB RAM · 1TB — no match
+         ⚠️  [ 150] M4 Max · 14-core CPU · 32-core GPU · 36GB RAM · 512GB — no match
+
+[14/21] Mac mini                        (mac, 3 variants)
+   🔎 "Mac mini"  (3 variants)  →  https://www.elcorteingles.es/search/?s=Mac+mini+Apple
+      📋 2 candidate results
+      🔍 No matches in this group. First 3 candidates:
+           · Apple MacBook Air 13 (2026) M5, 16GB, 512GB SSD, 13", MacOS Plata
+           · Teclado Apple Magic Keyboard con touch ID y teclado numérico blanco Blanco
+         ⚠️  [ 146] M4 Pro · 12-core CPU · 16-core GPU · 24GB RAM · 512GB — no match
+         ⚠️  [ 147] M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB — no match
+         ⚠️  [ 148] M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB — no match
+
+[15/21] MacBook Air                     (mac, 30 variants)
+   🔎 "MacBook Air 15"  (15 variants)  →  https://www.elcorteingles.es/search/?s=MacBook+Air+15+Apple
+      📋 12 candidate results
+         ✅ [  89] 15" · M5 · 10-core CPU · 10-core GPU · → Apple MacBook Air 15 (2026) M5, 24GB, 1TB SSD, 15", Mac | 2279.00€ | s=150 | A200408975
+         ✅ [  91] 15" · M5 · 10-core CPU · 10-core GPU · → Apple MacBook Air 15 (2026) M5, 16GB, 1TB SSD, 15", Mac | 2059.00€ | s=150 | A200408944
+         ⤵  [  98] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — lost dedup (SKU A200408975 claimed)
+         ⤵  [ 107] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Azul — lost dedup (SKU A200408944 claimed)
+         ⚠️  [  92] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Si — no match
+         ⚠️  [  95] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Blan — no match
+         ⚠️  [  99] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Az — no match
+         ⚠️  [ 100] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Blan — no match
+         ⚠️  [ 104] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Me — no match
+         ⚠️  [ 105] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Az — no match
+         ⚠️  [ 106] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Medi — no match
+         ⚠️  [ 110] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Medi — no match
+         ⚠️  [ 113] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Bl — no match
+         ⚠️  [ 115] 15" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Me — no match
+         ⚠️  [ 117] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — no match
+         ⚠️  [  98] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — no match
+         ⚠️  [ 107] 15" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Azul — no match
+   🔎 "MacBook Air 13"  (15 variants)  →  https://www.elcorteingles.es/search/?s=MacBook+Air+13+Apple
+      📋 12 candidate results
+         ✅ [ 112] 13" · M5 · 10-core CPU · 10-core GPU · → Apple MacBook Air 13 (2026) M5, 24GB, 1TB SSD, 13", Mac | 1979.00€ | s=150 | A200408878
+         ⤵  [ 114] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Azul — lost dedup (SKU A200408878 claimed)
+         ✅ [ 116] 13" · M5 · 10-core CPU · 8-core GPU ·  → Apple MacBook Air 13 (2026) M5, 16GB, 512GB SSD, 13", M | 1429.00€ | s=150 | A200408807
+         ⚠️  [  90] 13" · M5 · 10-core CPU · 8-core GPU · 16GB RAM · 512GB · Azu — no match
+         ⚠️  [  93] 13" · M5 · 10-core CPU · 8-core GPU · 16GB RAM · 512GB · Med — no match
+         ⚠️  [  94] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Me — no match
+         ⚠️  [  96] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Silv — no match
+         ⚠️  [  97] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Az — no match
+         ⚠️  [ 101] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Blan — no match
+         ⚠️  [ 102] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — no match
+         ⚠️  [ 103] 13" · M5 · 10-core CPU · 8-core GPU · 16GB RAM · 512GB · Bla — no match
+         ⚠️  [ 108] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Medi — no match
+         ⚠️  [ 109] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Medi — no match
+         ⚠️  [ 111] 13" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — no match
+         ⚠️  [ 118] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Blan — no match
+         ⚠️  [ 114] 13" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Azul — no match
+
+[16/21] MacBook Neo                     (mac, 8 variants)
+   🔎 "MacBook Neo"  (8 variants)  →  https://www.elcorteingles.es/search/?s=MacBook+Neo+Apple
+      📋 12 candidate results
+         ✅ [ 122] 512GB · Silver                         → Apple MacBook Neo (2026), A18 Pro, 8GB, 512GB SSD, 13", | 899.00€ | s=100 | A200418379
+         ✅ [ 125] 256GB · Silver                         → Apple MacBook Neo (2026), A18 Pro, 8GB, 256GB SSD, 13", | 799.00€ | s=100 | A200418371
+         ⚠️  [ 119] 512GB · Índigo — no match
+         ⚠️  [ 120] 512GB · Rosa Nube — no match
+         ⚠️  [ 121] 256GB · Rosa Nube — no match
+         ⚠️  [ 123] 256GB · Cítrico — no match
+         ⚠️  [ 124] 512GB · Cítrico — no match
+         ⚠️  [ 126] 256GB · Índigo — no match
+
+[17/21] MacBook Pro                     (mac, 24 variants)
+   🔎 "MacBook Pro 14"  (16 variants)  →  https://www.elcorteingles.es/search/?s=MacBook+Pro+14+Apple
+      📋 12 candidate results
+         ✅ [  65] 14" · M5 Pro · 18-core CPU · 20-core G → Apple MacBook Pro 14 (2026) M5 Pro 18 núcleos, 24GB, 2T | 3749.00€ | s=150 | A200408666
+         ✅ [  71] 14" · M5 · 10-core CPU · 10-core GPU · → Apple MacBook Pro 14 (2025) M5, 16GB, 1TB SSD, 14", mac | 2229.00€ | s=150 | A57125742
+         ✅ [  75] 14" · M5 Max · 18-core CPU · 32-core G → Apple MacBook Pro 14 (2026) M5 Max, 36GB, 2TB SSD, 14", | 4849.00€ | s=150 | A200408663
+         ✅ [  77] 14" · M5 Pro · 15-core CPU · 16-core G → Apple MacBook Pro 14 (2026) M5 Pro, 24GB, 1TB SSD, 14", | 2949.00€ | s=150 | A200408555
+         ⤵  [  78] 14" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Spac — lost dedup (SKU A57125742 claimed)
+         ⤵  [  80] 14" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 2TB ·  — lost dedup (SKU A200408666 claimed)
+         ⤵  [  83] 14" · M5 · 10-core CPU · 10-core GPU · 32GB RAM · 1TB · Spac — lost dedup (SKU A57125742 claimed)
+         ⤵  [  84] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 2TB ·  — lost dedup (SKU A200408666 claimed)
+         ⤵  [  86] 14" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Spac — lost dedup (SKU A57125742 claimed)
+         ⚠️  [  66] 14" · M5 · 10-core CPU · 10-core GPU · 32GB RAM · 1TB · Silv — no match
+         ⚠️  [  68] 14" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  69] 14" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Silv — no match
+         ⚠️  [  70] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  72] 14" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Silv — no match
+         ⚠️  [  76] 14" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+         ⚠️  [  79] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  78] 14" · M5 · 10-core CPU · 10-core GPU · 16GB RAM · 1TB · Spac — no match
+         ⚠️  [  80] 14" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 2TB ·  — no match
+         ⚠️  [  83] 14" · M5 · 10-core CPU · 10-core GPU · 32GB RAM · 1TB · Spac — no match
+         ⚠️  [  84] 14" · M5 Pro · 15-core CPU · 16-core GPU · 24GB RAM · 2TB ·  — no match
+         ⚠️  [  86] 14" · M5 · 10-core CPU · 10-core GPU · 24GB RAM · 1TB · Spac — no match
+   🔎 "MacBook Pro 16"  (8 variants)  →  https://www.elcorteingles.es/search/?s=MacBook+Pro+16+Apple
+      📋 12 candidate results
+         ✅ [  74] 16" · M5 Max · 18-core CPU · 40-core G → Apple MacBook Pro 16 (2026) M5 Max, 36GB, 2TB SSD, 16", | 5149.00€ | s=150 | A200408539
+         ⤵  [  87] 16" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — lost dedup (SKU A200408539 claimed)
+         ⚠️  [  67] 16" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  73] 16" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+         ⚠️  [  81] 16" · M5 Pro · 18-core CPU · 20-core GPU · 24GB RAM · 1TB ·  — no match
+         ⚠️  [  82] 16" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 1TB ·  — no match
+         ⚠️  [  85] 16" · M5 Max · 18-core CPU · 40-core GPU · 48GB RAM · 2TB ·  — no match
+         ⚠️  [  88] 16" · M5 Pro · 18-core CPU · 20-core GPU · 48GB RAM · 1TB ·  — no match
+         ⚠️  [  87] 16" · M5 Max · 18-core CPU · 32-core GPU · 36GB RAM · 2TB ·  — no match
+
+[18/21] iMac                            (mac, 19 variants)
+   🔎 "iMac"  (19 variants)  →  https://www.elcorteingles.es/search/?s=iMac+Apple
+      📋 6 candidate results
+         ✅ [ 129] 24" · M4 · 10-core CPU · 10-core GPU · → Apple iMac 24 (2024), M4, 16GB, 256GB SSD, GPU 10 Núcle | 2239.00€ | s=150 | A53530950
+         ⤵  [ 130] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Silv — lost dedup (SKU A53530950 claimed)
+         ⤵  [ 133] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Si — lost dedup (SKU A53530950 claimed)
+         ⚠️  [ 127] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Bl — no match
+         ⚠️  [ 128] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Bl — no match
+         ⚠️  [ 131] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Ve — no match
+         ⚠️  [ 132] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Rosa — no match
+         ⚠️  [ 134] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Blue — no match
+         ⚠️  [ 135] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Na — no match
+         ⚠️  [ 136] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Ro — no match
+         ⚠️  [ 137] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Si — no match
+         ⚠️  [ 138] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Ve — no match
+         ⚠️  [ 139] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Ro — no match
+         ⚠️  [ 140] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Verd — no match
+         ⚠️  [ 141] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Ve — no match
+         ⚠️  [ 142] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Ro — no match
+         ⚠️  [ 143] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Na — no match
+         ⚠️  [ 144] 24" · M4 · 10-core CPU · 10-core GPU · 24GB RAM · 512GB · Si — no match
+         ⚠️  [ 145] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 512GB · Bl — no match
+         ⚠️  [ 130] 24" · M4 · 8-core CPU · 8-core GPU · 16GB RAM · 256GB · Silv — no match
+         ⚠️  [ 133] 24" · M4 · 10-core CPU · 10-core GPU · 16GB RAM · 256GB · Si — no match
+
+[19/21] Apple Watch SE 3                (watch, 8 variants)
+   🔎 "Apple Watch SE 3"  (8 variants)  →  https://www.elcorteingles.es/search/?s=Apple+Watch+SE+3+Apple
+      📋 9 candidate results
+         ✅ [ 334] 44mm · Aluminio · Medianoche · GPS + C → Apple Watch SE 3 GPS + Cellular 44mm Aluminio medianoch | 339.00€ (was 349.00€) | s=95 | A56790297
+         ✅ [ 335] 40mm · Aluminio · Blanco Estrella · GP → Apple Watch SE 3 GPS + Cellular 40mm Aluminio blanco es | 309.00€ (was 319.00€) | s=95 | A56790293
+         ✅ [ 332] 40mm · Aluminio · Medianoche · GPS     → Apple Watch SE 3 GPS 40mm Aluminio medianoche con Corre | 249.00€ (was 269.00€) | s=80 | A56790287
+         ✅ [ 336] 40mm · Aluminio · Blanco Estrella · GP → Apple Watch SE 3 GPS 40mm Aluminio blanco estrella con  | 249.00€ (was 269.00€) | s=80 | A56790389
+         ✅ [ 337] 44mm · Aluminio · Medianoche · GPS     → Apple Watch SE 3 GPS 44mm Aluminio medianoche con Corre | 279.00€ (was 299.00€) | s=80 | A56790292
+         ✅ [ 339] 44mm · Aluminio · Blanco Estrella · GP → Apple Watch SE 3 GPS 44mm Aluminio blanco estrella con  | 279.00€ (was 299.00€) | s=80 | A56790290
+         ⤵  [ 333] 40mm · Aluminio · Medianoche · GPS + Cellular — lost dedup (SKU A56790287 claimed)
+         ⤵  [ 338] 44mm · Aluminio · Blanco Estrella · GPS + Cellular — lost dedup (SKU A56790290 claimed)
+         ⚠️  [ 333] 40mm · Aluminio · Medianoche · GPS + Cellular — no match
+         ⚠️  [ 338] 44mm · Aluminio · Blanco Estrella · GPS + Cellular — no match
+
+[20/21] Apple Watch Series 11           (watch, 22 variants)
+   🔎 "Apple Watch Series 11"  (22 variants)  →  https://www.elcorteingles.es/search/?s=Apple+Watch+Series+11+Apple
+      📋 9 candidate results
+         ✅ [ 314] 42mm · Aluminio · Plata · GPS          → Apple Watch Series 11 GPS 42mm Aluminio plata con Corre | 449.00€ | s=80 | A56790301
+         ✅ [ 316] 46mm · Aluminio · Plata · GPS          → Apple Watch Series 11 GPS 46mm Aluminio plata con Corre | 479.00€ | s=80 | A56790309
+         ✅ [ 317] 46mm · Aluminio · Gris Espacial · GPS  → Apple Watch Series 11 GPS 46mm Aluminio gris espacial c | 479.00€ | s=80 | A56790304
+         ✅ [ 323] 46mm · Aluminio · Negro Azabache · GPS → Apple Watch Series 11 GPS 46mm Aluminio negro azabache  | 479.00€ | s=80 | A56790303
+         ✅ [ 326] 42mm · Aluminio · Oro Rosa · GPS       → Apple Watch Series 11 GPS 42mm Aluminio oro rosa con Co | 449.00€ | s=80 | A56790394
+         ✅ [ 328] 42mm · Aluminio · Negro Azabache · GPS → Apple Watch Series 11 GPS 42mm Aluminio negro azabache  | 449.00€ | s=80 | A56790298
+         ⤵  [ 311] 46mm · Aluminio · Gris Espacial · GPS + Cellular — lost dedup (SKU A56790304 claimed)
+         ⤵  [ 315] 46mm · Aluminio · Plata · GPS + Cellular — lost dedup (SKU A56790309 claimed)
+         ⤵  [ 319] 42mm · Aluminio · Negro Azabache · GPS + Cellular — lost dedup (SKU A56790298 claimed)
+         ⤵  [ 322] 42mm · Titanio · Oro · GPS + Cellular — lost dedup (SKU A56790394 claimed)
+         ⤵  [ 325] 46mm · Aluminio · Negro Azabache · GPS + Cellular — lost dedup (SKU A56790303 claimed)
+         ⤵  [ 327] 42mm · Aluminio · Oro Rosa · GPS + Cellular — lost dedup (SKU A56790394 claimed)
+         ⤵  [ 331] 42mm · Aluminio · Plata · GPS + Cellular — lost dedup (SKU A56790301 claimed)
+         ⚠️  [ 310] 46mm · Titanio · Oro · GPS + Cellular — no match
+         ⚠️  [ 312] 42mm · Aluminio · Gris Espacial · GPS — no match
+         ⚠️  [ 313] 42mm · Titanio · Natural · GPS + Cellular — no match
+         ⚠️  [ 318] 46mm · Titanio · Natural · GPS + Cellular — no match
+         ⚠️  [ 320] 46mm · Aluminio · Oro Rosa · GPS + Cellular — no match
+         ⚠️  [ 321] 42mm · Aluminio · Gris Espacial · GPS + Cellular — no match
+         ⚠️  [ 324] 46mm · Titanio · Slate · GPS + Cellular — no match
+         ⚠️  [ 329] 42mm · Titanio · Slate · GPS + Cellular — no match
+         ⚠️  [ 330] 46mm · Aluminio · Oro Rosa · GPS — no match
+         ⚠️  [ 311] 46mm · Aluminio · Gris Espacial · GPS + Cellular — no match
+         ⚠️  [ 315] 46mm · Aluminio · Plata · GPS + Cellular — no match
+         ⚠️  [ 319] 42mm · Aluminio · Negro Azabache · GPS + Cellular — no match
+         ⚠️  [ 322] 42mm · Titanio · Oro · GPS + Cellular — no match
+         ⚠️  [ 325] 46mm · Aluminio · Negro Azabache · GPS + Cellular — no match
+         ⚠️  [ 327] 42mm · Aluminio · Oro Rosa · GPS + Cellular — no match
+         ⚠️  [ 331] 42mm · Aluminio · Plata · GPS + Cellular — no match
+
+[21/21] Apple Watch Ultra 3             (watch, 2 variants)
+   🔎 "Apple Watch Ultra 3"  (2 variants)  →  https://www.elcorteingles.es/search/?s=Apple+Watch+Ultra+3+Apple
+      📋 8 candidate results
+         ✅ [ 308] 49mm · Natural                         → Apple Watch Ultra 3 GPS + Cellular 49mm  Titanio natura | 869.00€ (was 899.00€) | s=80 | A56790403
+         ✅ [ 309] 49mm · Negro                           → Apple Watch Ultra 3 GPS + Cellular 49mm  Titanio negro  | 869.00€ (was 899.00€) | s=80 | A56790349
+
+📊 Summary:
+   Searches:   27
+   Matched:    80
+   No match:   267
+   By category:
+     airpods    4
+     ipad       18
+     iphone     32
+     mac        12
+     watch      14
