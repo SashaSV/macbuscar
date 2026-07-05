@@ -12,15 +12,25 @@ from selenium.common.exceptions import TimeoutException
 import json
 
 def driver_init():
-    #paswd = "/chromedriver"
-    #s = Service(paswd)
-    #driver = webdriver.Chrome(
-    #    executable_path=paswd
-    #)
-    #driver.get("https://www.google.com")
-    #driver = webdriver.Chrome(service=ser, options=op)
+    # gethtml.py is used by the older Apple scraper (apple.py), which
+    # doesn't go through stores/runner.py's newer make_driver(). On the
+    # VPS there's no display, so plain webdriver.Chrome() crashes with
+    # "Chrome instance exited" the moment the session starts.
+    #
+    # Apple.es doesn't fingerprint bots the way the retail stores do,
+    # so we DON'T need undetected-chromedriver here — just the same
+    # headless bundle every other scraper uses when CI=true is set.
+    # Local runs (no CI env) keep the visible browser so we can watch
+    # the JS variant links get pulled out of React state.
+    opts = webdriver.ChromeOptions()
+    if os.environ.get('CI') == 'true':
+        opts.add_argument('--headless=new')
+        opts.add_argument('--no-sandbox')
+        opts.add_argument('--disable-gpu')
+        opts.add_argument('--disable-dev-shm-usage')
+        opts.add_argument('--window-size=1920,1080')
     s = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=s)
+    driver = webdriver.Chrome(service=s, options=opts)
     return driver
 
 def get_html(driver, url, ftm) -> None:
