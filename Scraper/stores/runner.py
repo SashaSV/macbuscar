@@ -117,6 +117,43 @@ def _detect_chrome_major():
 #   Selenium driver
 # ════════════════════════════════════════════════════════════════════════════
 
+def _cleanup_uc_dir():
+    """Remove stale undetected_chromedriver files before uc.Chrome() init.
+
+    On Windows, uc.patcher.unzip_package() calls os.rename() to move a
+    freshly downloaded chromedriver from its temp unzip location to the
+    canonical undetected_chromedriver.exe path. Windows os.rename fails
+    with FileExistsError when the target exists, so a stale driver from
+    an interrupted previous run permanently blocks all future runs until
+    someone manually deletes the file. Linux os.rename silently replaces,
+    so this is a Windows-only footgun — the Rossellimac task hit it
+    twice in a row on scheduled runs (05 + 07 Jul 2026) because a prior
+    exception left the temp files behind.
+
+    We clear the whole undetected_chromedriver appdata dir; uc's patcher
+    re-downloads the driver on next auto() call, which costs ~2 s and
+    beats crashing every night.
+    """
+    if os.name != 'nt':
+        return
+    appdata = os.environ.get('APPDATA')
+    if not appdata:
+        return
+    uc_dir = os.path.join(appdata, 'undetected_chromedriver')
+    if not os.path.isdir(uc_dir):
+        return
+    import shutil
+    for name in os.listdir(uc_dir):
+        p = os.path.join(uc_dir, name)
+        try:
+            if os.path.isdir(p):
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                os.remove(p)
+        except Exception:
+            pass  # best-effort — if we can't clean, uc will error the same way as before
+
+
 def make_driver(user_agent=None):
     """Chrome with stealth-style options. Same for every store.
 
@@ -155,6 +192,9 @@ def make_driver(user_agent=None):
         # by _detect_chrome_major(); falls back to None on failure to
         # preserve the old auto-detect behavior.
         chrome_major = _detect_chrome_major()
+        # Wipe any stale chromedriver files from an interrupted previous
+        # run — see _cleanup_uc_dir() for the full rationale.
+        _cleanup_uc_dir()
         return uc.Chrome(options=opts, version_main=chrome_major,
                          use_subprocess=True)
 

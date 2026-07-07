@@ -683,11 +683,17 @@ def parse_variant_path(path):
     # option (no stand, +50 €). Only iMac has this; skip on other Mac
     # slugs so we don't false-positive on 'con-soporte-inclinable'
     # strings elsewhere.
-    if '/imac/' in slug or 'imac' in slug.lower()[:8]:
-        if re.search(r'-soporte-vesa\b', slug):
-            result['soporte'] = 'VESA'
-        elif re.search(r'-soporte\b', slug):
-            result['soporte'] = 'Inclinable'
+    # slug here is only the LAST URL segment (path.split('/')[-1]) so
+    # the '/imac/' family qualifier lives one level up and isn't
+    # visible here. The previous version gated on '/imac/ in slug'
+    # which never matched, leaving every iMac row with soporte=NULL.
+    # Tail-anchored \Z (end-of-string) is unambiguous: no other Mac
+    # slug ends in '-soporte'. We use \Z instead of $ to keep the
+    # regex safe from any downstream tool that reads $ as end-of-input.
+    if re.search(r'-soporte-vesa\Z', slug):
+        result['soporte'] = 'VESA'
+    elif re.search(r'-soporte\Z', slug):
+        result['soporte'] = 'Inclinable'
 
     # ─── Color extraction: strip ALL technical noise, what's left is color.
     color = slug
