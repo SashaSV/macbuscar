@@ -7,6 +7,7 @@ export const TIENDAS = [
   { id:'amazon',     nombre:'Amazon.es',       logo:'🛒', url:'https://www.amazon.es/',         badge:'OFERTA'  },
   { id:'worten',     nombre:'Worten',          logo:'🔌', url:'https://www.worten.es/',         badge:''        },
   { id:'ktuin',     nombre:'K-tuin',          logo:'🍏', url:'https://www.k-tuin.com/',        badge:'PREMIUM' },
+  { id:'rossellimac', nombre:'Rossellimac',   logo:'🍏', url:'https://www.rossellimac.es/',     badge:'PREMIUM' },
 ];
 
 export const CATS = [
