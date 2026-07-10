@@ -1156,8 +1156,15 @@ class AppleScraper:
             d.memory         = ''
             d.display        = casesize
             d.techs          = {
-                'family': family_slug, 'material': material,
-                'connectivity': connection, 'source': 'apple.com',
+                'family':       family_slug,
+                'material':     material,
+                'connectivity': connection,
+                # Band metadata for cases expanded by _expand_watch_bands.
+                # Blank on Series 11 / SE / older families whose case-only
+                # variant has no band choice.
+                'band':         p.get('band', ''),
+                'bandStyle':    p.get('bandStyle', ''),
+                'source':       'apple.com',
             }
 
             try:
