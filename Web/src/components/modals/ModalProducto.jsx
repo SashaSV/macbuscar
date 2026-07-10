@@ -28,7 +28,12 @@ const TABS = ['Precios', 'Galería', 'Características', 'Reseñas', 'Historial'
 // Filter dimensions to expose in UI (in order).
 // Note: 'cores' is a composite pseudo-field that bundles cpuCores+gpuCores
 // (since they are tied together — you can't pick 18-core CPU with 10-core GPU).
-const FILTER_FIELDS = ['memory', 'ram', 'color', 'display', 'connectivity', 'cpu', 'cores', 'screen', 'bandSize'];
+// 'band' + 'soporte' were added to surface Apple Watch band choice
+// (Alpine Loop / Trail Loop / Ocean Band / Titanium Milanese Loop) and
+// iMac stand type (Inclinable / VESA). Both fields are already populated
+// on ProductVariant by matcher_apple.py; the filter row just needs to
+// know they exist. bandSize covers the Watch S/M/L strap length.
+const FILTER_FIELDS = ['memory', 'ram', 'color', 'display', 'connectivity', 'cpu', 'cores', 'screen', 'soporte', 'band', 'bandSize'];
 const FILTER_LABELS = {
   memory: 'Almacenamiento',
   ram:    'Memoria RAM',
@@ -38,6 +43,8 @@ const FILTER_LABELS = {
   cpu: 'Chip',
   cores:  'Núcleos',
   screen: 'Acabado pantalla',
+  soporte: 'Soporte',
+  band: 'Correa',
   bandSize: 'Tamaño',
 };
 
@@ -122,6 +129,21 @@ function FilterIcon({ name, size = 16 }) {
           <rect x="8" y="6" width="8" height="12" rx="1" />
           <path d="M3 4l3 0 0 3M21 4l-3 0 0 3M3 20l3 0 0-3M21 20l-3 0 0-3"
                 stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </svg>
+      );
+    case 'band':     // Watch strap loop — abstract braided band
+      return (
+        <svg {...props}>
+          <rect x="7" y="9" width="10" height="6" rx="2" />
+          <path d="M4 12h3M17 12h3" stroke="currentColor" strokeWidth="1.8" fill="none" />
+          <path d="M9 12h6" stroke="white" strokeWidth="1.2" fill="none" />
+        </svg>
+      );
+    case 'soporte':  // iMac stand — screen on a base
+      return (
+        <svg {...props}>
+          <rect x="4" y="4" width="16" height="11" rx="1.5" />
+          <path d="M12 15v3M8 20h8" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
         </svg>
       );
     default:
@@ -430,6 +452,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
   // chip choice — when chip changes, cores must usually change too.
   const SIBLING_DROP_ORDER = [
     'screen',     // first thing we'll let go
+    'soporte',    // iMac stand — narrow dimension, safe to release
     'color',
     'cores',
     'ram',
@@ -437,6 +460,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
     'cpu',
     'display',
     'connectivity',
+    'band',       // Watch band style — release before case size
     'bandSize',
   ];
 
@@ -787,7 +811,10 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       mac:     ['display', 'cpu', 'memory'],
                       iphone:  ['display', 'memory'],
                       ipad:    ['display', 'memory'],
-                      watch:   ['bandSize', 'connectivity'],
+                      // Watch: band style is the biggest price lever (Milanese
+                      // Loop bumps Ultra 3 by 100 EUR), so it earns primary
+                      // billing alongside case size and connectivity.
+                      watch:   ['bandSize', 'band', 'connectivity'],
                       airpods: [],
                     };
                     const PRIMARY = PRIMARY_BY_CAT[prod.cat] || ['display', 'memory'];

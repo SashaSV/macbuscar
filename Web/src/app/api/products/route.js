@@ -129,6 +129,15 @@ export async function GET(request) {
         cpuCores: v.cpuCores,
         gpuCores: v.gpuCores,
         connectivity: v.connectivity,
+        // Extra dimensions filled by matcher_apple.py: screen finish
+        // (Standard vs Nano-texture on Mac / iMac), iMac soporte
+        // (Inclinable vs VESA), and Apple Watch band metadata (style +
+        // colour) so ModalProducto can render chip filters for them.
+        // All are nullable — an iPhone variant just gets nulls here.
+        screen: v.screen,
+        soporte: v.soporte,
+        band: v.band,
+        bandColor: v.bandColor,
         bandSize: v.bandSize,
         fotos: v.fotos,
         cover: v.cover,
