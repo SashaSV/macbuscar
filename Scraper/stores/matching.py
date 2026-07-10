@@ -84,6 +84,28 @@ APPLE_COLOR_SYNONYMS = {
     'verde azulado':   'teal',
     'rosa nube':       'cloud pink',
     'titanio natural': 'natural titanium',
+    'titanio negro':   'black titanium',
+    'natural':         'natural titanium',
+    'negro':           'black titanium',
+}
+
+
+# ── Apple Watch band styles (Ultra 3 sells case + band as a bundled SKU)
+# Keywords the retail listing name must contain to be considered THIS band.
+# 'ti_milaneseloop' shows up in Spanish stores as 'Milanese Loop en titanio'
+# / 'Milanesa Loop' / 'Pulsera Milanese'. Everything except Alpine and
+# Ocean can be written either style, so we list all common variants.
+BAND_KEYWORDS = {
+    'Alpine Loop':            ('alpine',),
+    'Trail Loop':             ('trail',),
+    'Ocean Band':             ('ocean',),
+    'Titanium Milanese Loop': ('milanese', 'milanesa'),
+    'Milanese Loop':          ('milanese', 'milanesa'),
+    'Sport Band':             ('sport band', 'correa deportiva', 'sport'),
+    'Sport Loop':             ('sport loop',),
+    'Braided Solo Loop':      ('braided solo', 'solo trenzada'),
+    'Solo Loop':              ('solo loop',),
+    'Link Bracelet':          ('link bracelet', 'eslabones'),
 }
 
 
@@ -613,6 +635,20 @@ def score_result(result, variant, *, strict_chip=True, strict_anc=True):
             return -1
         score += 30
 
+    # ── Watch band STYLE (Ultra 3: Alpine / Trail / Ocean / Milanese)
+    # Variants that came out of _expand_watch_bands() carry a band style;
+    # retail listings for the same case with a different band would fail
+    # this test, keeping the 8 case x band variants separated. Non-Watch
+    # variants (band=None) are unaffected.
+    v_band_style = variant.get('band')
+    if v_band_style:
+        keywords = BAND_KEYWORDS.get(v_band_style, ())
+        if keywords:
+            if any(kw in name_low for kw in keywords):
+                score += 40
+            else:
+                return -1
+
     # ── Mac chip
     # Hard reject when variant has an M-series chip and result lists a
     # DIFFERENT M-chip. Soft handling when result lists no chip at all:
@@ -743,6 +779,7 @@ def find_best_match(variant, results, family_re, *, strict_chip=True, strict_anc
         variant.get('color') or
         variant.get('memory') or
         variant.get('bandSize') or
+        variant.get('band') or
         (strict_anc and 'cancelación' in nombre_low)
     )
     threshold = MIN_MATCH_SCORE if has_diff else 20
@@ -869,18 +906,19 @@ def load_products_with_variants():
 
             cur.execute('''
                 SELECT id, "productId", nombre, sku, memory, color, display,
-                       "bandSize", connectivity, cpu
+                       "bandSize", connectivity, cpu, band
                 FROM "ProductVariant"
                 ORDER BY "productId", id
             ''')
             by_pid = {p['id']: p for p in products}
             for (vid, pid, vname, sku, mem, color, disp,
-                 band, conn_, cpu) in cur.fetchall():
+                 band, conn_, cpu, wband) in cur.fetchall():
                 if pid in by_pid:
                     by_pid[pid]['variants'].append({
                         'id': vid, 'nombre': vname, 'sku': sku,
                         'memory': mem, 'color': color, 'display': disp,
                         'bandSize': band, 'connectivity': conn_, 'cpu': cpu,
+                        'band': wband,
                     })
     finally:
         conn.close()
@@ -1034,19 +1072,20 @@ def load_matched_variants_for_store(store_id):
 
             cur.execute('''
                 SELECT id, "productId", nombre, sku, memory, color, display,
-                       "bandSize", connectivity, cpu
+                       "bandSize", connectivity, cpu, band
                 FROM "ProductVariant"
                 WHERE id = ANY(%s)
                 ORDER BY "productId", id
             ''', (list(matched_variant_ids),))
             by_pid = {p['id']: p for p in products}
             for (vid, pid, vname, sku, mem, color, disp,
-                 band, conn_, cpu) in cur.fetchall():
+                 band, conn_, cpu, wband) in cur.fetchall():
                 if pid in by_pid:
                     by_pid[pid]['variants'].append({
                         'id': vid, 'nombre': vname, 'sku': sku,
                         'memory': mem, 'color': color, 'display': disp,
                         'bandSize': band, 'connectivity': conn_, 'cpu': cpu,
+                        'band': wband,
                     })
     finally:
         conn.close()
