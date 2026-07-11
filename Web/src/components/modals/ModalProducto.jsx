@@ -28,16 +28,18 @@ const TABS = ['Precios', 'Galería', 'Características', 'Reseñas', 'Historial'
 // Filter dimensions to expose in UI (in order).
 // Note: 'cores' is a composite pseudo-field that bundles cpuCores+gpuCores
 // (since they are tied together — you can't pick 18-core CPU with 10-core GPU).
-// 'band' + 'soporte' were added to surface Apple Watch band choice
-// (Alpine Loop / Trail Loop / Ocean Band / Titanium Milanese Loop) and
-// iMac stand type (Inclinable / VESA). Both fields are already populated
-// on ProductVariant by matcher_apple.py; the filter row just needs to
-// know they exist. bandSize covers the Watch S/M/L strap length.
-const FILTER_FIELDS = ['memory', 'ram', 'color', 'display', 'connectivity', 'cpu', 'cores', 'screen', 'soporte', 'band', 'bandSize'];
+// 'band' + 'soporte' + 'caseMaterial' were added to surface Apple Watch
+// band choice (Alpine Loop / Trail Loop / Ocean Band / Titanium Milanese
+// Loop), iMac stand type (Inclinable / VESA), and Watch case metal
+// (Aluminio / Titanio) which is a huge price lever on Series 11 (Titanio
+// bumps 42mm from 449 EUR to 799 EUR). bandSize covers the Watch S/M/L
+// strap length.
+const FILTER_FIELDS = ['memory', 'ram', 'color', 'caseMaterial', 'display', 'connectivity', 'cpu', 'cores', 'screen', 'soporte', 'band', 'bandSize'];
 const FILTER_LABELS = {
   memory: 'Almacenamiento',
   ram:    'Memoria RAM',
   color: 'Color',
+  caseMaterial: 'Material',
   display: 'Pantalla',
   connectivity: 'Conectividad',
   cpu: 'Chip',
@@ -144,6 +146,13 @@ function FilterIcon({ name, size = 16 }) {
         <svg {...props}>
           <rect x="4" y="4" width="16" height="11" rx="1.5" />
           <path d="M12 15v3M8 20h8" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        </svg>
+      );
+    case 'caseMaterial':  // Watch case material — stylised case rings
+      return (
+        <svg {...props}>
+          <rect x="7" y="5" width="10" height="14" rx="3" />
+          <path d="M9 3v2M15 3v2M9 19v2M15 19v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
         </svg>
       );
     default:
@@ -388,8 +397,16 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
   // user picks filters) — incompatible values are rendered disabled by the
   // button's `valueIsCompatible` check at render time.
   //
-  // Sorting is also fixed (based purely on the value itself or its cheapest
-  // global price) so buttons stay in the same place across selections.
+  // EXCEPTION — color for Watch: we sort compatible-with-current-filters
+  // values first, incompatible after. Rationale: when the user flips
+  // Material Aluminio ↔ Titanio the pool of compatible colours changes
+  // completely (aluminum has Plata / Negro Azabache / Gris Espacial /
+  // Oro Rosa; titanium has Oro / Natural / Slate). Under the old stable
+  // global sort, switching material meant the active chip jumped from
+  // position 1 to position 5 as pickFilter auto-picked the first
+  // compatible colour, and non-Watch categories still keep the stable
+  // global sort because their colours are truly global (an iPhone 17
+  // Pro Max isn't priced differently for a colour subset).
   //
   // 'cores' is a composite pseudo-field: each value is "cpuCores|gpuCores".
   const filterOptions = useMemo(() => {
@@ -419,6 +436,27 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
           const [cb, gb] = b.split('|').map(Number);
           return (ca + ga) - (cb + gb);
         });
+      } else if (field === 'color' && prod.cat === 'watch') {
+        // Compatibility-first sort: any colour offered by a variant
+        // that also matches the OTHER selected filters comes first;
+        // colours only found on variants that would need us to drop
+        // a sibling filter come last (and render dimmed in the row).
+        // Within each group we fall back to cheapest-first for a
+        // stable tie-break, so a returning user sees the same
+        // relative ordering on repeat visits.
+        const isCompat = (val) => variants.some(v =>
+          v.color === val &&
+          Object.entries(selected).every(([k, v_]) => {
+            if (!v_ || k === 'color') return true;
+            if (k === 'cores') return `${v.cpuCores}|${v.gpuCores}` === v_;
+            return v[k] === v_;
+          })
+        );
+        sorted = values.sort((a, b) => {
+          const ac = isCompat(a), bc = isCompat(b);
+          if (ac !== bc) return ac ? -1 : 1;
+          return minPriceForValue(field, a, pool) - minPriceForValue(field, b, pool);
+        });
       } else {
         sorted = values.sort((a, b) =>
           minPriceForValue(field, a, pool) - minPriceForValue(field, b, pool)
@@ -427,7 +465,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
       opts[field] = sorted;
     }
     return opts;
-  }, [variantsWithPrice, variants]);
+  }, [variantsWithPrice, variants, prod.cat, selected]);
 
   // Find variant matching ALL selected filters. 'cores' is composite:
   // we match it against `${v.cpuCores}|${v.gpuCores}`.
@@ -811,16 +849,44 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                       mac:     ['display', 'cpu', 'memory'],
                       iphone:  ['display', 'memory'],
                       ipad:    ['display', 'memory'],
-                      // Watch: band style is the biggest price lever (Milanese
-                      // Loop bumps Ultra 3 by 100 EUR), so it earns primary
-                      // billing alongside case size and connectivity.
-                      watch:   ['bandSize', 'band', 'connectivity'],
+                      // Watch: primary-chip order mirrors Apple's own
+                      // PDP configurator (apple.com/es/shop/buy-watch) so
+                      // returning users read the modal in the same rhythm
+                      // they already know from Apple:
+                      //   Tamaño → Material → Color → Correa → Conectividad.
+                      // Case size + material + band type are the biggest
+                      // price levers (Titanio bumps 42mm S11 from 449 to
+                      // 799 EUR; Milanese Loop on Ultra 3 adds 100 EUR),
+                      // so keeping them up top also matches importance.
+                      // Colour comes between material and band because
+                      // the case-colour palette depends on which material
+                      // you picked — same reason Apple orders it there.
+                      watch:   ['bandSize', 'caseMaterial', 'color', 'band', 'connectivity'],
                       airpods: [],
                     };
                     const PRIMARY = PRIMARY_BY_CAT[prod.cat] || ['display', 'memory'];
 
-                    const allFields = FILTER_FIELDS.filter(f => filterOptions[f]);
-                    const primaryFields = allFields.filter(f => PRIMARY.includes(f));
+                    // Hide fields that are duplicates for a given category.
+                    // Watch stores size in BOTH `bandSize` and `display`
+                    // (both come out as '42mm'/'46mm'/'49mm' from the
+                    // scraper), so surfacing 'Pantalla' next to 'Tamaño'
+                    // would give the user two chip rows that do the same
+                    // thing. Same reason we don't show 'Display' as a chip
+                    // on AirPods where it's absent.
+                    const HIDDEN_BY_CAT = {
+                      watch:   ['display'],   // duplicates bandSize
+                      airpods: [],
+                    };
+                    const HIDDEN = HIDDEN_BY_CAT[prod.cat] || [];
+
+                    // Preserve the PRIMARY order defined in PRIMARY_BY_CAT
+                    // (Tamaño -> Material -> Color -> Correa -> Conectividad
+                    // for Watch) rather than falling back to the global
+                    // FILTER_FIELDS declaration order.
+                    const allFields = FILTER_FIELDS.filter(f =>
+                      filterOptions[f] && !HIDDEN.includes(f)
+                    );
+                    const primaryFields = PRIMARY.filter(f => filterOptions[f] && !HIDDEN.includes(f));
                     const secondaryFields = allFields.filter(f => !PRIMARY.includes(f));
 
                     function valueIsCompatible(field, val) {

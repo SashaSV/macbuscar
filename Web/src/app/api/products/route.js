@@ -139,6 +139,18 @@ export async function GET(request) {
         band: v.band,
         bandColor: v.bandColor,
         bandSize: v.bandSize,
+        // Watch case material (Aluminio / Titanio) isn't stored as its
+        // own column — the scraper writes 'Apple Watch Series 11 42mm
+        // Aluminio Plata GPS' into `nombre` and the material sits there
+        // as a word. Extract it here so ModalProducto can offer a
+        // "Material" chip filter without a Prisma migration. Null for
+        // any variant whose name doesn't mention Aluminio/Titanio.
+        caseMaterial: (() => {
+          const n = (v.nombre || '').toLowerCase();
+          if (n.includes('titanio'))  return 'Titanio';
+          if (n.includes('aluminio')) return 'Aluminio';
+          return null;
+        })(),
         fotos: v.fotos,
         cover: v.cover,
         hover: v.hover,
