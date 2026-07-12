@@ -118,7 +118,20 @@ export default function ManzanaApp() {
     if (orden === 'precio-asc') return aMin - bMin;
     if (orden === 'precio-desc') return bMin - aMin;
     if (orden === 'valoracion') return b.rating - a.rating;
-    return 0;
+    // 'default' — STATIC ordering, independent of prices / views / clicks.
+    // Groups on HomePage ("Más populares", "Mejor bajada de precio",
+    // "Bajada del mes") each drive their own dynamic sort so cards shuffle
+    // as data comes in. That's the wrong feel for the full catalogue:
+    // a returning user expects to find a product in the same slot they
+    // saw it last time. We sort by (a) category order matching the CATS
+    // array (iPhone → Mac → iPad → Watch → AirPods → Accesorios), then
+    // (b) name alphabetically. Both keys are static per product, so the
+    // catalogue reads like a printed price list.
+    const CAT_ORDER = CATS.reduce((acc, c, i) => (acc[c.id] = i, acc), {});
+    const aCatIdx = CAT_ORDER[a.cat] ?? 999;
+    const bCatIdx = CAT_ORDER[b.cat] ?? 999;
+    if (aCatIdx !== bCatIdx) return aCatIdx - bCatIdx;
+    return (a.nombre || '').localeCompare(b.nombre || '', 'es');
   });
 
   if (loadingProducts) return (

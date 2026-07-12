@@ -244,6 +244,41 @@ def color_search_terms(color):
     return terms
 
 
+# ── Colours whose short form is a strict prefix of a longer Apple
+# marketing name. Substring matching alone lets 'Oro' match 'Oro Rosa'
+# in a retail title, so we require a word boundary AFTER the short form
+# and forbid the specified follow-up token. Only lists ambiguous pairs
+# — 'Plata', 'Slate', 'Natural' etc. don't have longer forms and can
+# stay pure substring.
+COLOR_LOOKAHEAD_REJECTS = {
+    'oro':   ('rosa',),               # Oro (gold) ≠ Oro Rosa (rose gold)
+    'gold':  ('rose',),                # Gold ≠ Rose Gold
+    'negro': ('azabache', 'medianoche', 'espacial'),  # Negro ≠ Jet/Midnight/Space Black
+    'black': ('jet', 'midnight', 'space'),
+    'rose':  (),                       # symmetric — reserved for later
+}
+
+
+def _color_term_matches(term, name_low):
+    """Word-boundary color match with lookahead rejects.
+
+    Multi-word terms ('oro rosa', 'rose gold') fall back to substring —
+    they're already specific enough to avoid conflating with anything
+    else. Single-word terms enforce a word boundary AFTER the token and
+    an optional negative-lookahead against the ambiguous follow-ups
+    listed in COLOR_LOOKAHEAD_REJECTS.
+    """
+    if ' ' in term:
+        return term in name_low
+    rejects = COLOR_LOOKAHEAD_REJECTS.get(term, ())
+    if rejects:
+        alt = '|'.join(re.escape(r) for r in rejects)
+        pat = re.compile(rf'\b{re.escape(term)}\b(?!\s+(?:{alt}))', re.I)
+    else:
+        pat = re.compile(rf'\b{re.escape(term)}\b', re.I)
+    return bool(pat.search(name_low))
+
+
 def build_fallback_query(variant, subfamily_query):
     """Build a per-variant fallback search query when the sub-family search
     didn't surface this variant. Adds colour/memory/cpu/cellular tokens to
@@ -649,6 +684,36 @@ def score_result(result, variant, *, strict_chip=True, strict_anc=True):
             else:
                 return -1
 
+    # ── Watch case material (Aluminio / Titanio) — key discriminator
+    # between e.g. '46mm Aluminio Oro Rosa gpscell' and '46mm Titanio
+    # Oro gpscell'. Both share bandSize/connectivity, and 'Oro' is
+    # substring of 'Oro Rosa', so without this hard-check the matcher
+    # merges the two into one listing. Applied only when the retail
+    # title actually names a material — K-tuin/Amazon titles that
+    # simply omit 'Aluminio' still pass through so the softer signals
+    # (color, band, size) can arbitrate.
+    nombre_low_material = nombre.lower()
+    if 'titanio' in nombre_low_material or 'titanium' in nombre_low_material:
+        v_material = 'titanium'
+    elif ('aluminio' in nombre_low_material
+          or 'aluminium' in nombre_low_material
+          or 'aluminum' in nombre_low_material):
+        v_material = 'aluminum'
+    else:
+        v_material = None
+    if v_material:
+        r_has_titanium = ('titanio' in name_low or 'titanium' in name_low)
+        r_has_aluminum = ('aluminio' in name_low
+                          or 'aluminium' in name_low
+                          or 'aluminum' in name_low)
+        if v_material == 'titanium' and r_has_aluminum and not r_has_titanium:
+            return -1
+        if v_material == 'aluminum' and r_has_titanium and not r_has_aluminum:
+            return -1
+        if ((v_material == 'titanium' and r_has_titanium)
+                or (v_material == 'aluminum' and r_has_aluminum)):
+            score += 30
+
     # ── Mac chip
     # Hard reject when variant has an M-series chip and result lists a
     # DIFFERENT M-chip. Soft handling when result lists no chip at all:
@@ -728,16 +793,18 @@ def score_result(result, variant, *, strict_chip=True, strict_anc=True):
             score += 30
             has_strong_signal = True
 
-    # ── Color (bilingual matching via color_search_terms)
+    # ── Color (bilingual matching via color_search_terms, with word
+    # boundary + lookahead so 'Oro' doesn't match 'Oro Rosa', 'Negro'
+    # doesn't match 'Negro Azabache', etc — see COLOR_LOOKAHEAD_REJECTS.
     v_col = (variant.get('color') or '').lower().strip()
     if v_col:
         terms = color_search_terms(v_col)
-        if any(t in name_low for t in terms):
+        if any(_color_term_matches(t, name_low) for t in terms):
             score += 30
         else:
             first = v_col.split()[0] if v_col.split() else ''
             first_terms = color_search_terms(first) if first else set()
-            if len(first) >= 4 and any(t in name_low for t in first_terms):
+            if len(first) >= 4 and any(_color_term_matches(t, name_low) for t in first_terms):
                 score += 15
             elif has_strong_signal:
                 pass
