@@ -24,7 +24,6 @@ export default function HistorialChart({ variant }) {
   if (!variant) return null;
 
   // ── 1. Build per-store timelines ──────────────────────────────────────
-  // timelines: Map<storeId, Array<{ dateMs, price, storeName? }>> sorted asc
   const timelines = new Map();
 
   const pushPoint = (storeId, dateMs, price, storeName) => {
@@ -39,10 +38,6 @@ export default function HistorialChart({ variant }) {
   for (const ph of (variant.priceHistory || [])) {
     pushPoint(ph.storeId, new Date(ph.date).getTime(), ph.price);
   }
-  // Always include the current Price as a "now" sample — covers stores
-  // whose latest change is older than the 90-day PriceHistory window AND
-  // anchors the rightmost end of the chart at today's actual displayed
-  // price (which is what the user is comparing the historical numbers to).
   for (const pr of (variant.prices || [])) {
     pushPoint(
       pr.storeId,
@@ -75,9 +70,6 @@ export default function HistorialChart({ variant }) {
   const sortedDays = [...dayKeys].sort();
 
   // ── 3. For each day, compute snapshot min across stores ──────────────
-  // "Snapshot min on day D" = MIN over each store of the store's price
-  // EFFECTIVE at end of day D (i.e. the most recent timeline entry with
-  // date ≤ D). Stores that don't yet exist on day D contribute nothing.
   const points = [];
   for (const day of sortedDays) {
     const dayEnd = new Date(day + 'T23:59:59.999Z').getTime();
@@ -102,9 +94,7 @@ export default function HistorialChart({ variant }) {
 
   if (!points.length) return null;
 
-  // Collapse runs of identical consecutive prices — the chart shows MOVEMENTS,
-  // and a long flat line with 40 identical labels is noise. Keep first/last
-  // of each run so the visual flat segment is preserved.
+  // Collapse runs of identical consecutive prices — the chart shows MOVEMENTS.
   const compressed = [];
   for (let i = 0; i < points.length; i++) {
     const prev = compressed[compressed.length - 1];
@@ -115,27 +105,105 @@ export default function HistorialChart({ variant }) {
   }
   const display = compressed;
 
-  // ── 4. Chart geometry & styling ──────────────────────────────────────
+  // ── 4. Chart geometry ────────────────────────────────────────────────
+  // Larger viewBox coords so SVG-unit fontSizes (10-13) render at a
+  // readable px size at 260px chart height. Padding leaves room for Y-axis
+  // ticks on the left, X-axis dates below, and price labels above the line
+  // without clipping.
   const prices = display.map(p => p.price);
-  const min = Math.min(...prices), max = Math.max(...prices);
-  const range = max - min || 1;
-  const W = 100, H = 52;
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  // Y-axis: pad range 8% top and bottom so line never touches edges and
+  // even a small variation is visually meaningful (a 3% drop shouldn't
+  // read as "flat line", which was the old bug).
+  const rawRange = maxP - minP || 1;
+  const yPadFrac = 0.15;
+  const yLo = minP - rawRange * yPadFrac;
+  const yHi = maxP + rawRange * yPadFrac;
+  const yRange = yHi - yLo;
+
+  const W = 800, H = 300;
+  const PAD_L = 62, PAD_R = 22, PAD_T = 28, PAD_B = 34;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+
+  const xOf = (i) => display.length === 1
+    ? PAD_L + innerW / 2
+    : PAD_L + (i / (display.length - 1)) * innerW;
+  const yOf = (price) => PAD_T + (1 - (price - yLo) / yRange) * innerH;
+
   const pts = display.map((pt, i) => ({
-    x: display.length === 1 ? W / 2 : (i / (display.length - 1)) * W,
-    y: H - ((pt.price - min) / range) * H * 0.62 - H * 0.2,
+    x: xOf(i),
+    y: yOf(pt.price),
     label: pt.label,
     price: pt.price,
+    dateObj: pt.dateObj,
   }));
-  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-  const area = `${path} L${pts[pts.length-1].x},${H} L0,${H} Z`;
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const area = `${path} L${pts[pts.length-1].x.toFixed(1)},${PAD_T + innerH} L${pts[0].x.toFixed(1)},${PAD_T + innerH} Z`;
+
   const drop = prices[prices.length - 1] - prices[0];
   const isDown = drop < 0;
   const color = isDown ? '#10b981' : (drop > 0 ? '#ef4444' : '#6b7280');
 
-  // Subsample date labels so we never draw more than ~7 on the x-axis.
-  const MAX_LABELS = 7;
-  const step = Math.max(1, Math.ceil(pts.length / MAX_LABELS));
-  const showLabel = i => i === 0 || i === pts.length - 1 || i % step === 0;
+  // ── Y-axis: compute 4 gridline values at nice round steps ─────────────
+  // Pick a step that gives ~4 intervals; snap to 5/10/25/50/100 for readability.
+  function pickStep(range, targetSteps = 4) {
+    const raw = range / targetSteps;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / magnitude;
+    let nice;
+    if (norm < 1.5) nice = 1;
+    else if (norm < 3.5) nice = 2;
+    else if (norm < 7.5) nice = 5;
+    else nice = 10;
+    return nice * magnitude;
+  }
+  const yStep = pickStep(yRange);
+  const yTicks = [];
+  const firstTick = Math.ceil(yLo / yStep) * yStep;
+  for (let v = firstTick; v <= yHi; v += yStep) {
+    yTicks.push(v);
+  }
+
+  // ── X-axis: subsample date labels so we never draw more than ~7 ──────
+  const MAX_X_LABELS = 7;
+  const step = Math.max(1, Math.ceil(pts.length / MAX_X_LABELS));
+  const showXLabel = i => i === 0 || i === pts.length - 1 || i % step === 0;
+
+  // ── Price labels above the line: only on KEY points (first, last,
+  // absolute min, absolute max, plus any point that starts a new run
+  // of a different price). Skips clutter of a label on every dot.
+  const minIdx = prices.indexOf(minP);
+  const maxIdx = prices.indexOf(maxP);
+  const keyIdxs = new Set([0, prices.length - 1, minIdx, maxIdx]);
+  // Also flag "price changed vs previous" points — that's the informative
+  // moment. Filter later to avoid crowding by minimum-distance gate.
+  const changeIdxs = [];
+  for (let i = 1; i < prices.length; i++) {
+    if (prices[i] !== prices[i - 1]) changeIdxs.push(i);
+  }
+  // Add change points until we've got ~6 labels total.
+  for (const idx of changeIdxs) {
+    if (keyIdxs.size >= 6) break;
+    keyIdxs.add(idx);
+  }
+  // Anti-overlap gate: if two label indexes are visually within 60 SVG-units
+  // on the X axis (roughly one label width), drop the later one.
+  const sortedKeys = [...keyIdxs].sort((a, b) => a - b);
+  const finalLabelIdxs = new Set();
+  let lastX = -Infinity;
+  for (const i of sortedKeys) {
+    const x = pts[i]?.x ?? 0;
+    if (x - lastX >= 60) {
+      finalLabelIdxs.add(i);
+      lastX = x;
+    }
+  }
+  // Always guarantee first + last are labelled even if they collide with a
+  // key point — the range endpoints anchor the reader.
+  finalLabelIdxs.add(0);
+  finalLabelIdxs.add(pts.length - 1);
 
   const firstDate = display[0]?.dateObj;
   const lastDate  = display[display.length - 1]?.dateObj;
@@ -146,6 +214,7 @@ export default function HistorialChart({ variant }) {
 
   return (
     <div>
+      {/* HEADER: title + range on the left, min/max stats on the right */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:14 }}>
         <div>
           <div style={{ fontSize:11, color:'rgba(29,29,31,0.5)', textTransform:'uppercase', letterSpacing:0.4 }}>
@@ -166,12 +235,12 @@ export default function HistorialChart({ variant }) {
         <div style={{ fontSize:11, color:'rgba(29,29,31,0.55)', textAlign:'right', display:'flex', flexDirection:'column', gap:4 }}>
           <div>
             Mín: <span style={{ color:'#047857', fontWeight:700, fontSize:13, fontFamily:'ui-monospace,monospace' }}>
-              {min.toLocaleString('es-ES')} €
+              {minP.toLocaleString('es-ES')} €
             </span>
           </div>
           <div>
             Máx: <span style={{ color:'#b91c1c', fontWeight:700, fontSize:13, fontFamily:'ui-monospace,monospace' }}>
-              {max.toLocaleString('es-ES')} €
+              {maxP.toLocaleString('es-ES')} €
             </span>
           </div>
         </div>
@@ -181,53 +250,100 @@ export default function HistorialChart({ variant }) {
         background: 'rgba(255,255,255,0.55)',
         border: '0.5px solid rgba(255,255,255,0.8)',
         borderRadius: 14,
-        padding: '20px 14px 26px',
+        padding: '8px 4px',
         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)',
       }}>
-        <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:160, overflow:'visible' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width:'100%', height:260, overflow:'visible', display:'block' }}
+             preserveAspectRatio="xMidYMid meet">
           <defs>
-            <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity="0.32" />
+            <linearGradient id="hcg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.28" />
               <stop offset="100%" stopColor={color} stopOpacity="0" />
             </linearGradient>
           </defs>
-          <line x1="0" y1={H/2} x2={W} y2={H/2}
-                stroke="rgba(29,29,31,0.08)" strokeWidth="0.3" strokeDasharray="0.6 0.6" />
 
-          {pts.length > 1 && <path d={area} fill="url(#cg)" />}
+          {/* Y-axis grid lines + labels */}
+          {yTicks.map((v) => {
+            const y = yOf(v);
+            return (
+              <g key={`y-${v}`}>
+                <line
+                  x1={PAD_L}
+                  y1={y}
+                  x2={W - PAD_R}
+                  y2={y}
+                  stroke="rgba(29,29,31,0.07)"
+                  strokeWidth="1"
+                  strokeDasharray="3 4"
+                />
+                <text
+                  x={PAD_L - 8}
+                  y={y + 4}
+                  textAnchor="end"
+                  fontSize="11"
+                  fill="rgba(29,29,31,0.5)"
+                  style={{ fontFamily: 'ui-monospace,monospace' }}
+                >
+                  {v.toLocaleString('es-ES', { maximumFractionDigits: 0 })} €
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Area fill + line */}
+          {pts.length > 1 && <path d={area} fill="url(#hcg)" />}
           {pts.length > 1 && (
-            <path d={path} fill="none" stroke={color} strokeWidth="1.4"
-                  strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d={path}
+              fill="none"
+              stroke={color}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           )}
 
-          {pts.map((p, i) => (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r="1.6" fill="#ffffff" stroke={color} strokeWidth="0.8" />
-              <text
-                x={p.x}
-                y={p.y - 3.2}
-                textAnchor="middle"
-                fontSize="3.8"
-                fontWeight="700"
-                fill="#1d1d1f"
-                style={{ fontFamily: 'ui-monospace,monospace' }}
-              >
-                {p.price.toLocaleString('es-ES')}€
-              </text>
-              {showLabel(i) && (
-                <text
-                  x={p.x}
-                  y={H + 4.5}
-                  textAnchor="middle"
-                  fontSize="3.2"
-                  fill="rgba(29,29,31,0.55)"
-                  style={{ fontWeight: 500 }}
-                >
-                  {p.label}
-                </text>
-              )}
-            </g>
-          ))}
+          {/* Data points + labels */}
+          {pts.map((p, i) => {
+            const isKey = finalLabelIdxs.has(i);
+            return (
+              <g key={i}>
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={isKey ? 4.5 : 3}
+                  fill="#ffffff"
+                  stroke={color}
+                  strokeWidth={isKey ? 2 : 1.5}
+                />
+                {isKey && (
+                  <text
+                    x={p.x}
+                    y={p.y - 12}
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="700"
+                    fill="#1d1d1f"
+                    style={{ fontFamily: 'ui-monospace,monospace' }}
+                  >
+                    {p.price.toLocaleString('es-ES', { maximumFractionDigits: 2 })} €
+                  </text>
+                )}
+                {showXLabel(i) && (
+                  <text
+                    x={p.x}
+                    y={H - PAD_B + 18}
+                    textAnchor="middle"
+                    fontSize="11"
+                    fill="rgba(29,29,31,0.55)"
+                    style={{ fontWeight: 500 }}
+                  >
+                    {p.label}
+                  </text>
+                )}
+              </g>
+            );
+          })}
         </svg>
       </div>
     </div>
