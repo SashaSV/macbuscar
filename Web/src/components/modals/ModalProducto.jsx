@@ -753,14 +753,21 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
 
           {tab === 'Precios' && (
             <div style={{
-              // Desktop: 2-column split (filters left, retailers right)
-              // so the user can scroll retailers without losing track of
-              // which configuration they're pricing. Mobile keeps the
-              // simple vertical flow — not enough horizontal room for a
-              // split, and the natural thumb-scroll feel matters more.
+              // Desktop: THREE-column split —
+              //   COL 1: photo + filter chips
+              //   COL 2: selected-variant summary + BarraPrecios ladder
+              //   COL 3: retailer cards (Apple + others + 2ª mano)
+              // Each column scrolls independently so a long retailer
+              // list never pushes the filters or the summary off-screen,
+              // and the summary always sits between the picker (filters)
+              // and the outcome (cards) — you tweak on the left, watch
+              // the ladder rearrange in the middle, then act on the
+              // right. Mobile keeps the simple vertical flow (block) —
+              // not enough horizontal room for a 3-way split, and the
+              // natural thumb-scroll feel matters more.
               flex: 1,
               display: isMobile ? 'block' : 'grid',
-              gridTemplateColumns: isMobile ? undefined : 'minmax(420px, 480px) 1fr',
+              gridTemplateColumns: isMobile ? undefined : 'minmax(380px, 460px) minmax(300px, 380px) 1fr',
               overflow: isMobile ? 'visible' : 'hidden',
               minHeight: 0,
               margin: isMobile ? 0 : '-22px -28px 0',
@@ -1045,6 +1052,23 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                 </div>
               </div>
 
+              </div>{/* /LEFT column */}
+
+              {/* COL 2 (desktop) / second block (mobile):
+                  selected-variant summary + BarraPrecios ladder. Sits
+                  between filters and retailer cards so it reads as the
+                  bridge — the current best price + which store owns it
+                  + the % you're saving vs Apple, right next to the
+                  ladder that shows all stores at a glance. Independent
+                  scroll on desktop matches COL 1 and COL 3. */}
+              <div style={{
+                overflowY: isMobile ? 'visible' : 'auto',
+                padding: isMobile ? '18px 0 0' : '24px 24px 24px 24px',
+                minHeight: 0,
+                borderRight: isMobile ? 'none' : '1px solid rgba(0,0,0,0.06)',
+                WebkitOverflowScrolling: 'touch',
+              }}>
+
               {/* Selected Variant Header */}
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
@@ -1126,15 +1150,17 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   appleMsrp={selectedVariant?.msrp}
                 />
               )}
-              </div>{/* /LEFT column */}
 
-              {/* RIGHT column (desktop) / bottom block (mobile):
-                  retailer cards. Independently scrollable on desktop
-                  so a long retailer list never pushes the filters
-                  off-screen. */}
+              </div>{/* /COL 2 */}
+
+              {/* COL 3 (desktop) / bottom block (mobile): retailer
+                  cards. Split into Apple / all-other-retailers / 2ª
+                  mano zones — see the render block below. Independent
+                  scroll on desktop lets long lists breathe without
+                  pushing COL 1 or COL 2 off-screen. */}
               <div style={{
                 overflowY: isMobile ? 'visible' : 'auto',
-                padding: isMobile ? '18px 0 0' : '24px 44px 24px 28px',
+                padding: isMobile ? '18px 0 0' : '24px 44px 24px 24px',
                 minHeight: 0,
                 WebkitOverflowScrolling: 'touch',
               }}>
@@ -1579,7 +1605,7 @@ export default function ModalProducto({ prod, precios, scrapeStatus, onCerrar, o
                   )}
                 </div>
               )}
-              </div>{/* /RIGHT column */}
+              </div>{/* /COL 3 */}
             </div>
           )}
 
