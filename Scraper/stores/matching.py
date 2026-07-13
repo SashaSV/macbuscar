@@ -818,16 +818,36 @@ def score_result(result, variant, *, strict_chip=True, strict_anc=True):
         if abs(v_disp - r_disp) < 0.3:
             score += 20
 
-    # ── Connectivity (cellular vs Wi-Fi)
+    # ── Connectivity (cellular vs Wi-Fi) — HARD reject on explicit
+    # conflict, soft neutral when the retail title says neither.
+    #
+    # iPad retailers routinely publish separate Wi-Fi and Wi-Fi+Cellular
+    # SKUs in the same catalog and identical in every other dimension
+    # (Rossellimac, Fnac, PcComponentes all do this for the base iPad).
+    # If the title EXPLICITLY says 'Wi-Fi' with no cellular mention, a
+    # Cellular variant of ours would be the wrong SKU by definition, and
+    # vice-versa. So both directions hard-reject on explicit conflict.
+    #
+    # But: many stores omit both words for phones and watches (K-tuin
+    # iPhone titles rarely mention cellular even for cellular SKUs).
+    # Those pass through with no bonus and no penalty — the softer
+    # signals (colour, memory, display) do the arbitrating.
     v_conn = (variant.get('connectivity') or '').lower()
+    r_has_cell = ('cellular' in name_low or 'celular' in name_low
+                  or ' 5g' in name_low or name_low.endswith('5g'))
+    r_says_wifi_only = (('wi-fi' in name_low or 'wifi' in name_low)
+                        and not r_has_cell)
     if 'cell' in v_conn or 'celular' in v_conn:
-        if 'cellular' in name_low or 'celular' in name_low or '5g' in name_low:
+        if r_has_cell:
             score += 15
-        else:
-            score -= 10
-    elif v_conn:
-        if 'cellular' in name_low or 'celular' in name_low:
-            score -= 10
+        elif r_says_wifi_only:
+            return -1                # explicit "Wi-Fi" + no cellular → wrong SKU
+        # else: neutral — retail didn't say either way
+    elif v_conn:                     # variant is Wi-Fi only
+        if r_has_cell:
+            return -1                # variant Wi-Fi, retail says Cellular
+        if r_says_wifi_only:
+            score += 15
 
     return score
 
