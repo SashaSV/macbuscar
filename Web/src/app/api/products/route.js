@@ -1,5 +1,24 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Cached response with Incremental Static Regeneration (ISR).
+//
+// Why: this endpoint's payload is HEAVY — Product + Variants + Prices +
+// 90 days of PriceHistory + Listings + Reviews, with several JOINs. And
+// the underlying data changes at most a few times per day (scrapers run
+// on a nightly cron; a manual full-scrape is the fastest turnaround
+// we ever have). Under the old `force-dynamic` + `no-store` config,
+// every single visitor triggered a fresh Prisma query against Neon,
+// which burned through the free-tier CU-hour allowance in weeks.
+//
+// With ISR + shared s-maxage, Vercel serves the cached response for up
+// to 1h and only re-queries Neon on the first request after the window
+// expires; `stale-while-revalidate` lets subsequent visitors get the
+// stale copy instantly while the refresh runs in the background. Net
+// effect: ~1 Prisma query per hour per (cat, q) tuple, not per visitor.
+//
+// Trade-off: users may see a price up to ~1h stale. Since retailers
+// themselves refresh at most a few times per day and PriceHistory is
+// sparse (rows exist only on real changes), this is well within the
+// noise floor of the underlying data.
+export const revalidate = 3600;   // ISR: regenerate at most once per hour
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolveCustomCover } from '@/lib/customCover';
@@ -387,7 +406,14 @@ export async function GET(request) {
     });
 
     return NextResponse.json(serialized, {
-      headers: { 'Cache-Control': 'no-store, max-age=0' },
+      headers: {
+        // Shared cache (Vercel edge / CDN) holds the response for 1h;
+        // stale-while-revalidate keeps it available for another 24h
+        // while a background refresh runs. Matches the ISR revalidate
+        // window at the top of this file.
+        'Cache-Control':
+          'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
     });
   } catch (err) {
     console.error('[GET /api/products]', err);

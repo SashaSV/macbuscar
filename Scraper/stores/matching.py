@@ -832,10 +832,21 @@ def score_result(result, variant, *, strict_chip=True, strict_anc=True):
     # iPhone titles rarely mention cellular even for cellular SKUs).
     # Those pass through with no bonus and no penalty — the softer
     # signals (colour, memory, display) do the arbitrating.
+    # MediaMarkt abbreviations: their JSON-LD names use 'CL' as a
+    # standalone token for Cellular ('IPAD MINI 128GB WI-FI CL BLUE',
+    # 'IPAD MINI WF CL 256GB STL'), so the full 'cellular'/'celular'
+    # substring check missed them and Cellular listings ended up linked
+    # to Wi-Fi variants at inflated prices. `\bcl\b` catches the
+    # standalone token without matching random 'cl' sequences inside
+    # other words. `+ cell` and `+cell` cover the compact 'Wi-Fi+Cell'
+    # form used in some MediaMarkt Constructor.io titles.
     v_conn = (variant.get('connectivity') or '').lower()
     r_has_cell = ('cellular' in name_low or 'celular' in name_low
-                  or ' 5g' in name_low or name_low.endswith('5g'))
-    r_says_wifi_only = (('wi-fi' in name_low or 'wifi' in name_low)
+                  or ' 5g' in name_low or name_low.endswith('5g')
+                  or re.search(r'\bcl\b', name_low) is not None
+                  or '+ cell' in name_low or '+cell' in name_low)
+    r_says_wifi_only = (('wi-fi' in name_low or 'wifi' in name_low
+                         or re.search(r'\bwf\b', name_low) is not None)
                         and not r_has_cell)
     if 'cell' in v_conn or 'celular' in v_conn:
         if r_has_cell:
