@@ -8,6 +8,28 @@ they come up.
 
 ## 🚀 Next up (high-value, well-scoped)
 
+### Apple Store price refresh — no schedule at all (found 2026-07-23)
+*Root cause of stale "PRECIO OFICIAL APPLE STORE" prices on the site
+(e.g. iPad mini stuck at 13 jul while every retailer refreshed 22 jul).*
+
+`apple.py` is NOT in `refresh_all.py`'s `STORES` list, has no
+`apple-refresh.bat`/Task Scheduler entry, and isn't referenced in any
+VPS crontab — it only ever ran manually. Everything else (K-tuin,
+PcC, MediaMarkt, Amazon nightly on VPS; Worten/ECI/Fnac/Rossellimac
+local cron) has a runner; Apple never did.
+
+- [x] `apple-refresh.bat` added to project root (mirrors
+      worten-refresh.bat pattern: `python -m stores.apple >> apple.log`)
+- [x] `apple-refresh.bat` now also runs `python -m stores.matcher_apple`
+      after the scrape (2026-07-23 fix) — previously it only scraped;
+      fresh prices landed in `ScrapedProduct` but never reached
+      `Price`/`msrp` because nobody ran the matcher afterward.
+- [ ] Register Windows Task Scheduler job `macbuscar-apple`, weekly
+      (Apple prices change rarely — daily is overkill). Suggest
+      Sunday 02:00, ahead of Worten (03:30) / ECI (04:00).
+- [ ] Run once manually now to clear the current staleness:
+      `apple-refresh.bat` (scrape + matcher)
+
 ### Re-enable El Corte Inglés on VPS nightly
 *Currently runs on local Windows Task Scheduler because VPS IP is
 in ECI's Akamai datacenter blocklist (HTTP/2 403 from bare curl).
@@ -313,6 +335,89 @@ Keeps the site's prices fresh without re-running the full match logic.
 
 ## 🧹 Data cleanup
 
+- [x] **iPad mini Azul Wi-Fi = base-iPad price (SKU collision redux, FIXED 2026-07-23)**
+      iPad mini Azul Wi-Fi 128/256/512 (variants 263/264/265) show the
+      BASE iPad Apple price (499/629/879 €) instead of their own
+      (679/809/1059 € = their msrp). Azul is the ONLY colour shared by
+      base iPad and mini Wi-Fi, so exactly those 3 configs collide.
+      **Root cause:** `ScrapedProduct` is `@@unique([sku, storeId])` and
+      `apple.py` derives `sku` from the URL slug TAIL, which is identical
+      for `.../ipad/128gb-azul-wifi` and `.../ipad-mini/128gb-azul-wifi`.
+      The two families overwrite each other's ScrapedProduct row; the
+      matcher then propagates the surviving family's price onto whichever
+      variant holds the bare `128gb-azul-wifi` sku (the mini). The
+      previous fix only prefixed base-iPad *variant* SKUs in the DB
+      (`ipad-128gb-azul-wifi`, variants 358-360) — it left apple.py
+      deriving bare tails and left ScrapedProduct's collision intact, so
+      it regressed on the very next scrape.
+      - [x] Data-correction one-shot written: `Web/fix-ipadmini-azul-price.mjs`
+            (sets Apple Price.price = variant.msrp for any ipad-mini row
+            that disagrees; dry-run by default, `--apply` to write).
+      - [x] **Permanent source fix in `apple.py`** (line ~991, `_scrape_family`):
+            iPad SKUs now derived as `f"{family_slug}-{tail}"` so
+            `ipad-128gb-azul-wifi` ≠ `ipad-mini-128gb-azul-wifi`. Only
+            `category == 'iPad'` is prefixed; iPhone/Mac/AirPods tails stay
+            bare (already unique per family) to avoid a catalog-wide churn.
+      - [x] DB migration written: `Web/migrate-apple-ipad-sku.mjs`
+            (renames existing cat='ipad' variant SKUs to the family-qualified
+            form, idempotent, dry-run by default, flags any unique conflicts).
+      - [x] Ran: migrate SKUs → re-scrape iPad families → matcher. Prices
+            now correct and fresh (Apple cut prices: mini 549/679/929,
+            base iPad 379/509/759), each config appears once with a
+            family-prefixed sku, collision check clean.
+      - [x] **Dedup fallout cleaned** (`Web/dedup-apple-ipad-variants.mjs`):
+            the re-scrape created 157 bare-sku DUPLICATE iPad variants
+            because `matcher_apple.py` reprocesses EVERY ScrapedProduct
+            row (see matcher bug below), so the leftover pre-migration
+            bare rows re-inserted variants alongside the migrated ones.
+            Script deleted the 157 bare dupes (only where a prefixed twin
+            existed — 0 orphans) + the 157 stale bare ScrapedProduct rows.
+
+- [x] **matcher_apple.py reprocesses ALL ScrapedProduct rows every run**
+      (root cause of the 2026-07-23 duplicate-variant mess), FIXED
+      2026-07-23. Two-part fix:
+      - `matcher_apple.py`: SELECT now filters `AND "matchStatus" =
+        'pending'` (matches what the docstring always claimed it did).
+      - `dbservice_postgres.py` `save_scraped_products()`: the
+        `ON CONFLICT DO UPDATE` now also resets `"matchStatus" =
+        'pending'` on every rescrape (previously it left matchStatus
+        untouched, so a matched row stayed 'matched' forever — without
+        this half of the fix, filtering the matcher alone would have
+        silently stopped ALL future price updates for already-matched
+        SKUs). Together: fresh scrapes get reprocessed, stale/orphaned
+        rows (e.g. pre-migration bare SKUs) quietly stop being touched
+        instead of re-creating duplicate variants.
+      - Confirmed isolated to the Apple pipeline only — amazon/worten/
+        mediamarkt/ktuin/fnac go through `matching.py`'s
+        `upsert_scraped_and_price()`, which has its own ON CONFLICT and
+        sets `matchStatus='matched'` immediately (live matching during
+        scrape, no separate batch matcher).
+      - Not needed after this fix: the sku-based prune/cleanup pass —
+        stale rows just stop being reprocessed instead.
+
+- [x] **Apple images: download as WebP, not PNG** (done 2026-07-24).
+      `apple.py` fetched variant images with `fmt=png-alpha` + saved
+      `.png`, needing a separate sharp conversion pass. Now fetches WebP
+      directly:
+      - `to_png_alpha()` renamed to `to_webp_alpha()`, regex now emits
+        `fmt=webp-alpha` (keeps the alpha channel — plain `fmt=webp`
+        would drop transparency and put the product on a solid bg).
+        Updated at all 3 call sites: `extract_variant_images` (main +
+        synthesized `_AV1..4` urls) and `_extract_watch_variant_image`.
+      - `download_image()` now writes `.webp` filenames instead of `.png`.
+      - Hero images were already `fmt=webp` from the page HTML —
+        untouched.
+      - Content-Type / size-sanity checks are format-agnostic, no change
+        needed there.
+      - [ ] **Not yet done:** run a scrape and visually verify a
+            transparent variant image still renders correctly (no black/
+            white matte where the transparent background should be)
+            before this rides along on the next full Apple scrape.
+      - [ ] Existing `/Web/public/products/*.png` files are untouched by
+            this change (only NEW downloads get `.webp`) — decide later
+            whether to bulk re-pull old ones or leave the PNG→WebP sharp
+            step in place as a one-time backfill for the old files.
+
 - [ ] **Apple Watch Oro vs Oro Rosa** — K-tuin scraper showed these mapping to same SKU
       (32676 "Oro rosa" matched both variants). Verify in DB, likely
       duplicate variants for one real colour.
@@ -320,6 +425,52 @@ Keeps the site's prices fresh without re-running the full match logic.
       (works because of COLOR_TRANSLATIONS but cleaner to normalize at source)
 - [ ] **iPhone 16 Pro / Pro Max** — missing from `Web/prisma/seed/products.js`
       (only iPhone 16 / 16 Plus / 16e in seed; iPhone 17 family complete)
+
+---
+
+## 🧪 Testing / monitoring (data-integrity guardrails)
+
+*Motivation: the iPad-mini Azul collision (2026-07-23) and the 10-day
+Apple-price staleness both went unnoticed until spotted by eye on the
+live site. We need automated checks that would have caught either one
+the night it happened. Build these as standalone Node scripts under
+`Web/tests/` (Prisma, no framework needed) plus a thin `npm test` /
+CI wrapper, so they can run post-scrape and fail loudly.*
+
+- [ ] **Price-vs-MSRP anomaly check** — for every Apple Store Price row,
+      flag where `|price - variant.msrp| / msrp` exceeds a threshold
+      (e.g. >5%). Apple sells at list price, so any Apple row that
+      disagrees with its own msrp is almost certainly a mis-linked SKU
+      (exactly the mini/base collision signature). Would have caught
+      263/264/265 immediately. Generalize the one-off
+      `check-ipadmini-collision.mjs` into this.
+- [ ] **Cross-family SKU / URL collision check** — assert no two variants
+      in DIFFERENT product families share a `sku`, and no two share an
+      Apple `Price.url`. Catches the ScrapedProduct `(sku, storeId)`
+      collision class at the source, for ALL families (not just iPad).
+- [ ] **Staleness check** — flag any Price row whose `updatedAt` is older
+      than its store's expected cadence (Apple weekly, retailers daily).
+      Would have caught the whole Apple catalog frozen at 10-11 days.
+      Emit a per-store "oldest price age" summary. Generalize
+      `check-apple.mjs`.
+- [ ] **Outlier / sanity bounds** — flag prices that are implausible:
+      below a floor (e.g. iPhone < 300 €, MacBook < 800 €), a retailer
+      priced *below* Apple MSRP by an improbable margin (>40%), or a
+      variant whose price moved >30% vs its last `PriceHistory` point
+      overnight (fat-finger / parse error like the ECI trade-in-vs-price
+      mixups).
+- [ ] **Duplicate-variant check** — assert one variant per
+      (productId, memory, color, connectivity, cpu, bandSize) tuple.
+      Catches the Watch Oro/Oro-Rosa and iMac EN/ES duplication classes
+      already noted under Data cleanup.
+- [ ] **Coverage regression check** — per store, compare matched-variant
+      count against a stored baseline; fail if it drops >15% (the Amazon
+      Mac regression signature). Persist baselines in a small JSON.
+- [ ] **Wiring** — run these after `refresh_all.py` / the Apple matcher
+      (a step in the VPS `run-refresh.sh` and/or a GH Action), and print
+      a compact report. Non-zero exit on any hard failure so the nightly
+      log makes the breakage obvious instead of it surfacing on the live
+      site days later.
 
 ---
 

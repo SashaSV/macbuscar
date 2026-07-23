@@ -109,7 +109,7 @@ def download_image(url, strict=False):
     name_m = re.search(r'/is/([A-Za-z0-9_\-]+)\?', url)
     base_name = (name_m.group(1)[:80] if name_m else 'img')
     url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
-    filename = f'{base_name}_{url_hash}.png'
+    filename = f'{base_name}_{url_hash}.webp'
     local_path = os.path.join(PRODUCTS_DIR, filename)
     public_path = f'{PUBLIC_PREFIX}/{filename}'
 
@@ -433,9 +433,12 @@ def extract_variant_price(html, path):
 
 # ── Image extraction ───────────────────────────────────────────────────────
 
-def to_png_alpha(url):
-    """Force Apple CDN url → png-alpha (transparent background)."""
-    url = re.sub(r'fmt=(p-jpg|jpeg|jpg|webp)', 'fmt=png-alpha', url, flags=re.I)
+def to_webp_alpha(url):
+    """Force Apple CDN url → webp-alpha (transparent background, WebP instead
+    of PNG so we no longer need a separate PNG→WebP conversion pass after
+    download). Scene7 (Apple's image CDN) supports webp-alpha the same way
+    it supports png-alpha — alpha channel preserved, just a smaller format."""
+    url = re.sub(r'fmt=(p-jpg|jpeg|jpg|webp|png-alpha)', 'fmt=webp-alpha', url, flags=re.I)
     url = re.sub(r'&qlt=\d+', '', url)
     url = re.sub(r'\?qlt=\d+&', '?', url)
     url = re.sub(r'&\.v=[^&]+', '', url)
@@ -569,7 +572,7 @@ def extract_variant_images(html):
         wid_m = re.search(r'wid=(\d+)', url)
         if wid_m and int(wid_m.group(1)) < 400:
             continue
-        url = to_png_alpha(url)
+        url = to_webp_alpha(url)
         if url in seen:
             continue
         seen.add(url)
@@ -594,7 +597,7 @@ def extract_variant_images(html):
         # Synthesize _AV1, _AV2, _AV3 (Apple often goes up to AV3 or AV4)
         for av in (1, 2, 3, 4):
             synth = f'{base}_AV{av}{query}'
-            synth = to_png_alpha(synth)
+            synth = to_webp_alpha(synth)
             if synth not in seen:
                 seen.add(synth)
                 results.append(synth)
@@ -987,8 +990,23 @@ class AppleScraper:
                 print(f'          {tag} V{vi_idx+1}. {u}')
             v_local = download_images_batch(v_image_urls, strict=True)
 
-            # SKU = last URL segment without query string
-            sku = unquote(path.split('?')[0].rstrip('/').split('/')[-1])[:200]
+            # SKU = last URL segment without query string.
+            tail = unquote(path.split('?')[0].rstrip('/').split('/')[-1])
+            # Family-qualify the SKU for iPad. Base iPad and iPad mini share
+            # identical config tails (e.g. '128gb-azul-wifi' for both
+            # .../ipad/... and .../ipad-mini/...). Since ScrapedProduct is
+            # @@unique([sku, storeId]), the two families would overwrite each
+            # other's row and the matcher would then stamp one family's price
+            # onto the other's variant (the Azul-only mini/base collision
+            # seen 2026-07-23). Prefixing with family_slug makes the keys
+            # distinct: 'ipad-128gb-azul-wifi' vs 'ipad-mini-128gb-azul-wifi'.
+            # Only iPad is affected; iPhone/Mac/AirPods tails are already
+            # unique per family, so we leave their SKUs untouched to avoid a
+            # catalog-wide SKU migration.
+            if category == 'iPad':
+                sku = f'{family_slug}-{tail}'[:200]
+            else:
+                sku = tail[:200]
 
             d = DataScraps(vendor=VENDOR)
             d.url            = full_url
@@ -1227,7 +1245,7 @@ class AppleScraper:
         for m in pat.finditer(html):
             name, params = m.group(1), m.group(2)
             full_url = f'https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/{name}?{params}'
-            return [to_png_alpha(full_url)]
+            return [to_webp_alpha(full_url)]
         return []
 
     def _expand_watch_bands(self, html, products, family_slug):

@@ -230,6 +230,7 @@ def save_scraped_products(data_list: list, store_id: str = None):
                             display     = EXCLUDED.display,
                             cpu         = EXCLUDED.cpu,
                             ean         = EXCLUDED.ean,
+                            "matchStatus" = 'pending',
                             "updatedAt" = NOW()
                     """, (
                         str(d.get('sku', ''))[:200],

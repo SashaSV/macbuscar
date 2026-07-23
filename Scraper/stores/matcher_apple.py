@@ -532,7 +532,7 @@ def run(dry_run=False, store_id='apple'):
                 SELECT id, sku, url, name, category, color, memory, display, cpu,
                        price, available, ean, techs, images
                 FROM "ScrapedProduct"
-                WHERE "storeId" = %s
+                WHERE "storeId" = %s AND "matchStatus" = 'pending'
                 ORDER BY id
             """, (store_id,))
             rows = cur.fetchall()
