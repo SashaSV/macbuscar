@@ -39,13 +39,38 @@ MODULE_MAP = {
 }
 
 
+# Stores whose scraper predates the runner.py refactor and doesn't expose
+# the shared interface (warmup_driver, STORE_LABEL, etc.) — worten.py has
+# its own make_driver()/_warmup_session() under different names. Skipped
+# gracefully rather than crashing --all; not part of the VPS nightly
+# pipeline anyway (runs locally via Windows Task Scheduler).
+LEGACY_STANDALONE = {'worten'}
+
+# Fallback pacing for any store missing its own PAGE_DELAY constant.
+DEFAULT_PAGE_DELAY = (3.0, 6.0)
+
+
 def run_one(store_id, *, limit, apply_):
     module_name = MODULE_MAP.get(store_id)
     if not module_name:
         print(f'❌ unknown store_id {store_id!r} (known: {sorted(MODULE_MAP)})')
         return
+    if store_id in LEGACY_STANDALONE:
+        print(f'\n⏭️  {store_id}: legacy standalone scraper (no runner.py interface) — skipped.')
+        print(f'    Not part of the VPS nightly pipeline anyway; runs locally.')
+        return
     mod = importlib.import_module(f'stores.{module_name}')
+    required = ('is_captcha', 'warmup_driver')
+    missing = [a for a in required if not hasattr(mod, a)]
+    if missing:
+        print(f'\n⏭️  {store_id}: missing {missing} — not runner.py-compatible, skipped.')
+        return
     extract_price = getattr(mod, 'extract_price_pdp', None)
+    # Reuse each store's own tuned anti-bot delay (e.g. pccomponentes.py's
+    # PAGE_DELAY=(4.0, 8.0) for its Akamai front) instead of a one-size
+    # default — a too-tight delay is exactly what triggered a Cloudflare
+    # "just a moment..." challenge on PcComponentes during the first test.
+    page_delay = getattr(mod, 'PAGE_DELAY', DEFAULT_PAGE_DELAY)
     runner.refresh_store_direct(
         store_id=store_id,
         store_label=getattr(mod, 'STORE_LABEL', store_id),
@@ -53,6 +78,7 @@ def run_one(store_id, *, limit, apply_):
         is_captcha=mod.is_captcha,
         warmup_driver=mod.warmup_driver,
         extract_price=extract_price,
+        page_delay=page_delay,
         dry_run=not apply_,
         limit=limit,
     )
