@@ -920,3 +920,121 @@ def refresh_store(*, store_id, store_label, host,
         print(f'   ⚠️  Captcha encountered — partial run')
 
     return (matched, missed, captcha_hit)
+
+
+# Direct-URL price check — visits each matched variant's OWN saved
+# Price.url and reads the price straight off that page, instead of
+# re-searching + re-scoring every night. No candidate list means no risk
+# of a refurb/wrong-SKU listing winning the match (the class of bug that
+# tanked the iPad mini price on Amazon). See matching.py's "Direct
+# product-page price extraction" section for the generic multi-strategy
+# extractor; individual stores can pass their own `extract_price` when
+# the generic strategies don't find anything (Amazon needed this — see
+# amazon.extract_price_pdp).
+def refresh_store_direct(*, store_id, store_label, host,
+                         is_captcha, warmup_driver,
+                         extract_price=None,
+                         page_delay=(2.5, 5.0),
+                         dry_run=False, limit=None):
+    """Returns (matched, missed, captcha_hit) — same shape as refresh_store().
+
+    matched : variants whose price was read + (if not dry_run) written
+    missed  : URL didn't resolve / no price found — same mark_price_missed()
+              cooldown as the search-based path, so a genuinely dead URL
+              eventually gets hidden rather than silently going stale.
+    """
+    extract_price = extract_price or matching.extract_price_from_html
+    delay_min, delay_max = page_delay
+
+    rows = matching.load_variant_urls_for_store(store_id)
+    if limit:
+        rows = rows[:limit]
+    print(f'\n{store_label} — direct-URL price check')
+    print(f'   {len(rows)} matched variant(s) with saved URL')
+    if dry_run:
+        print('   🔍 DRY RUN — no DB writes\n')
+
+    if not rows:
+        print('   Nothing to check.\n')
+        return (0, 0, False)
+
+    driver = make_driver()
+    conn = None
+    if not dry_run:
+        conn = matching.get_connection()
+
+    matched = 0
+    missed = 0
+    captcha_hit = False
+
+    try:
+        warmup_driver(driver)
+
+        for i, (variant_id, url, old_price) in enumerate(rows, 1):
+            if captcha_hit:
+                break
+            try:
+                driver.get(url)
+            except Exception as e:
+                print(f'   ❌ [{variant_id:4}] navigation failed: '
+                      f'{type(e).__name__}: {str(e)[:80]}')
+                missed += 1
+                continue
+            time.sleep(random.uniform(delay_min, delay_max))
+            html = driver.page_source
+
+            marker, snippet = is_captcha(html)
+            if marker:
+                print(f'   🚫 CAPTCHA detected (marker: {marker!r}). Stopping.')
+                captcha_hit = True
+                missed += 1
+                break
+
+            price, method = extract_price(html)
+            if not price:
+                print(f'   ⚠️  [{i}/{len(rows)}] [{variant_id:4}] no price found '
+                      f'(was {old_price}€)  {url[:70]}')
+                missed += 1
+                if not dry_run:
+                    try:
+                        with conn.cursor() as cur:
+                            matching.mark_price_missed(cur, store_id, variant_id)
+                        conn.commit()
+                    except Exception as e:
+                        conn.rollback()
+                        print(f'      ⚠️  mark_missed error: {type(e).__name__}: {str(e)[:80]}')
+                continue
+
+            delta = f'  (was {old_price}€)' if old_price and abs(price - float(old_price)) > 0.01 else ''
+            tag = '🔄' if dry_run else '✅'
+            print(f'   {tag} [{i}/{len(rows)}] [{variant_id:4}] {price:>8.2f}€{delta}  via {method}')
+            matched += 1
+
+            if not dry_run:
+                try:
+                    with conn.cursor() as cur:
+                        ok = matching.upsert_price_only(cur, store_id, variant_id, {'price': price})
+                    if ok:
+                        conn.commit()
+                    else:
+                        conn.rollback()
+                        print(f'      ⚠️  [{variant_id:4}] no Price row found')
+                except Exception as e:
+                    conn.rollback()
+                    print(f'      ❌ DB error: {type(e).__name__}: {str(e)[:100]}')
+
+    except KeyboardInterrupt:
+        print('\n⛔ Cancelled by user')
+    finally:
+        try: driver.quit()
+        except Exception: pass
+        if conn: conn.close()
+
+    print(f'\n📊 {store_label} direct-check summary:')
+    print(f'   Checked:    {len(rows)}')
+    print(f'   OK:         {matched}')
+    print(f'   Missed:     {missed}')
+    if captcha_hit:
+        print(f'   ⚠️  Captcha encountered — partial run')
+
+    return (matched, missed, captcha_hit)

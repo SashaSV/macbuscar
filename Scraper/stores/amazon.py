@@ -373,6 +373,32 @@ def prepare_financing_page(driver, timeout=8.0):
     # is the correct behavior (leave DB NULL rather than write wrong data).
 
 
+def extract_price_pdp(html):
+    """Amazon-specific PDP price extractor for the direct-URL price-check
+    path (runner.refresh_store_direct). Confirmed via VPS probe that the
+    generic strategies in matching.extract_price_from_html() all miss on
+    Amazon's product page (HTTP 200, page loads fine, but no og:price
+    meta and no JSON-LD Offer with a usable price) — Amazon's buy-box
+    price lives in the same `.a-price` structure already used for search
+    result cards in parse_search_results(), just under a different
+    container id depending on layout (mobile/desktop A/B tests vary it).
+    Returns (price_float, method_str) or (None, None).
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    for sel in (
+        '#corePrice_feature_div span.a-price:not(.a-text-price) span.a-offscreen',
+        '#corePriceDisplay_desktop_feature_div span.a-price:not(.a-text-price) span.a-offscreen',
+        '#apex_desktop span.a-price:not(.a-text-price) span.a-offscreen',
+        'span.a-price:not(.a-text-price) span.a-offscreen',
+    ):
+        el = soup.select_one(sel)
+        if el:
+            price = matching.parse_price(el.get_text(strip=True))
+            if price:
+                return price, f'css[{sel}]'
+    return None, None
+
+
 def refresh(*, dry_run=False):
     """Nightly refresh entry point. Called by refresh_all.py orchestrator.
     Same per-store strictness as main() (strict_chip=False) so Amazon's

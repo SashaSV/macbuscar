@@ -468,6 +468,112 @@ def parse_jsonld(soup, host=None, is_non_apple_listing=None):
 
 
 # ════════════════════════════════════════════════════════════════════════════
+#   Direct product-page price extraction
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Used by the "direct-URL price check" path: instead of re-searching and
+# re-scoring every night (the class of bug that let a refurb iPad Mini 4
+# win a match), we visit the SKU's own saved Price.url and read the price
+# straight off the page it already lives on. No candidate list, no
+# scoring, no risk of picking the wrong item.
+#
+# Three strategies, tried in order (cheapest/most-reliable first):
+#   1. <meta property="og:price:amount">, "product:price:amount", or
+#      "og:product:price:amount" — Shopify (Rossellimac) and Magento
+#      (K-tuin) both expose this directly, no parsing needed.
+#   2. <script type="application/ld+json"> Product/Offer schema — walks
+#      the same nested structure parse_jsonld() already handles for
+#      search-results pages (MediaMarkt confirmed working this way).
+#   3. Best-effort regex on the raw HTML for a euro amount near the top
+#      of the document — last resort for stores with neither of the
+#      above; store files can override with their own extractor when
+#      this proves too fragile (see amazon.py).
+
+def extract_price_meta(html):
+    """Strategy 1: og:price:amount / product:price:amount meta tags.
+    Returns (price_float, method_str) or (None, None)."""
+    for prop in ('og:price:amount', 'product:price:amount', 'og:product:price:amount'):
+        m = re.search(
+            rf'<meta[^>]+property=["\']?{re.escape(prop)}["\']?[^>]+content=["\']([^"\']+)["\']',
+            html, re.I,
+        )
+        if not m:
+            # attribute order can be reversed (content before property)
+            m = re.search(
+                rf'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']?{re.escape(prop)}["\']?',
+                html, re.I,
+            )
+        if m:
+            price = parse_price(m.group(1))
+            if price:
+                return price, f'meta[{prop}]'
+    return None, None
+
+
+def extract_price_jsonld(html):
+    """Strategy 2: application/ld+json Product/Offer schema, anywhere in
+    the document (not just ItemList search results). Returns
+    (price_float, method_str) or (None, None)."""
+    for raw in re.findall(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html, re.I | re.S,
+    ):
+        try:
+            data = json.loads(raw.strip())
+        except Exception:
+            continue
+        stack = [data] if not isinstance(data, list) else list(data)
+        seen = 0
+        while stack and seen < 5000:
+            seen += 1
+            node = stack.pop()
+            if isinstance(node, list):
+                stack.extend(node)
+                continue
+            if not isinstance(node, dict):
+                continue
+            offers = node.get('offers')
+            if isinstance(offers, dict) and offers.get('price'):
+                price = parse_price(offers['price'])
+                if price:
+                    return price, 'jsonld offers.price'
+            if isinstance(offers, list):
+                for o in offers:
+                    if isinstance(o, dict) and o.get('price'):
+                        price = parse_price(o['price'])
+                        if price:
+                            return price, 'jsonld offers[].price'
+            stack.extend(v for v in node.values() if isinstance(v, (dict, list)))
+    return None, None
+
+
+def extract_price_regex_fallback(html):
+    """Strategy 3: first plausible '€' amount near the top of the page.
+    Deliberately crude — only meant to catch simple cases; stores where
+    this misfires should get a bespoke extractor instead (see amazon.py).
+    Returns (price_float, method_str) or (None, None)."""
+    head = html[:80000]
+    m = re.search(r'(\d{1,3}(?:[.\s]\d{3})*,\d{2})\s*€', head)
+    if m:
+        price = parse_price(m.group(1))
+        if price:
+            return price, 'regex fallback'
+    return None, None
+
+
+def extract_price_from_html(html):
+    """Run all three generic strategies in order. Returns
+    (price_float, method_str) or (None, None) if nothing matched.
+    Store-specific overrides (e.g. amazon.extract_price_pdp) should be
+    tried by the caller BEFORE falling back to this."""
+    for fn in (extract_price_meta, extract_price_jsonld, extract_price_regex_fallback):
+        price, method = fn(html)
+        if price:
+            return price, method
+    return None, None
+
+
+# ════════════════════════════════════════════════════════════════════════════
 #   Sub-family resolver
 # ════════════════════════════════════════════════════════════════════════════
 
@@ -1203,6 +1309,35 @@ def load_matched_variants_for_store(store_id):
     # Strip products that ended up with zero variants (defensive — shouldn't
     # happen given the join filter above, but keeps the runner loop clean).
     return [p for p in products if p['variants']]
+
+
+def load_variant_urls_for_store(store_id):
+    """For the direct-URL price-check path: return
+    [(variant_id, url, current_price), ...] for every variant that already
+    has a matched, URL-bearing Price row for this store. Same cooldown
+    gating as load_matched_variants_for_store (skips variants currently in
+    a mark_price_missed() cooldown window).
+
+    Unlike load_matched_variants_for_store, this doesn't need Product/
+    sub-family grouping at all — there's no search to route, just a flat
+    list of (variant, saved URL) pairs to visit directly.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT v.id, pr.url, pr.price
+                FROM "ProductVariant" v
+                JOIN "Price" pr ON pr."variantId" = v.id
+                WHERE pr."storeId" = %s
+                  AND pr.price > 0
+                  AND pr.url IS NOT NULL AND pr.url != ''
+                  AND (pr."nextCheckAt" IS NULL OR pr."nextCheckAt" <= NOW())
+                ORDER BY v.id
+            ''', (store_id,))
+            return cur.fetchall()
+    finally:
+        conn.close()
 
 
 def upsert_price_only(cur, store_id, variant_id, result):
