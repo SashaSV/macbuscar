@@ -2,8 +2,23 @@
 """
 Scraper/refresh_all.py
 ─────────────────────────────────────────────────────────────────────────────
-Nightly price-refresh orchestrator. Runs each store's refresh() in sequence,
-swallowing failures per-store so one bad partner doesn't kill the run.
+Nightly price-refresh orchestrator. Runs each store's refresh_direct() in
+sequence, swallowing failures per-store so one bad partner doesn't kill
+the run.
+
+DIRECT-URL ONLY, NO SEARCH FALLBACK (as of the direct-URL rollout): each
+store visits its own already-matched variants' saved Price.url directly
+instead of re-searching + re-scoring every night. This removes the wrong-
+match risk entirely for the nightly path (no candidate list = nothing to
+mis-score) and is faster. If a URL doesn't resolve to a price, the variant
+is marked missed/discontinued via mark_price_missed() -- there is
+deliberately NO fallback to a search-based re-match here. Finding NEW
+matches (or re-matching after a real listing change) is exclusively
+"discovery"'s job now (stores/runner.py's run_store(), invoked manually or
+via a separate, less-frequent schedule), and discovery itself is gated by
+matching.check_price_sane() so a bad match can't reach the live site from
+that path either. See matching.py's PriceAnomalyRejected and runner.py's
+refresh_store_direct()/run_store() for the two respective safeguards.
 
 Invoked by `.github/workflows/refresh-prices.yml` at 02:00 UTC daily
 (03:00 Madrid winter / 04:00 summer). Can also be run locally with:
@@ -15,13 +30,15 @@ Invoked by `.github/workflows/refresh-prices.yml` at 02:00 UTC daily
     python refresh_all.py --only ktuin worten   # subset
 
 What gets refreshed:
-  - Price.price for already-matched (variant, store) pairs only
+  - Price.price for already-matched (variant, store) pairs only, read
+    straight off each variant's own saved product-page URL
   - Previous Price.price moves into Price.oldPrice (SQL standard side-effect:
     right-hand side of SET sees pre-update values)
   - PriceHistory row written on price change
+  - discontinued=true (cooldown ladder) on a miss -- no search fallback
 
 What is NOT touched:
-  - ScrapedProduct (audit trail stays put)
+  - ScrapedProduct (audit trail stays put; direct-check doesn't write it)
   - financing columns (monthlyPrice/monthlyMonths/financingProvider/
     monthlyApr — these change only during full scrape, not nightly refresh)
   - Variants without a Price row for the store (full scrape can pick them up)
@@ -125,7 +142,7 @@ def main():
         print(f'\n{"─" * 72}\n  {sid.upper()}\n{"─" * 72}')
         store_started = time.time()
         try:
-            matched, missed, captcha = mod.refresh(dry_run=args.dry_run)
+            matched, missed, captcha = mod.refresh_direct(dry_run=args.dry_run)
             summary.append((sid, matched, missed, captcha, None))
         except Exception as e:
             elapsed = time.time() - store_started

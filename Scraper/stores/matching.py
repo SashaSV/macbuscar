@@ -1142,6 +1142,78 @@ def load_products_with_variants():
     return products
 
 
+class PriceAnomalyRejected(Exception):
+    """Raised by upsert_scraped_and_price when a freshly-matched price is
+    a statistical outlier vs. every other store + msrp for the same
+    variant — almost certainly a matching error (wrong SKU, refurb/used
+    listing, wrong generation), not a real price. The write is skipped
+    entirely, so a bad discovery match never reaches the live site; the
+    caller's existing DB-error handling surfaces this in the run's logs
+    (it flows through the generic `except Exception` in runner.py) rather
+    than silently corrupting a Price row.
+
+    This is the same class of bug that let a 2018 refurb iPad Mini 4
+    (139€) win a match against our current iPad mini (679€ msrp) on
+    Amazon this session — the refurb/generation filters in this module
+    catch that SPECIFIC case now, but this check is a general backstop
+    for whatever the next one turns out to be.
+
+    Mirrors the threshold logic in Web/check-price-anomalies.mjs (the
+    standalone whole-DB audit script) so "caught automatically at write
+    time" and "caught by the periodic audit" agree on what counts as
+    anomalous.
+    """
+    pass
+
+
+def check_price_sane(cur, variant_id, new_price, exclude_store_id, threshold=0.65):
+    """Compare a freshly-scraped price against every OTHER store's
+    current price + the variant's msrp for the same SKU.
+
+    Flags the same class of outlier check-price-anomalies.mjs does:
+        new_price < threshold * median(reference prices)
+        AND new_price < 0.75 * min(reference prices)
+    (both conditions required so a store that's legitimately the
+    cheapest of the pack isn't penalized — only a genuine, isolated
+    outlier trips this.)
+
+    Needs >=2 reference points to judge; a brand-new SKU with nothing
+    else scraped yet has nothing to compare against, so it passes by
+    default (first-price verification for a new SKU has to rely on
+    other signals — msrp presence, human spot-check — not this).
+
+    Returns (is_sane: bool, reason: str | None).
+    """
+    cur.execute('''
+        SELECT price FROM "Price"
+        WHERE "variantId" = %s AND "storeId" != %s AND price > 0
+    ''', (variant_id, exclude_store_id))
+    refs = [float(r[0]) for r in cur.fetchall()]
+
+    cur.execute('SELECT msrp FROM "ProductVariant" WHERE id = %s', (variant_id,))
+    row = cur.fetchone()
+    if row and row[0]:
+        refs.append(float(row[0]))
+
+    if len(refs) < 2:
+        return True, None
+
+    refs_sorted = sorted(refs)
+    n = len(refs_sorted)
+    median = (refs_sorted[n // 2] if n % 2
+              else (refs_sorted[n // 2 - 1] + refs_sorted[n // 2]) / 2)
+    lowest = refs_sorted[0]
+
+    below_median = new_price < threshold * median
+    below_lowest = new_price < 0.75 * lowest
+    if below_median and below_lowest:
+        return False, (
+            f'price={new_price:.2f}€ is {new_price / median:.0%} of median '
+            f'{median:.2f}€ across {n} reference point(s) (lowest other={lowest:.2f}€)'
+        )
+    return True, None
+
+
 def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
     """Upsert ScrapedProduct + Price; write PriceHistory on price change.
 
@@ -1151,12 +1223,26 @@ def upsert_scraped_and_price(cur, store_id, variant_id, result, cat, score):
     Lifecycle tracking: a successful upsert ALWAYS resets the lifecycle
     flags — the SKU is alive again as of right now, regardless of whatever
     discontinued/nextCheckAt was previously set.
+
+    Raises PriceAnomalyRejected (no write at all) if the price fails the
+    cross-store sanity check — see check_price_sane() above. Only applies
+    here (the discovery/full-scrape path); the nightly direct-URL price
+    check (runner.refresh_store_direct) reads a SKU's own canonical page
+    with no candidate selection, so there's no matching risk to guard
+    against there.
     """
     sku      = str(result['asin'])
     name     = result['name']
     url      = result['url']
     price    = float(result['price'])
     oldprice = float(result['oldprice']) if result.get('oldprice') else 0.0
+
+    sane, reason = check_price_sane(cur, variant_id, price, store_id)
+    if not sane:
+        raise PriceAnomalyRejected(
+            f'[{store_id}] variant {variant_id} ({name[:60]!r}): {reason} '
+            f'— write REJECTED, looks like a wrong-SKU/refurb match'
+        )
 
     cur.execute('''
         INSERT INTO "ScrapedProduct"

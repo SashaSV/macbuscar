@@ -414,6 +414,24 @@ def refresh(*, dry_run=False):
     )
 
 
+def refresh_direct(*, dry_run=False):
+    """Nightly direct-URL price check. Visits each matched variant's own
+    saved Price.url instead of re-searching — no candidate list, so no
+    matching risk. Replaces refresh() as of the direct-URL rollout; kept
+    refresh() in place as a manual fallback for full-family re-discovery,
+    not for nightly use (see refresh_all.py).
+    """
+    return runner.refresh_store_direct(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        is_captcha=is_captcha,
+        warmup_driver=warmup_driver,
+        page_delay=PAGE_DELAY,
+        dry_run=dry_run,
+    )
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #   Entry point
 # ════════════════════════════════════════════════════════════════════════════
