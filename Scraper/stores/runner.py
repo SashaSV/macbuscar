@@ -324,6 +324,13 @@ def parse_standard_args(description=None):
                     help='filter by category (iphone/ipad/mac/watch/airpods)')
     ap.add_argument('--product', default=None,
                     help='substring filter on Product.nombre')
+    ap.add_argument('--variant-id', default=None,
+                    help='comma-separated ProductVariant.id list — restricts '
+                         'scraping to just these SKUs (still resolves their '
+                         'sub-family search URL, but only scores/writes the '
+                         'requested variant(s), not the whole group). Use to '
+                         're-check a single flagged price without rescanning '
+                         'an entire product family.')
     ap.add_argument('--fallback', action='store_true',
                     help='per-variant fallback search for unmatched variants')
     ap.add_argument('--inspect', action='store_true',
@@ -382,6 +389,10 @@ def run_store(*, store_id, store_label, host,
     limit          = args.limit
     only_cat       = args.cat
     only_product   = args.product
+    only_variant_ids = None
+    raw_variant_ids = getattr(args, 'variant_id', None)
+    if raw_variant_ids:
+        only_variant_ids = {int(x) for x in raw_variant_ids.split(',') if x.strip()}
     fallback       = args.fallback
     inspect        = args.inspect
     with_financing = getattr(args, 'with_financing', False) and parse_financing is not None
@@ -409,6 +420,24 @@ def run_store(*, store_id, store_label, host,
         sub = only_product.lower()
         products = [p for p in products if sub in p['nombre'].lower()]
         print(f'   Filter "{only_product}": {len(products)} remain')
+    if only_variant_ids:
+        # Keep the product (so its sub-family search URL still resolves
+        # normally), but trim each product's variant list down to just the
+        # requested SKU(s) — everything else in that family is left alone
+        # in the DB (no write, no rescan). Products with none of the
+        # requested ids are dropped entirely.
+        trimmed = []
+        for p in products:
+            keep = [v for v in p['variants'] if v['id'] in only_variant_ids]
+            if keep:
+                p = {**p, 'variants': keep}
+                trimmed.append(p)
+        products = trimmed
+        found_ids = {v['id'] for p in products for v in p['variants']}
+        missing = only_variant_ids - found_ids
+        if missing:
+            print(f'   ⚠️  variant id(s) not found (wrong id or filtered out by --cat/--product): {sorted(missing)}')
+        print(f'   Filter variant-id={sorted(only_variant_ids)}: {len(products)} product(s), {len(found_ids)} variant(s) remain')
     if limit:
         products = products[:limit]
         print(f'   Limit: {limit}')
@@ -618,6 +647,15 @@ def run_store(*, store_id, store_label, host,
                             print(f'            ⚠️  [{variant["id"]:4}] '
                                   f'{variant["nombre"][:60]} — fb SKU '
                                   f'{str(best["asin"])[:30]} already claimed')
+                            if not dry_run:
+                                try:
+                                    with conn.cursor() as cur:
+                                        matching.mark_price_missed(cur, store_id, variant['id'])
+                                    conn.commit()
+                                except Exception as e:
+                                    conn.rollback()
+                                    print(f'               ⚠️  mark_missed error: '
+                                          f'{type(e).__name__}: {str(e)[:80]}')
                         elif best:
                             claimed_skus.add(best['asin'])
                             total_matched += 1
@@ -644,11 +682,45 @@ def run_store(*, store_id, store_label, host,
                             print(f'            ⚠️  [{variant["id"]:4}] '
                                   f'{variant["nombre"][:60]} — still no match '
                                   f'({len(fb_results)} candidates)')
+                            # Same safety net as the non-fallback branch
+                            # above — a miss even after the per-variant
+                            # fallback search means we genuinely couldn't
+                            # find this SKU today, so start the discontinue
+                            # cooldown rather than leaving a stale/wrong
+                            # price live on the site indefinitely.
+                            if not dry_run:
+                                try:
+                                    with conn.cursor() as cur:
+                                        matching.mark_price_missed(cur, store_id, variant['id'])
+                                    conn.commit()
+                                except Exception as e:
+                                    conn.rollback()
+                                    print(f'               ⚠️  mark_missed error: '
+                                          f'{type(e).__name__}: {str(e)[:80]}')
                 elif unmatched_in_group:
                     for variant in unmatched_in_group:
                         total_no_match += 1
                         print(f'         ⚠️  [{variant["id"]:4}] '
                               f'{variant["nombre"][:60]} — no match')
+                        # Manual/targeted runs (e.g. --variant-id re-checks
+                        # after a flagged price anomaly) used to leave the
+                        # existing Price row untouched on a miss — only the
+                        # nightly refresh_store() called mark_price_missed().
+                        # That meant a wrong/stale price stayed live on the
+                        # site indefinitely if a manual re-scrape failed to
+                        # find ANY match (matched-wrong-item bug fixed, but
+                        # the correct listing didn't score high enough to
+                        # replace it). Same cooldown-based discontinue logic
+                        # as the nightly path now applies here too.
+                        if not dry_run:
+                            try:
+                                with conn.cursor() as cur:
+                                    matching.mark_price_missed(cur, store_id, variant['id'])
+                                conn.commit()
+                            except Exception as e:
+                                conn.rollback()
+                                print(f'            ⚠️  mark_missed error: '
+                                      f'{type(e).__name__}: {str(e)[:80]}')
 
             if captcha_hit:
                 break

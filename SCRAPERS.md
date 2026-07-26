@@ -32,6 +32,7 @@ Amazon is the floor because its ranker shuffles between runs.
 ## Runner environments
 
 **VPS** — `scraper@217.160.22.101` (IONOS Ubuntu).
+- SSH login (PowerShell): `ssh -i $env:USERPROFILE\.ssh\macbuscar scraper@217.160.22.101`
 - Crontab: `0 2 * * *  ~/macbuscar/run-refresh.sh  >>  ~/macbuscar-refresh.log 2>&1`
 - Runs `Scraper/refresh_all.py` which iterates `STORES` list and
   swallows per-store failures.

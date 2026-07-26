@@ -8,6 +8,46 @@ they come up.
 
 ## 🚀 Next up (high-value, well-scoped)
 
+### Rossellimac writes silently landed on stale __pycache__ (found + fixed 2026-07-26)
+*Symptom: rossellimac Price rows stuck at 18 jul despite Task Scheduler
+running `rossellimac-refresh.bat` daily with "Matched: 131, 0 DB errors"
+in the log every night since.*
+
+Root cause: a stale compiled `.pyc` under `Scraper/scanner/__pycache__/`
+for `dbservice_postgres.py` was being loaded instead of the current
+source. The stale bytecode's `get_connection()` resolved `DATABASE_URL`
+to the OLD Neon DB (`ep-restless-sound-al7yu847...neon.tech/neondb`)
+instead of the current IONOS Postgres (`217.160.22.101/macbuscar`) —
+so every scheduled run scraped fine, matched fine, wrote+committed
+fine, just to the WRONG (abandoned) database, with zero errors because
+the write itself succeeded there.
+
+Why only rossellimac: its `.bat` (and Task Scheduler run) is the only
+local-cron store whose invocation window happened to straddle this
+session's edits to `dbservice_postgres.py` (matchStatus fix) without
+an interleaving process restart that would've invalidated the cache
+normally. Confirmed via a temporary diagnostic print of `conn.get_dsn_parameters()`
+injected directly into `runner.py`'s write block — showed `neon.tech`
+on a failing run, `217.160.22.101` after clearing `__pycache__`.
+
+- [x] Diagnosed via a chain of isolated reproductions (raw UPDATE,
+      direct `upsert_scraped_and_price()` call, live-instrumented
+      `runner.py`) — every isolated test wrote correctly; only the
+      real `python -m stores.rossellimac` process was affected, which
+      pointed at bytecode caching rather than logic/connection-string
+      bugs.
+- [x] Fixed by clearing all `__pycache__/` dirs under `Scraper/`;
+      confirmed fixed (`AirPods Pro 3` / variant 340 now writes to
+      `217.160.22.101` correctly).
+- [ ] Run a full `rossellimac-refresh.bat` (or `python -m
+      stores.rossellimac`) to catch up the ~141 other rows still
+      stuck at their last-good timestamp (13-18 jul).
+- [ ] Consider adding `python -B` (already used by the scheduled
+      `.bat` to skip WRITING new `.pyc`s, but doesn't stop READING
+      stale ones) or a `PYTHONDONTWRITEBYTECODE=1` + periodic
+      `__pycache__` purge to the refresh `.bat` files as a guard
+      against this recurring after future code edits.
+
 ### Apple Store price refresh — no schedule at all (found 2026-07-23)
 *Root cause of stale "PRECIO OFICIAL APPLE STORE" prices on the site
 (e.g. iPad mini stuck at 13 jul while every retailer refreshed 22 jul).*

@@ -119,6 +119,13 @@ REJECT_ANYWHERE = (
     'reacondicionado', 'renewed', 'segunda mano', 'usado',
     'señales de uso', 'producto reacondicionado',
     'open box', 'outlet', 'restaurado',
+    # English-language refurb/used tags that show up on Amazon.es listings
+    # sold by third-party marketplace sellers (Amazon itself titles these
+    # in English even on the .es storefront). Missing 'refurbished' let a
+    # 2018-era "iPad Mini 4 (Refurbished)" at 139€ slip through and match
+    # our current iPad mini variant, tanking its displayed price by 79%.
+    'refurbished', 'refurb', 'pre-owned', 'preowned', 'used -', 'grade a',
+    'grado a', 'grado b', 'grado c',
 )
 REJECT_AT_START = ('funda', 'protector', 'cargador', 'cable', 'adaptador',
                    'soporte', 'correa', 'pulsera', 'bandolera')
@@ -536,8 +543,14 @@ def subfamily_info(product, variant):
         return (f'iPad Air {size}',
                 r'\bipad\s+air\b[^\n]*?\b' + size + r'(?:[.,]\d)?\b(?![\s-]*(?:GB|RAM|core|n[úu]cleos?|gen|generaci)\b)')
     if fam == 'ipad-mini':
+        # Added negative lookahead: rejects bare "iPad Mini 4" / "iPad Mini
+        # 4 128gb" (digit right after "mini", no "gen" suffix) — the
+        # existing lookahead below only caught "...4th gen"/"generación"
+        # phrasing, so a 2018 refurb iPad Mini 4 slipped through and
+        # matched our current iPad mini variant on Amazon. Both bounded
+        # to 2-6 since our DB iPad mini is the latest (7th gen / 2024).
         return ('iPad mini',
-                r'\bipad\s+mini\b(?![^\n]*\b[2-6](?:th|\u00aa)?\s*(?:gen|generaci))')
+                r'\bipad\s+mini\b(?!\s*[2-6]\b)(?![^\n]*\b[2-6](?:th|\u00aa)?\s*(?:gen|generaci))')
     if fam == 'ipad':
         return ('iPad', r'\bipad\b(?!\s*(?:pro|air|mini))')
 
