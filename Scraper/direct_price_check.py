@@ -25,8 +25,12 @@ import sys
 
 from stores import runner
 
-# store_id (DB) -> scraper module name (stores/*.py) — these diverge for
-# pccomp (module is pccomponentes.py) and istore (module is ktuin.py).
+# store_id (DB) -> scraper module name (stores/*.py) — diverges for pccomp
+# (module is pccomponentes.py). dbservice_postgres.py's vendor_to_store_id
+# maps 'k-tuin.com' -> 'istore', but the actually-seeded Store.id in this
+# DB is 'ktuin' (confirmed via a live query: get-sample-urls.mjs found
+# rows under store.id='ktuin', none under 'istore') — that vendor map
+# entry looks stale/unused for this store.
 MODULE_MAP = {
     'amazon':      'amazon',
     'mediamarkt':  'mediamarkt',
@@ -34,7 +38,7 @@ MODULE_MAP = {
     'fnac':        'fnac',
     'elcorte':     'elcorte',
     'worten':      'worten',
-    'istore':      'ktuin',
+    'ktuin':       'ktuin',
     'rossellimac': 'rossellimac',
 }
 
