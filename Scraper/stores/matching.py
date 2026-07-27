@@ -641,9 +641,21 @@ def subfamily_info(product, variant):
     # iPad mini: lookahead rejects 2nd-6th gen listings; our DB iPad mini
     # is the latest (7th gen / 2024).
     if fam == 'ipad-pro':
+        # Our tracked iPad Pro generation is the M5 (2025) refresh. Unlike
+        # iPad mini/Watch/AirPods, this pattern had NO generation guard at
+        # all — any "iPad Pro 11/13" hit of the right screen size matched,
+        # M5 or not. score_result()'s chip-check couldn't catch it either:
+        # variant.nombre never mentions the chip ("11\" · 256GB · Plata ·
+        # Standard · Wi-Fi + Cellular"), unlike Mac variants which spell
+        # the chip out in their name. Result: a stale M4 (2024) Amazon/
+        # MediaMarkt listing kept matching our M5 variants and showing a
+        # ~15-40% "discount" that was really just an older, cheaper model.
+        # Reject any listing that explicitly names an older M-chip anywhere
+        # in the title; update the range if/when M5 itself becomes legacy.
         size = '13' if (disp and disp >= 12.5) else '11'
         return (f'iPad Pro {size}',
-                r'\bipad\s+pro\b[^\n]*?\b' + size + r'(?:[.,]\d)?\b(?![\s-]*(?:GB|RAM|core|n[úu]cleos?|gen|generaci)\b)')
+                r'\bipad\s+pro\b[^\n]*?\b' + size + r'(?:[.,]\d)?\b(?![\s-]*(?:GB|RAM|core|n[úu]cleos?|gen|generaci)\b)'
+                r'(?![^\n]*\bm[1-4]\b(?!\d))')
     if fam == 'ipad-air':
         size = '13' if (disp and disp >= 12.5) else '11'
         return (f'iPad Air {size}',
@@ -856,7 +868,13 @@ def score_result(result, variant, *, strict_chip=True, strict_anc=True):
             # of an old/different chip and reject. Non-strict mode (Amazon
             # and other stores with terse titles): neutral — don't reject
             # just because the title omitted the chip name.
-            if strict_chip and re.search(r'\b(?:intel|core\s+i[357])\b', result['name'], re.I):
+            # i[357] used to miss 'Core i9' entirely — a live bug: a
+            # MediaMarkt marketplace listing for a 2020 27" Intel iMac
+            # (i9, Radeon Pro 5300) matched our current 24" M4 iMac variant
+            # and stayed live at a wildly wrong price because this branch
+            # only fires on 'positive evidence of an old chip', and i9
+            # wasn't recognized as one. i\d covers every Core i-series.
+            if strict_chip and re.search(r'\b(?:intel|core\s+i\d)\b', result['name'], re.I):
                 return -1
             # Else: no chip info, neutral (no +30 bonus, no rejection).
 

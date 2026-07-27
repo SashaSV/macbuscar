@@ -38,8 +38,15 @@ async function main() {
   const flagged = [];
 
   for (const v of variants) {
+    // Exclude discontinued=true rows entirely — they're already hidden
+    // from bestPrice on the live site (mark_price_missed's cooldown
+    // ladder), so flagging them here is pure noise: a stale/wrong price
+    // sitting in a Price row that no user ever sees isn't a live
+    // anomaly, it's just unswept data. Confirmed via check-variant-price.mjs
+    // that variants 294 and 216 were exactly this — already discontinued,
+    // re-surfacing every run despite being invisible on the site.
     const points = v.prices
-      .filter(p => p.price != null && p.price > 0)
+      .filter(p => p.price != null && p.price > 0 && !p.discontinued)
       .map(p => ({ storeId: p.storeId, storeName: p.store?.nombre || p.storeId, price: p.price, updatedAt: p.updatedAt }));
     if (v.msrp) points.push({ storeId: '__msrp__', storeName: 'MSRP', price: v.msrp, updatedAt: null });
 
