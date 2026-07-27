@@ -516,6 +516,25 @@ def refresh(*, dry_run=False):
     )
 
 
+def refresh_direct(*, dry_run=False):
+    """Direct-URL price check. Visits each matched variant's own saved
+    Price.url instead of re-searching — no candidate list, so no matching
+    risk. Runs locally (elcorte-refresh.bat) since ECI's Akamai config
+    blocks the VPS datacenter IP outright; a residential IP still needs
+    this exactly like the VPS stores do, for the same reason (speed +
+    zero wrong-match risk on the nightly path).
+    """
+    return runner.refresh_store_direct(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        is_captcha=is_captcha,
+        warmup_driver=warmup_driver,
+        page_delay=PAGE_DELAY,
+        dry_run=dry_run,
+    )
+
+
 def main():
     args = runner.parse_standard_args(description='El Corte Inglés price scraper')
     runner.run_store(

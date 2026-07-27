@@ -399,6 +399,24 @@ def refresh(*, dry_run=False):
     )
 
 
+def refresh_direct(*, dry_run=False):
+    """Direct-URL price check. Visits each matched variant's own saved
+    Price.url instead of re-searching — no candidate list, so no matching
+    risk. Runs locally (rossellimac-refresh.bat); confirmed working via
+    the VPS smoke test too (3/3) but the search-based flow still needs a
+    residential IP for this store's CF WAF, so it stays on the local job.
+    """
+    return runner.refresh_store_direct(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        is_captcha=is_captcha,
+        warmup_driver=warmup_driver,
+        page_delay=PAGE_DELAY,
+        dry_run=dry_run,
+    )
+
+
 def main():
     args = runner.parse_standard_args(description='Rossellimac.es price scraper')
     runner.run_store(
