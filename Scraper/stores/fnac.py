@@ -1063,6 +1063,17 @@ def make_driver():
     chrome_major = _detect_chrome_major()
     if chrome_major:
         print(f'   🔧 Detected Chrome {chrome_major}; pinning chromedriver')
+    # Wipe any stale chromedriver files left behind by an interrupted
+    # previous run before uc.Chrome() init. Without this, uc.patcher's
+    # os.rename() from its temp unzip dir to the canonical
+    # undetected_chromedriver.exe path can throw FileNotFoundError/
+    # FileExistsError on Windows when a prior crash left partial files
+    # in place — exactly what happened to the 27 Jul 09:40 scheduled run
+    # (WinError 3, chromedriver-win32\chromedriver.exe not found at the
+    # expected source path). runner.py's make_driver() already does this
+    # for the CI/UC path; fnac.py has its own separate make_driver() that
+    # was missing the same guard.
+    runner._cleanup_uc_dir()
     return uc.Chrome(options=opts, version_main=chrome_major)
 
 
