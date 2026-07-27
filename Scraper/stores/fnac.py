@@ -51,8 +51,15 @@ from selenium.webdriver.common.by import By
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scanner.dbservice_postgres import get_connection
 
+# Only needed for refresh_direct() (the nightly direct-URL price check).
+# Fnac predates the runner.py refactor and doesn't use it for anything
+# else — discovery (run()/main() below) still has its own hand-rolled
+# loop, matching, and DB-write code.
+from . import runner
+
 
 STORE_ID = 'fnac'
+STORE_LABEL = '📚 Fnac scraper'
 HOST = 'https://www.fnac.es'
 SEARCH_URL_TPL = '{host}/SearchResult/ResultList.aspx?Search={query}'
 
@@ -1302,6 +1309,28 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
         print(f'   By category:')
         for c, n in sorted(by_cat.items()):
             print(f'     {c:10} {n}')
+
+
+def refresh_direct(*, dry_run=False):
+    """Direct-URL price check. Visits each matched variant's own saved
+    Price.url instead of re-searching — no candidate list, so no matching
+    risk. Reuses Fnac's OWN make_driver() (always undetected_chromedriver,
+    not just under CI) — runner.py's generic make_driver() only switches
+    to UC when the CI env var is set, and Fnac's search scraper has
+    always needed UC even locally to get past DataDome, so the direct
+    check gets the same driver via the driver_factory override rather
+    than risk plain selenium getting blocked here too.
+    """
+    return runner.refresh_store_direct(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        is_captcha=is_captcha,
+        warmup_driver=warmup_driver,
+        driver_factory=make_driver,
+        page_delay=(PAGE_DELAY_MIN, PAGE_DELAY_MAX),
+        dry_run=dry_run,
+    )
 
 
 def main():

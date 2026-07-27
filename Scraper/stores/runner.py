@@ -935,6 +935,7 @@ def refresh_store_direct(*, store_id, store_label, host,
                          is_captcha, warmup_driver,
                          extract_price=None,
                          page_delay=(2.5, 5.0),
+                         driver_factory=None,
                          dry_run=False, limit=None):
     """Returns (matched, missed, captcha_hit) — same shape as refresh_store().
 
@@ -942,6 +943,14 @@ def refresh_store_direct(*, store_id, store_label, host,
     missed  : URL didn't resolve / no price found — same mark_price_missed()
               cooldown as the search-based path, so a genuinely dead URL
               eventually gets hidden rather than silently going stale.
+
+    driver_factory : optional callable() -> webdriver, overriding the
+        generic make_driver() above. Needed by stores whose OWN scraper
+        insists on a specific driver (Fnac always uses undetected_chromedriver
+        to defeat DataDome, even outside CI — unlike the CI-only UC switch
+        make_driver() does by default). Worten/Fnac pass their own
+        make_driver so the direct-URL path gets the exact same anti-bot
+        posture their search-based scraper already relies on.
     """
     extract_price = extract_price or matching.extract_price_from_html
     delay_min, delay_max = page_delay
@@ -958,7 +967,7 @@ def refresh_store_direct(*, store_id, store_label, host,
         print('   Nothing to check.\n')
         return (0, 0, False)
 
-    driver = make_driver()
+    driver = (driver_factory or make_driver)()
     conn = None
     if not dry_run:
         conn = matching.get_connection()

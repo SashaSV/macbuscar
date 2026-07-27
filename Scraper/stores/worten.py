@@ -50,8 +50,15 @@ from webdriver_manager.chrome import ChromeDriverManager
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scanner.dbservice_postgres import get_connection
 
+# Only needed for refresh_direct() (the nightly direct-URL price check).
+# Worten predates the runner.py refactor and doesn't use it for anything
+# else — discovery (run()/main() below) still has its own hand-rolled
+# loop, matching, and DB-write code.
+from . import runner
+
 
 STORE_ID = 'worten'
+STORE_LABEL = '🟢 Worten scraper'
 HOST = 'https://www.worten.es'
 
 # Worten search URL — no brand filter param available, just query string.
@@ -1055,6 +1062,32 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
         print(f'   By category:')
         for c, n in sorted(by_cat.items()):
             print(f'     {c:10} {n}')
+
+
+def refresh_direct(*, dry_run=False):
+    """Direct-URL price check. Visits each matched variant's own saved
+    Price.url instead of re-searching — no candidate list, so no matching
+    risk. Reuses Worten's own make_driver()/_warmup_session()/is_captcha
+    (plain selenium, same as its search-based scraper — Worten has never
+    needed undetected_chromedriver the way Fnac does). This is the ONLY
+    path here that goes through matching.py's shared upsert_price_only()/
+    mark_price_missed() — the discovery loop below (run()/main()) still
+    writes via this module's own hand-rolled upsert_scraped_and_price(),
+    which predates and doesn't share the anomaly/lifecycle safety nets
+    added to matching.py this session. Worth refactoring discovery onto
+    the shared path too at some point; out of scope for just adding the
+    nightly direct-check.
+    """
+    return runner.refresh_store_direct(
+        store_id=STORE_ID,
+        store_label=STORE_LABEL,
+        host=HOST,
+        is_captcha=is_captcha,
+        warmup_driver=_warmup_session,
+        driver_factory=make_driver,
+        page_delay=(PAGE_DELAY_MIN, PAGE_DELAY_MAX),
+        dry_run=dry_run,
+    )
 
 
 def main():
