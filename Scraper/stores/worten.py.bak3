@@ -811,18 +811,8 @@ def make_driver():
         opts.add_argument('--no-sandbox')
         opts.add_argument('--disable-gpu')
         opts.add_argument('--disable-dev-shm-usage')
-    # Worten sits behind Cloudflare. Plain selenium (even headless=new with a
-    # real UA) gets served the 'Un momento...' interstitial instead of the
-    # product page, which is why the 27 Jul run read prices off a challenge
-    # page. undetected_chromedriver patches the fingerprint giveaways the
-    # same way fnac.py already relies on for DataDome.
-    import undetected_chromedriver as uc
-    from .fnac import _detect_chrome_major
-    runner._cleanup_uc_dir()
-    chrome_major = _detect_chrome_major()
-    if chrome_major:
-        print(f'   \U0001f527 Detected Chrome {chrome_major}; pinning chromedriver')
-    driver = uc.Chrome(options=opts, version_main=chrome_major)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=opts)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
         'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'
     })

@@ -1,6 +1,6 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
-Worten.es scraper вЂ” variant-driven, prices only.
+Worten.es scraper — variant-driven, prices only.
 
 Mirrors the Amazon scraper architecture: load DB Products/Variants, do one
 search per sub-family, match candidates from search-result cards, and upsert
@@ -52,16 +52,16 @@ from scanner.dbservice_postgres import get_connection
 
 # Only needed for refresh_direct() (the nightly direct-URL price check).
 # Worten predates the runner.py refactor and doesn't use it for anything
-# else вЂ” discovery (run()/main() below) still has its own hand-rolled
+# else — discovery (run()/main() below) still has its own hand-rolled
 # loop, matching, and DB-write code.
 from . import runner
 
 
 STORE_ID = 'worten'
-STORE_LABEL = 'рџџў Worten scraper'
+STORE_LABEL = '🟢 Worten scraper'
 HOST = 'https://www.worten.es'
 
-# Worten search URL вЂ” no brand filter param available, just query string.
+# Worten search URL — no brand filter param available, just query string.
 # We append " Apple" to the search term and filter non-Apple results
 # by inspecting the result name (see is_non_apple_listing below).
 SEARCH_URL_TPL = '{host}/search?query={query}'
@@ -74,30 +74,30 @@ USER_AGENT = (
 # Scoring threshold and request pacing. Worten is fronted by DataDome,
 # which soft-throttles after the first ~5-6 search queries (200 OK with
 # normal layout but 0 products). To stay below that throttle threshold:
-#   1. Long inter-request delays вЂ” 10-20 sec, not the 3-6 sec we use for
+#   1. Long inter-request delays — 10-20 sec, not the 3-6 sec we use for
 #      Amazon. From a residential IP this still completes 27 searches in
 #      ~8-12 min, which is fine for a nightly Windows Task Scheduler run.
 #   2. A real homepage visit + cookie-banner click at session start
 #      (see _warmup_session below) so the first /search?query= isn't
-#      our very first request вЂ” DataDome treats fresh-session-straight-
+#      our very first request — DataDome treats fresh-session-straight-
 #      to-search as a strong bot signal.
 MIN_MATCH_SCORE = 50
 PAGE_DELAY_MIN  = 10.0
 PAGE_DELAY_MAX  = 18.0
 
 
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 #   URL + parsing
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 
 def build_search_url(product_name: str, cat: str) -> str:
     """Worten search URL with " Apple" appended for brand bias.
-    `cat` is currently unused вЂ” Worten doesn't have a department filter."""
+    `cat` is currently unused — Worten doesn't have a department filter."""
     query = quote_plus(f'{product_name} Apple')
     return SEARCH_URL_TPL.format(host=HOST, query=query)
 
 
-# English в†’ Spanish color translation for fallback queries.
+# English → Spanish color translation for fallback queries.
 COLOR_TRANSLATIONS = {
     'blue':    'Azul',
     'silver':  'Plata',
@@ -105,7 +105,7 @@ COLOR_TRANSLATIONS = {
     'pink':    'Rosa',
     'orange':  'Naranja',
     'yellow':  'Amarillo',
-    'purple':  'PГєrpura',
+    'purple':  'Púrpura',
     'red':     'Rojo',
     'black':   'Negro',
     'white':   'Blanco',
@@ -143,10 +143,10 @@ def build_fallback_query(variant: dict, subfamily_query: str) -> str:
 
 
 def parse_price(text: str):
-    """Parse Spanish price string ('1.299,99 в‚¬') to float. None on failure."""
+    """Parse Spanish price string ('1.299,99 €') to float. None on failure."""
     if not text:
         return None
-    s = text.replace('в‚¬', '').replace('EUR', '').replace('\xa0', '').strip()
+    s = text.replace('€', '').replace('EUR', '').replace('\xa0', '').strip()
     if '.' in s and ',' in s:
         s = s.replace('.', '').replace(',', '.')
     elif ',' in s:
@@ -159,7 +159,7 @@ def parse_price(text: str):
 
 def is_captcha(html: str) -> tuple:
     """Detect bot-challenge pages. Returns (matched_marker, snippet) or (None, '').
-    Worten is fronted by DataDome вЂ” the script tag for DataDome may be present
+    Worten is fronted by DataDome — the script tag for DataDome may be present
     even on normal pages, so we look for STRONG indicators only (challenge
     iframe, explicit block text), not just the script reference."""
     if not html:
@@ -187,7 +187,7 @@ def is_captcha(html: str) -> tuple:
 REJECT_ANYWHERE = (
     'reacondicionado', 'renewed', 'segunda mano', 'usado',
     'flipper',          # Worten's used / open-box program
-    'seГ±ales de uso',
+    'señales de uso',
     'producto reaco',
 )
 REJECT_AT_START = ('funda', 'protector', 'cargador', 'cable', 'adaptador',
@@ -226,16 +226,16 @@ def is_non_apple_listing(name: str) -> bool:
 
 def _slug_from_url(url: str) -> str:
     """Extract Worten product slug as a stable SKU.
-    /productos/iphone-16-pro-256gb-titanio-natural-9876 в†’ that whole tail."""
+    /productos/iphone-16-pro-256gb-titanio-natural-9876 → that whole tail."""
     if not url:
         return ''
     path = url.split('?')[0].rstrip('/')
     return path.split('/')[-1]
 
 
-# в”Ђв”Ђ parse_search_results в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+# ── parse_search_results ────────────────────────────────────────────────────
 # Worten uses Constructor.io for search; product cards expose ALL the data
-# we need as `data-cnstrc-*` attributes вЂ” no fragile DOM scraping required.
+# we need as `data-cnstrc-*` attributes — no fragile DOM scraping required.
 #
 # Sample card structure:
 #   <article class="product-card"
@@ -272,7 +272,7 @@ def parse_search_results(html: str) -> list:
         if not price or price < 50:
             continue
 
-        # SKU вЂ” prefer data-sku from inner anchor (stable EAN/MRKEAN format);
+        # SKU — prefer data-sku from inner anchor (stable EAN/MRKEAN format);
         # fall back to Constructor's internal item id.
         anchor = card.select_one('a[data-sku]') or card.select_one('a[href*="/productos/"]')
         sku = ''
@@ -287,7 +287,7 @@ def parse_search_results(html: str) -> list:
         if href and not href.startswith('http'):
             href = HOST + href
 
-        # Optional strike-through price (sale indicator) вЂ” if Worten exposes
+        # Optional strike-through price (sale indicator) — if Worten exposes
         # it via a separate cnstrc attribute, use it; otherwise ignore.
         oldprice = parse_price(
             card.get('data-cnstrc-item-original-price') or
@@ -312,7 +312,7 @@ def inspect_page(html: str) -> None:
     """Diagnostic dump of search-page structure. Triggered by --inspect.
     Shows raw data-cnstrc-* attributes plus what parse_search_results extracts."""
     soup = BeautifulSoup(html, 'html.parser')
-    print('\nв”Ђв”Ђ PAGE INSPECTION в”Ђв”Ђ')
+    print('\n── PAGE INSPECTION ──')
     print(f'   <title>: {soup.title.get_text(strip=True) if soup.title else "(none)"}')
 
     cards = soup.select(CARD_SELECTOR)
@@ -335,23 +335,23 @@ def inspect_page(html: str) -> None:
     parsed = parse_search_results(html)
     print(f'\n   parse_search_results() found {len(parsed)} usable products.')
     for r in parsed[:8]:
-        oldp = f' (was {r["oldprice"]}в‚¬)' if r.get('oldprice') else ''
-        print(f'     В· [{r["asin"][:24]:24}] {r["name"][:60]:60} | {r["price"]}в‚¬{oldp}')
+        oldp = f' (was {r["oldprice"]}€)' if r.get('oldprice') else ''
+        print(f'     · [{r["asin"][:24]:24}] {r["name"][:60]:60} | {r["price"]}€{oldp}')
 
 
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 #   Variant matching  (same regex-based scoring as Amazon)
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 
 MEMORY_RE  = re.compile(r'(\d{1,4})\s*(GB|TB)\b', re.I)
-DISPLAY_RE = re.compile(r'(\d{1,2}(?:[.,]\d)?)\s*(?:pulgadas?|"|вЂі|\u201d|\u2033|\bin\b)', re.I)
+DISPLAY_RE = re.compile(r'(\d{1,2}(?:[.,]\d)?)\s*(?:pulgadas?|"|″|\u201d|\u2033|\bin\b)', re.I)
 BAND_RE    = re.compile(r'(\d{2})\s*mm\b', re.I)
 
 CHIP_RE = re.compile(r'\bm(\d+)(?:\s+(pro|max|ultra))?\b', re.I)
 CPU_CORES_VARIANT_RE = re.compile(r'(\d+)-?core\s+CPU', re.I)
 GPU_CORES_VARIANT_RE = re.compile(r'(\d+)-?core\s+GPU', re.I)
-CPU_CORES_RESULT_RE  = re.compile(r'CPU\s+de\s+(\d+)\s+n[Гєu]cleos', re.I)
-GPU_CORES_RESULT_RE  = re.compile(r'GPU\s+de\s+(\d+)\s+n[Гєu]cleos', re.I)
+CPU_CORES_RESULT_RE  = re.compile(r'CPU\s+de\s+(\d+)\s+n[úu]cleos', re.I)
+GPU_CORES_RESULT_RE  = re.compile(r'GPU\s+de\s+(\d+)\s+n[úu]cleos', re.I)
 RAM_RE = re.compile(
     r'(\d{1,3})\s*GB\s*(?:RAM|de\s+RAM|Memoria(?:\s+unificada)?)',
     re.I,
@@ -429,17 +429,17 @@ def _band_norm(s: str):
 
 
 def subfamily_info(product: dict, variant: dict):
-    """Same sub-family disambiguation as Amazon вЂ” product family + display
+    """Same sub-family disambiguation as Amazon — product family + display
     size drives the search query and post-filter regex.
 
     NOTE: the regex matches a result NAME (a string in Spanish), so the same
-    patterns work for Amazon and Worten вЂ” they list Apple products with the
+    patterns work for Amazon and Worten — they list Apple products with the
     same naming conventions (Spanish titles).
     """
     fam = product.get('family') or ''
     disp = _display_norm(variant.get('display') or '')
 
-    # в”Ђв”Ђ iPhone
+    # ── iPhone
     if fam == 'iphone-17-pro':
         if disp and disp > 6.5:
             return ('iPhone 17 Pro Max', r'\biphone\s+17\s+pro\s+max\b')
@@ -457,7 +457,7 @@ def subfamily_info(product: dict, variant: dict):
     if fam == 'iphone-air':
         return ('iPhone Air', r'\biphone\s+air\b')
 
-    # в”Ђв”Ђ Mac
+    # ── Mac
     if fam == 'macbook-air':
         size = '15' if (disp and disp >= 14.5) else '13'
         return (f'MacBook Air {size}',
@@ -475,7 +475,7 @@ def subfamily_info(product: dict, variant: dict):
     if fam == 'mac-studio':
         return ('Mac Studio', r'\bmac\s+studio\b')
 
-    # в”Ђв”Ђ iPad
+    # ── iPad
     if fam == 'ipad-pro':
         size = '13' if (disp and disp >= 12.5) else '11'
         return (f'iPad Pro {size}',
@@ -489,7 +489,7 @@ def subfamily_info(product: dict, variant: dict):
     if fam == 'ipad':
         return ('iPad', r'\bipad\b(?!\s*(?:pro|air|mini))')
 
-    # в”Ђв”Ђ Apple Watch
+    # ── Apple Watch
     if fam == 'apple-watch':
         m = re.search(r'series\s+(\d+)', (product.get('nombre') or '').lower())
         if m:
@@ -502,7 +502,7 @@ def subfamily_info(product: dict, variant: dict):
     if fam == 'apple-watch-se':
         return ('Apple Watch SE', r'\bapple\s+watch\s+se\b')
 
-    # в”Ђв”Ђ AirPods
+    # ── AirPods
     if fam == 'airpods-pro':
         m = re.search(r'pro\s+(\d+)', (product.get('nombre') or '').lower())
         if m:
@@ -532,14 +532,14 @@ def group_variants_by_subfamily(product: dict) -> dict:
             }
         groups[query]['variants'].append(v)
     if unsupported:
-        print(f'      вљ пёЏ  {unsupported} variant(s) with unsupported family={product.get("family")!r} вЂ” skipped')
+        print(f'      ⚠️  {unsupported} variant(s) with unsupported family={product.get("family")!r} — skipped')
     return groups
 
 
 def score_result(result: dict, variant: dict) -> int:
     """Same scoring logic as Amazon (see amazon.py for full docs).
     base 20 + memory 50 + chip 30 + RAM 30 + cores 20 each + color 30
-    + bandSize 30 + display 20 + connectivity В±15. Hard rejects on
+    + bandSize 30 + display 20 + connectivity ±15. Hard rejects on
     explicit mismatches (memory, chip, RAM, cores, bandSize, color)."""
     score = 20
     name_low = result['name'].lower()
@@ -607,10 +607,10 @@ def score_result(result: dict, variant: dict) -> int:
 
     # ANC (AirPods 4)
     nombre_low = nombre.lower()
-    variant_says_anc    = 'cancelaciГіn' in nombre_low and 'sin cancelaciГіn' not in nombre_low
-    variant_says_no_anc = 'sin cancelaciГіn' in nombre_low
-    sin_cancel_in_name  = 'sin cancelaciГіn' in name_low
-    anc_in_name         = 'cancelaciГіn' in name_low and not sin_cancel_in_name
+    variant_says_anc    = 'cancelación' in nombre_low and 'sin cancelación' not in nombre_low
+    variant_says_no_anc = 'sin cancelación' in nombre_low
+    sin_cancel_in_name  = 'sin cancelación' in name_low
+    anc_in_name         = 'cancelación' in name_low and not sin_cancel_in_name
 
     has_strong_signal = False
     if variant_says_anc:
@@ -667,7 +667,7 @@ def find_best_match(variant: dict, results: list, family_re):
         variant.get('color') or
         variant.get('memory') or
         variant.get('bandSize') or
-        'cancelaciГіn' in nombre_low
+        'cancelación' in nombre_low
     )
     threshold = MIN_MATCH_SCORE if has_diff else 20
 
@@ -681,9 +681,9 @@ def find_best_match(variant: dict, results: list, family_re):
     return (best, best_s) if best_s >= threshold else (None, 0)
 
 
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 #   DB access
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 
 def load_products_with_variants() -> list:
     conn = get_connection()
@@ -725,7 +725,7 @@ def load_products_with_variants() -> list:
 def upsert_scraped_and_price(cur, variant_id: int, result: dict, cat: str, score: int):
     """Write ScrapedProduct (audit) + Price + PriceHistory if price changed.
     SKU is the Worten product URL slug (result['asin'] holds that for both
-    Amazon and Worten вЂ” the field name is shared for code reuse)."""
+    Amazon and Worten — the field name is shared for code reuse)."""
     sku      = result['asin']
     name     = result['name']
     url      = result['url']
@@ -781,20 +781,19 @@ def upsert_scraped_and_price(cur, variant_id: int, result: dict, cat: str, score
         ''', (variant_id, STORE_ID, price))
 
 
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 #   Selenium driver
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 
 def make_driver():
     opts = Options()
     opts.add_argument(f'--user-agent={USER_AGENT}')
     opts.add_argument('--disable-blink-features=AutomationControlled')
-    # disabled: breaks --headless=new on Chrome 150+ (session not created)
-    # opts.add_experimental_option('excludeSwitches', ['enable-automation'])
-    # opts.add_experimental_option('useAutomationExtension', False)
+    opts.add_experimental_option('excludeSwitches', ['enable-automation'])
+    opts.add_experimental_option('useAutomationExtension', False)
     opts.add_argument('--lang=es-ES')
     # Headless by default. Worten's make_driver() used to always try to
-    # open a VISIBLE window (--start-maximized, no --headless) вЂ” fine for
+    # open a VISIBLE window (--start-maximized, no --headless) — fine for
     # an interactive dev run, but the nightly Task Scheduler job hit a
     # consistent "Chrome instance exited" SessionNotCreatedException when
     # run non-interactively (locked screen / no attached desktop for the
@@ -811,18 +810,8 @@ def make_driver():
         opts.add_argument('--no-sandbox')
         opts.add_argument('--disable-gpu')
         opts.add_argument('--disable-dev-shm-usage')
-    # Worten sits behind Cloudflare. Plain selenium (even headless=new with a
-    # real UA) gets served the 'Un momento...' interstitial instead of the
-    # product page, which is why the 27 Jul run read prices off a challenge
-    # page. undetected_chromedriver patches the fingerprint giveaways the
-    # same way fnac.py already relies on for DataDome.
-    import undetected_chromedriver as uc
-    from .fnac import _detect_chrome_major
-    runner._cleanup_uc_dir()
-    chrome_major = _detect_chrome_major()
-    if chrome_major:
-        print(f'   \U0001f527 Detected Chrome {chrome_major}; pinning chromedriver')
-    driver = uc.Chrome(options=opts, version_main=chrome_major)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=opts)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
         'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'
     })
@@ -840,7 +829,7 @@ def _warmup_session(driver):
     through cleanly.
 
     Failure-tolerant: if the cookie banner selector is stale or the homepage
-    redirects to a challenge, we just log and continue вЂ” the actual scrape
+    redirects to a challenge, we just log and continue — the actual scrape
     will fail with a clear CAPTCHA marker anyway.
     """
     from selenium.webdriver.common.by import By
@@ -860,22 +849,22 @@ def _warmup_session(driver):
             except Exception:
                 continue
     except Exception as e:
-        print(f'   вљ пёЏ  warmup failed: {type(e).__name__}: {str(e)[:80]}')
+        print(f'   ⚠️  warmup failed: {type(e).__name__}: {str(e)[:80]}')
 
 
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 #   Main loop
-# в•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђв•ђ
+# ════════════════════════════════════════════════════════════════════════════
 
 def run(dry_run=False, limit=None, only_cat=None, only_product=None,
         fallback=False, inspect=False):
-    print(f'\nрџџў Worten scraper ({STORE_ID})')
+    print(f'\n🟢 Worten scraper ({STORE_ID})')
     if dry_run:
-        print('рџ”Ќ DRY RUN вЂ” no DB changes\n')
+        print('🔍 DRY RUN — no DB changes\n')
     if fallback:
-        print('вџі  Per-variant FALLBACK enabled (extra searches for unmatched)\n')
+        print('⟳  Per-variant FALLBACK enabled (extra searches for unmatched)\n')
     if inspect:
-        print('рџ”¬ INSPECT mode вЂ” first page dumped; no matching\n')
+        print('🔬 INSPECT mode — first page dumped; no matching\n')
 
     products = load_products_with_variants()
     print(f'   Loaded {len(products)} Products from DB')
@@ -898,7 +887,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
     random.shuffle(products)
 
     if not products:
-        print('\nвљ пёЏ  Nothing to scrape.')
+        print('\n⚠️  Nothing to scrape.')
         return
 
     driver = make_driver()
@@ -926,12 +915,12 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                 pattern  = group['pattern']
                 variants = group['variants']
                 search_url = build_search_url(query, product['cat'])
-                print(f'   рџ”Ћ "{query}"  ({len(variants)} variants)  в†’  {search_url}')
+                print(f'   🔎 "{query}"  ({len(variants)} variants)  →  {search_url}')
 
                 try:
                     driver.get(search_url)
                 except Exception as e:
-                    print(f'      вќЊ navigation failed: {type(e).__name__}: {str(e)[:100]}')
+                    print(f'      ❌ navigation failed: {type(e).__name__}: {str(e)[:100]}')
                     continue
 
                 time.sleep(random.uniform(PAGE_DELAY_MIN, PAGE_DELAY_MAX))
@@ -940,7 +929,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
 
                 marker, snippet = is_captcha(html)
                 if marker:
-                    print(f'      рџљ« CAPTCHA / bot challenge detected (marker: {marker!r}).')
+                    print(f'      🚫 CAPTCHA / bot challenge detected (marker: {marker!r}).')
                     print(f'         Context: ...{snippet[:200]}...')
                     captcha_hit = True
                     break
@@ -953,7 +942,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                     break
 
                 results = parse_search_results(html)
-                print(f'      рџ“‹ {len(results)} candidate results')
+                print(f'      📋 {len(results)} candidate results')
                 if not results:
                     continue
 
@@ -973,8 +962,8 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                 group_matched = 0
                 for variant, best, score in scored:
                     if best['asin'] in claimed_skus:
-                        print(f'         в¤µ  [{variant["id"]:4}] '
-                              f'{variant["nombre"][:60]} вЂ” lost dedup '
+                        print(f'         ⤵  [{variant["id"]:4}] '
+                              f'{variant["nombre"][:60]} — lost dedup '
                               f'(SKU {best["asin"]} claimed by higher-scoring variant)')
                         unmatched_in_group.append(variant)
                         continue
@@ -983,11 +972,11 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                     total_matched += 1
                     group_matched += 1
                     by_cat[product['cat']] = by_cat.get(product['cat'], 0) + 1
-                    note = f'{best["price"]:.2f}в‚¬'
+                    note = f'{best["price"]:.2f}€'
                     if best.get('oldprice'):
-                        note += f' (was {best["oldprice"]:.2f}в‚¬)'
-                    print(f'         вњ… [{variant["id"]:4}] '
-                          f'{variant["nombre"][:38]:38} в†’ '
+                        note += f' (was {best["oldprice"]:.2f}€)'
+                    print(f'         ✅ [{variant["id"]:4}] '
+                          f'{variant["nombre"][:38]:38} → '
                           f'{best["name"][:55]:55} | {note} | s={score} | {best["asin"][:30]}')
 
                     if not dry_run:
@@ -1000,28 +989,28 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                             conn.commit()
                         except Exception as e:
                             conn.rollback()
-                            print(f'            вќЊ DB error: {type(e).__name__}: {str(e)[:100]}')
+                            print(f'            ❌ DB error: {type(e).__name__}: {str(e)[:100]}')
 
                 # Diagnostic on zero matches
                 if group_matched == 0 and results:
-                    print(f'      рџ”Ќ No matches in this group. First 3 candidates returned by Worten:')
+                    print(f'      🔍 No matches in this group. First 3 candidates returned by Worten:')
                     for r in results[:3]:
-                        print(f'           В· {r["name"][:120]}')
+                        print(f'           · {r["name"][:120]}')
 
                 # Fallback for unmatched
                 if unmatched_in_group and fallback and not captcha_hit:
-                    print(f'      вџі Fallback for {len(unmatched_in_group)} unmatched variant(s):')
+                    print(f'      ⟳ Fallback for {len(unmatched_in_group)} unmatched variant(s):')
                     for variant in unmatched_in_group:
                         if captcha_hit:
                             total_no_match += 1
                             continue
                         fb_query = build_fallback_query(variant, query)
                         fb_url   = build_search_url(fb_query, product['cat'])
-                        print(f'         рџ”Ѓ "{fb_query}"')
+                        print(f'         🔁 "{fb_query}"')
                         try:
                             driver.get(fb_url)
                         except Exception as e:
-                            print(f'            вќЊ navigation failed: {type(e).__name__}')
+                            print(f'            ❌ navigation failed: {type(e).__name__}')
                             total_no_match += 1
                             continue
                         time.sleep(random.uniform(PAGE_DELAY_MIN, PAGE_DELAY_MAX))
@@ -1029,7 +1018,7 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                         total_searches += 1
                         fb_marker, _ = is_captcha(fb_html)
                         if fb_marker:
-                            print(f'            рџљ« CAPTCHA on fallback ({fb_marker!r}). Stopping.')
+                            print(f'            🚫 CAPTCHA on fallback ({fb_marker!r}). Stopping.')
                             captcha_hit = True
                             total_no_match += 1
                             continue
@@ -1037,18 +1026,18 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                         best, score = find_best_match(variant, fb_results, pattern)
                         if best and best['asin'] in claimed_skus:
                             total_no_match += 1
-                            print(f'            вљ пёЏ  [{variant["id"]:4}] '
-                                  f'{variant["nombre"][:60]} вЂ” fallback SKU '
+                            print(f'            ⚠️  [{variant["id"]:4}] '
+                                  f'{variant["nombre"][:60]} — fallback SKU '
                                   f'{best["asin"][:30]} already claimed')
                         elif best:
                             claimed_skus.add(best['asin'])
                             total_matched += 1
                             by_cat[product['cat']] = by_cat.get(product['cat'], 0) + 1
-                            note = f'{best["price"]:.2f}в‚¬'
+                            note = f'{best["price"]:.2f}€'
                             if best.get('oldprice'):
-                                note += f' (was {best["oldprice"]:.2f}в‚¬)'
-                            print(f'            вњ… [{variant["id"]:4}] '
-                                  f'{variant["nombre"][:38]:38} в†’ '
+                                note += f' (was {best["oldprice"]:.2f}€)'
+                            print(f'            ✅ [{variant["id"]:4}] '
+                                  f'{variant["nombre"][:38]:38} → '
                                   f'{best["name"][:55]:55} | {note} | s={score} | {best["asin"][:30]} (fb)')
                             if not dry_run:
                                 try:
@@ -1060,29 +1049,29 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
                                     conn.commit()
                                 except Exception as e:
                                     conn.rollback()
-                                    print(f'               вќЊ DB error: {type(e).__name__}')
+                                    print(f'               ❌ DB error: {type(e).__name__}')
                         else:
                             total_no_match += 1
-                            print(f'            вљ пёЏ  [{variant["id"]:4}] '
-                                  f'{variant["nombre"][:60]} вЂ” still no match '
+                            print(f'            ⚠️  [{variant["id"]:4}] '
+                                  f'{variant["nombre"][:60]} — still no match '
                                   f'({len(fb_results)} candidates)')
                 elif unmatched_in_group:
                     for variant in unmatched_in_group:
                         total_no_match += 1
-                        print(f'         вљ пёЏ  [{variant["id"]:4}] '
-                              f'{variant["nombre"][:60]} вЂ” no match')
+                        print(f'         ⚠️  [{variant["id"]:4}] '
+                              f'{variant["nombre"][:60]} — no match')
 
             if captcha_hit:
                 break
 
     except KeyboardInterrupt:
-        print('\nв›” Cancelled by user')
+        print('\n⛔ Cancelled by user')
     finally:
         try: driver.quit()
         except: pass
         if conn: conn.close()
 
-    print(f'\nрџ“Љ Summary:')
+    print(f'\n📊 Summary:')
     print(f'   Searches:   {total_searches}')
     print(f'   Matched:    {total_matched}')
     print(f'   No match:   {total_no_match}')
@@ -1092,38 +1081,14 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
             print(f'     {c:10} {n}')
 
 
-def extract_price_pdp(html):
-    """Worten-specific PDP price extractor. The generic JSON-LD strategy in
-    matching.extract_price_from_html() misfires here: Worten embeds a
-    cross-sell Product node for the USB-C power adapter (21.41 EUR) and no
-    JSON-LD node for the page's own product, so the generic walker returns
-    the accessory's price for every item. The real price lives in a
-    microdata meta tag instead. Returns (price_float, method_str) or
-    (None, None).
-    """
-    m = re.search(
-        r'<meta[^>]+itemprop=["\']price["\'][^>]*content=["\']([\d.,]+)["\']',
-        html, re.I)
-    if not m:
-        m = re.search(
-            r'<meta[^>]+content=["\']([\d.,]+)["\'][^>]*itemprop=["\']price["\']',
-            html, re.I)
-    if m:
-        try:
-            return float(m.group(1).replace(",", ".")), "meta itemprop=price"
-        except ValueError:
-            pass
-    return None, None
-
-
 def refresh_direct(*, dry_run=False):
     """Direct-URL price check. Visits each matched variant's own saved
-    Price.url instead of re-searching вЂ” no candidate list, so no matching
+    Price.url instead of re-searching — no candidate list, so no matching
     risk. Reuses Worten's own make_driver()/_warmup_session()/is_captcha
-    (plain selenium, same as its search-based scraper вЂ” Worten has never
+    (plain selenium, same as its search-based scraper — Worten has never
     needed undetected_chromedriver the way Fnac does). This is the ONLY
     path here that goes through matching.py's shared upsert_price_only()/
-    mark_price_missed() вЂ” the discovery loop below (run()/main()) still
+    mark_price_missed() — the discovery loop below (run()/main()) still
     writes via this module's own hand-rolled upsert_scraped_and_price(),
     which predates and doesn't share the anomaly/lifecycle safety nets
     added to matching.py this session. Worth refactoring discovery onto
@@ -1137,7 +1102,6 @@ def refresh_direct(*, dry_run=False):
         is_captcha=is_captcha,
         warmup_driver=_warmup_session,
         driver_factory=make_driver,
-        extract_price=extract_price_pdp,
         page_delay=(PAGE_DELAY_MIN, PAGE_DELAY_MAX),
         dry_run=dry_run,
     )

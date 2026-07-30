@@ -811,18 +811,8 @@ def make_driver():
         opts.add_argument('--no-sandbox')
         opts.add_argument('--disable-gpu')
         opts.add_argument('--disable-dev-shm-usage')
-    # Worten sits behind Cloudflare. Plain selenium (even headless=new with a
-    # real UA) gets served the 'Un momento...' interstitial instead of the
-    # product page, which is why the 27 Jul run read prices off a challenge
-    # page. undetected_chromedriver patches the fingerprint giveaways the
-    # same way fnac.py already relies on for DataDome.
-    import undetected_chromedriver as uc
-    from .fnac import _detect_chrome_major
-    runner._cleanup_uc_dir()
-    chrome_major = _detect_chrome_major()
-    if chrome_major:
-        print(f'   \U0001f527 Detected Chrome {chrome_major}; pinning chromedriver')
-    driver = uc.Chrome(options=opts, version_main=chrome_major)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=opts)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
         'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'
     })
@@ -1092,30 +1082,6 @@ def run(dry_run=False, limit=None, only_cat=None, only_product=None,
             print(f'     {c:10} {n}')
 
 
-def extract_price_pdp(html):
-    """Worten-specific PDP price extractor. The generic JSON-LD strategy in
-    matching.extract_price_from_html() misfires here: Worten embeds a
-    cross-sell Product node for the USB-C power adapter (21.41 EUR) and no
-    JSON-LD node for the page's own product, so the generic walker returns
-    the accessory's price for every item. The real price lives in a
-    microdata meta tag instead. Returns (price_float, method_str) or
-    (None, None).
-    """
-    m = re.search(
-        r'<meta[^>]+itemprop=["\']price["\'][^>]*content=["\']([\d.,]+)["\']',
-        html, re.I)
-    if not m:
-        m = re.search(
-            r'<meta[^>]+content=["\']([\d.,]+)["\'][^>]*itemprop=["\']price["\']',
-            html, re.I)
-    if m:
-        try:
-            return float(m.group(1).replace(",", ".")), "meta itemprop=price"
-        except ValueError:
-            pass
-    return None, None
-
-
 def refresh_direct(*, dry_run=False):
     """Direct-URL price check. Visits each matched variant's own saved
     Price.url instead of re-searching вЂ” no candidate list, so no matching
@@ -1137,7 +1103,6 @@ def refresh_direct(*, dry_run=False):
         is_captcha=is_captcha,
         warmup_driver=_warmup_session,
         driver_factory=make_driver,
-        extract_price=extract_price_pdp,
         page_delay=(PAGE_DELAY_MIN, PAGE_DELAY_MAX),
         dry_run=dry_run,
     )
