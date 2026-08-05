@@ -986,6 +986,7 @@ def refresh_store_direct(*, store_id, store_label, host,
     matched = 0
     missed = 0
     captcha_hit = False
+    pending_missed = []
 
     try:
         warmup_driver(driver)
@@ -1030,14 +1031,8 @@ def refresh_store_direct(*, store_id, store_label, host,
                 print(f'   ⚠️  [{i}/{len(rows)}] [{variant_id:4}] no price found '
                       f'(was {old_price}€)  {url[:70]}')
                 missed += 1
-                if not dry_run:
-                    try:
-                        with conn.cursor() as cur:
-                            matching.mark_price_missed(cur, store_id, variant_id)
-                        conn.commit()
-                    except Exception as e:
-                        conn.rollback()
-                        print(f'      ⚠️  mark_missed error: {type(e).__name__}: {str(e)[:80]}')
+                # Deferred on purpose - flushed in `finally` below.
+                pending_missed.append(variant_id)
                 continue
 
             delta = f'  (was {old_price}€)' if old_price and abs(price - float(old_price)) > 0.01 else ''
@@ -1063,6 +1058,34 @@ def refresh_store_direct(*, store_id, store_label, host,
     finally:
         try: driver.quit()
         except Exception: pass
+        # Misses are marked here, in one batch, rather than inside the loop,
+        # so the run can be judged as a whole. A store that returns nothing
+        # at all is almost never a store where every product vanished
+        # overnight - it is our end: changed markup, an anti-bot wall, a
+        # dead driver. Marking those misses sets discontinued on every row,
+        # and the next run only looks at rows that are NOT discontinued, so
+        # the store stays dark forever behind a cheerful 'Nothing to check.'
+        # Worten did exactly that on 2 Aug 2026.
+        if pending_missed and not dry_run and conn:
+            if matched == 0 and len(pending_missed) >= 10:
+                print(f'\n   [!] {len(pending_missed)} of {len(rows)} checked and not one '
+                      f'price was read.\n       Treating this as our failure, not theirs '
+                      f'- nothing marked discontinued.\n       Check the store manually '
+                      f'before the next run.')
+            else:
+                marked = 0
+                for vid in pending_missed:
+                    try:
+                        with conn.cursor() as cur:
+                            matching.mark_price_missed(cur, store_id, vid)
+                        conn.commit()
+                        marked += 1
+                    except Exception as e:
+                        conn.rollback()
+                        print(f'      [!] mark_missed error for {vid}: '
+                              f'{type(e).__name__}: {str(e)[:80]}')
+                if marked:
+                    print(f'   {marked} variant(s) marked missed')
         if conn: conn.close()
 
     print(f'\n📊 {store_label} direct-check summary:')
