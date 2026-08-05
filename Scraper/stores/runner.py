@@ -202,10 +202,21 @@ def make_driver(user_agent=None):
     opts = Options()
     opts.add_argument(f'--user-agent={ua}')
     opts.add_argument('--disable-blink-features=AutomationControlled')
-    opts.add_experimental_option('excludeSwitches', ['enable-automation'])
+    # Disabled: with Chrome 150+ this option makes --headless=new abort
+    # at startup ('session not created: Chrome instance exited').
+    # opts.add_experimental_option('excludeSwitches', ['enable-automation'])
     opts.add_experimental_option('useAutomationExtension', False)
     opts.add_argument('--lang=es-ES')
-    opts.add_argument('--start-maximized')
+    # Headless by default so nightly refreshes don't need a visible
+    # desktop (and don't steal focus during local runs).
+    # SCRAPER_HEADFUL=1 brings the window back for debugging.
+    if os.environ.get('SCRAPER_HEADFUL') == '1':
+        opts.add_argument('--start-maximized')
+    else:
+        opts.add_argument('--headless=new')
+        opts.add_argument('--window-size=1920,1080')
+        opts.add_argument('--disable-gpu')
+        opts.add_argument('--disable-dev-shm-usage')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=opts)
     # Hide the webdriver flag from JS introspection — defeats some bot
@@ -1004,7 +1015,12 @@ def refresh_store_direct(*, store_id, store_label, host,
             # (Worten embeds one for the USB-C adapter) can yield a price that
             # has nothing to do with this product. Reject wild deviations from
             # the known previous price rather than writing garbage to Price.
-            if price and old_price and float(old_price) > 0:
+            # PRICE_GUARD_OFF=1 disables the ratio check for repair runs.
+            # Needed when the STORED price is itself garbage: a correct
+            # value then looks 'implausible' against it and gets dropped,
+            # freezing the bad number in place forever.
+            if (price and old_price and float(old_price) > 0
+                    and os.environ.get('PRICE_GUARD_OFF') != '1'):
                 ratio = price / float(old_price)
                 if ratio < 0.5 or ratio > 2.0:
                     print(f'   \u26d4 [{i}/{len(rows)}] [{variant_id:4}] implausible '

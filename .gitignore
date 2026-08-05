@@ -21,3 +21,20 @@ Scraper/*-refresh.bat
 Scraper/elcorte-refresh.bat
 Scraper/fnac-refresh.bat
 Scraper/rossellimac-refresh.bat
+
+# local Chrome profiles (contain real cookies) - never commit
+Scraper/.chrome-profiles/
+
+
+# throwaway Chrome profiles from driver debugging
+Scraper/.chromeprof*/
+Scraper/.chrome-profiles/
+
+# scratch diagnostics and patch scripts from the Aug 2026 driver debugging
+Scraper/*.bak
+Scraper/stores/*.bak*
+Scraper/*_live.log
+Scraper/*_dry.log
+Scraper/*_repair.log
+Scraper/dryrun.log
+Scraper/live_run.log

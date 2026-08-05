@@ -1054,9 +1054,14 @@ def make_driver():
     opts = uc.ChromeOptions()
     opts.add_argument(f'--user-agent={USER_AGENT}')
     opts.add_argument('--lang=es-ES')
-    opts.add_argument('--start-maximized')
-    if os.environ.get('CI') == 'true':
+    # Headless by default (was: CI-only). A visible window is pointless
+    # for the nightly job and needs an attached desktop the Task
+    # Scheduler session doesn't have. FNAC_HEADFUL=1 to debug locally.
+    if os.environ.get('FNAC_HEADFUL') == '1':
+        opts.add_argument('--start-maximized')
+    else:
         opts.add_argument('--headless=new')
+        opts.add_argument('--window-size=1920,1080')
         opts.add_argument('--no-sandbox')
         opts.add_argument('--disable-gpu')
         opts.add_argument('--disable-dev-shm-usage')
@@ -1074,7 +1079,38 @@ def make_driver():
     # for the CI/UC path; fnac.py has its own separate make_driver() that
     # was missing the same guard.
     runner._cleanup_uc_dir()
-    return uc.Chrome(options=opts, version_main=chrome_major)
+    # Chrome 151 update (Jul 2026): uc.Chrome() launches chrome.exe as a
+    # child of python.exe and then has chromedriver attach over
+    # --remote-debugging-port. That child now dies instantly (no
+    # DevToolsActivePort file, no surviving process), so the attach fails
+    # with 'cannot connect to chrome ... not reachable'. Verified this is
+    # not flag-related: the same happens with a bare uc.Chrome().
+    # Keep uc's PATCHED chromedriver (that is what defeats the bot
+    # checks) but let chromedriver spawn Chrome itself, which still
+    # works. uc has had no release since 3.5.5 (2023).
+    # uc defaults its profile to tempfile.mkdtemp(), and on this box that
+    # directory's ACL stops Chrome from creating its ProcessSingleton lock
+    # file ('Lock file can not be created: access denied' in chrome_debug.log),
+    # so Chrome aborts at startup and chromedriver reports 'cannot connect
+    # to chrome ... not reachable'. Handing uc an ordinary directory fixes
+    # it. Persisting the profile between runs is a bonus: DataDome's
+    # clearance cookie survives, so we get challenged less often.
+    # A blank profile gets challenged by DataDome every single time, even
+    # headful under uc. What gets through is a COPY OF THE REAL Chrome
+    # profile: it carries the datadome clearance cookie earned by a human
+    # solving the captcha once, plus ordinary history/prefs that make the
+    # fingerprint look lived-in. Refresh the copy (tools/refresh_fnac_profile)
+    # whenever the cookie expires and the captcha marker comes back.
+    # Kept OUTSIDE the repo on purpose: this is a copy of the real Chrome
+    # profile, cookies and sessions included. Inside the working tree git
+    # picked up 10k+ files and it would only take one careless commit to
+    # publish live session cookies.
+    prof_dir = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')),
+                            'macbuscar-profiles', 'fnac-real')
+    os.makedirs(prof_dir, exist_ok=True)
+    opts.add_argument('--profile-directory=Default')
+    return uc.Chrome(options=opts, version_main=chrome_major,
+                     user_data_dir=prof_dir)
 
 
 def warmup_driver(driver):

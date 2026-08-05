@@ -822,7 +822,26 @@ def make_driver():
     chrome_major = _detect_chrome_major()
     if chrome_major:
         print(f'   \U0001f527 Detected Chrome {chrome_major}; pinning chromedriver')
-    driver = uc.Chrome(options=opts, version_main=chrome_major)
+    # uc.Chrome() will not start against a plain selenium Options object
+    # (fails with 'cannot connect to chrome ... not reachable'); it needs
+    # its own uc.ChromeOptions. Copy the arguments across, and hand the
+    # headless decision to uc's own flag rather than passing --headless=new
+    # ourselves, since uc applies its own headless hardening on top.
+    # We use uc's PATCHED CHROMEDRIVER but not its Chrome launcher.
+    # uc.Chrome() spawns chrome.exe itself via subprocess and then has
+    # chromedriver attach over --remote-debugging-port; as of Chrome 151
+    # a chrome.exe spawned as a child of python.exe on this box dies
+    # immediately (no DevToolsActivePort, no process), so that attach
+    # always fails with 'cannot connect to chrome ... not reachable'.
+    # Letting chromedriver launch Chrome the normal way works fine, and
+    # the patched binary still carries the driver-level fixes that get
+    # us past Worten's Cloudflare check. uc has had no release since
+    # 3.5.5 (2023), so there is no upstream fix to wait for.
+    from undetected_chromedriver.patcher import Patcher
+    patcher = Patcher(version_main=chrome_major)
+    patcher.auto()
+    driver = webdriver.Chrome(service=Service(patcher.executable_path),
+                              options=opts)
     driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
         'source': 'Object.defineProperty(navigator, "webdriver", {get: () => undefined})'
     })

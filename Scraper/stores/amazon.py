@@ -389,7 +389,15 @@ def extract_price_pdp(html):
         '#corePrice_feature_div span.a-price:not(.a-text-price) span.a-offscreen',
         '#corePriceDisplay_desktop_feature_div span.a-price:not(.a-text-price) span.a-offscreen',
         '#apex_desktop span.a-price:not(.a-text-price) span.a-offscreen',
-        'span.a-price:not(.a-text-price) span.a-offscreen',
+        # NOTE: there used to be a page-wide
+        #   'span.a-price:not(.a-text-price) span.a-offscreen'
+        # fallback here. On a PDP with no buy box (only 'Ver todas las
+        # opciones de compra') the three containers above match nothing and
+        # that fallback returned the FIRST a-price on the page - an
+        # accessory or an installment amount, not the product. That is where
+        # the 10,49 EUR iPad Air and friends came from. No buy box means no
+        # price we can trust, so fall through to (None, None) and let the
+        # caller mark the variant missed.
     ):
         el = soup.select_one(sel)
         if el:
